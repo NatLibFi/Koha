@@ -142,12 +142,12 @@ sub get_elasticsearch_settings {
             analysis => {
                 analyzer => {
                     analyser_phrase => {
-                        tokenizer => 'keyword',
-                        filter    => ['lowercase'],
+                        tokenizer => 'icu_tokenizer',
+                        filter    => ['icu_folding'],
                     },
                     analyser_standard => {
-                        tokenizer => 'standard',
-                        filter    => ['lowercase'],
+                        tokenizer => 'icu_tokenizer',
+                        filter    => ['icu_folding'],
                     },
                 },
                 normalizer => {
@@ -180,6 +180,7 @@ sub get_elasticsearch_mappings {
 
     $mappings = {
         data => {
+            _all => {type => "string", analyzer => "analyser_standard"},
             properties => {
                 record => {
                     store          => "true",
