@@ -4264,7 +4264,7 @@ CREATE TABLE IF NOT EXISTS club_enrollments (
   borrowernumber int(11) NOT NULL,
   date_enrolled timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   date_canceled timestamp NULL DEFAULT NULL,
-  date_created timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  date_created timestamp NOT NULL DEFAULT '2000-01-01 00:00:00',
   date_updated timestamp NULL DEFAULT NULL,
   branchcode varchar(10) NULL DEFAULT NULL,
   PRIMARY KEY (id),
