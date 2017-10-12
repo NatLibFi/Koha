@@ -32,6 +32,7 @@ use Koha::Patron::Category;
 use Koha::ItemTypes;
 use Koha::IssuingRule;
 use Koha::IssuingRules;
+use Koha::Auth::PermissionManager;
 
 #Setting variables
 my $input = new CGI;
@@ -160,6 +161,8 @@ if ( $step == 3 ) {
         }
         else {
 
+            my $permissionManager = Koha::Auth::PermissionManager->new();
+
             my $patron_data = {
                 surname      => scalar $input->param('surname'),
                 firstname    => scalar $input->param('firstname'),
@@ -171,8 +174,7 @@ if ( $step == 3 ) {
                 password2    => scalar $input->param('password2'),
                 privacy      => "default",
                 address      => "",
-                city         => "",
-                flags => 1,    # Will be superlibrarian
+                city         => ""
             };
 
             my $patron_category =
@@ -184,6 +186,7 @@ if ( $step == 3 ) {
 
             #Error handling checking if the patron was created successfully
             if ($borrowernumber) {
+                $permissionManager->grantPermission($borrowernumber, 'superlibrarian', 'superlibrarian');
                 push @messages, { code => 'success_on_insert_patron' };
             }
             else {
@@ -191,8 +194,13 @@ if ( $step == 3 ) {
             }
         }
     }
-
-    $step++ if Koha::Patrons->search( { flags => 1 } )->count;
+    my $permissionModule = Koha::Auth::PermissionModules->cast('superlibrarian');
+    my $permission = Koha::Auth::Permissions->cast('superlibrarian');
+    my $borrowerPermission = Koha::Auth::BorrowerPermissions->search({
+        permission_module_id => $permissionModule->permission_module_id,
+        permission_id => $permission->permission_id
+    })->next();
+    $step++ if $borrowerPermission;
 }
 if ( $step == 4 ) {
     if ( $op eq 'add_validate_itemtype' ) {
