@@ -200,7 +200,25 @@ sub build_query_compat {
         $lang, $params )
       = @_;
 
-#die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang, $params );
+#die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang );
+    my @sort_params  = $self->_convert_sort_fields(@$sort_by);
+    my @index_params = $self->_convert_index_fields(@$indexes);
+    my $limits       = $self->_fix_limit_special_cases($orig_limits);
+    if ( $params->{suppress} ) { push @$limits, "suppress:0"; }
+
+    # Merge the indexes in with the search terms and the operands so that
+    # each search thing is a handy unit.
+    unshift @$operators, undef;    # The first one can't have an op
+    my @search_params;
+    my $ea = each_array( @$operands, @$operators, @index_params );
+    while ( my ( $oand, $otor, $index ) = $ea->() ) {
+        next if ( !defined($oand) || $oand eq '' );
+        push @search_params, {
+            operand => $self->_clean_search_term($oand),      # the search terms
+            operator => defined($otor) ? uc $otor : undef,    # AND and so on
+            $index ? %$index : (),
+        };
+    }
 
     my $query;
     my $limits = ();
