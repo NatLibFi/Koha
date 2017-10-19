@@ -136,7 +136,6 @@ label, .label {
     max-width: inherit;
     padding: 0;
     color: black;
-    margin-bottom: 0;
     vertical-align: middle;
 }
 
@@ -873,7 +872,6 @@ fieldset.rows label.inline {
 	display : inline;
 	float : none;
 	margin-left : 1em;
-	width : auto;
 }
 
 fieldset.rows .inputnote {
@@ -2032,7 +2030,6 @@ div#acqui_order_supplierlist > div.supplier {
 div#acqui_order_supplierlist > div.supplier > span.suppliername {
     display: inline;
     font-size: 1.7em;
-    margin-bottom: 0.5em;
 }
 
 div#acqui_order_supplierlist > div.supplier > span.action {
@@ -2902,10 +2899,6 @@ span.browse-button {
 #i18nMenu a .sublanguage-selected {
     color: #000;
     font-weight: bold;
-}
-
-#i18nMenu .dropdown-menu a:hover,
-#i18nMenu .dropdown-menu a:focus {
 }
 
 #circ_circulation_issue .onsite_checkout-select label,
