@@ -3,6 +3,7 @@ package t::lib::Mocks;
 use Modern::Perl;
 use C4::Context;
 
+use Koha::Logger;
 use Koha::Schema;
 use Test::MockModule;
 
@@ -97,6 +98,45 @@ sub mock_session {
     }
 
     return $session;
+}
+
+=head2 mock_logger
+
+    t::lib::Mocks::mock_logger('DEBUG'); #Log::Log4perl verbosity level
+
+    t::lib::Mocks::mock_logger({
+        'log4perl.logger.rest.Koha.REST.V1' => 'ERROR, TEST',
+        'log4perl.appender.TEST' => 'Log::Log4perl::Appender::TestBuffer',
+        'log4perl.appender.TEST.layout' => 'SimpleLayout',
+    });
+
+@PARAM1 HASHRef, Alternatively a Log::Log4perl config HASHref can be passed directly to Koha::Logger.
+        or
+        String, Log::Log4perl verbosity level, 'TRACE', 'DEBUG', etc.
+@RETURNS undef
+@THROWS Koha::Exceptions::Exception if instantiating a logger failed
+
+=cut
+
+sub mock_logger {
+    my ($levelOrConfig) = @_;
+
+    my ($config, $level);
+    if (ref($levelOrConfig) eq 'HASH') {
+        $config = $levelOrConfig;
+    }
+    else {
+        $level = uc($levelOrConfig);
+        $config = {
+            'log4perl.rootLogger' => "$level, TEST",
+            'log4perl.appender.TEST' => 'Log::Log4perl::Appender::ScreenColoredLevels',
+            'log4perl.appender.TEST.layout' => 'SimpleLayout',
+        };
+    }
+    t::lib::Mocks::mock_config('log4perl_conf', $config);
+
+    my $l = Koha::Logger->get();
+    $l->trace("Koha::Logger mocked from ".($level ? $level : ($config ? 'configuration': 'ERROR')));
 }
 
 1;

@@ -28,12 +28,11 @@ use Log::Log4perl;
 use Mojolicious::Lite;
 use Try::Tiny;
 
-my $config = {
+t::lib::Mocks::mock_logger({
     'log4perl.logger.rest.Koha.REST.V1' => 'ERROR, TEST',
     'log4perl.appender.TEST' => 'Log::Log4perl::Appender::TestBuffer',
     'log4perl.appender.TEST.layout' => 'SimpleLayout',
-};
-t::lib::Mocks::mock_config('log4perl_conf', $config);
+});
 
 my $remote_address = '127.0.0.1';
 my $t              = Test::Mojo->new('Koha::REST::V1');

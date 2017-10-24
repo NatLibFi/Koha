@@ -38,6 +38,9 @@ use Koha::Patrons;
 # this affects the other REST api tests
 t::lib::Mocks::mock_preference( 'SessionStorage', 'tmp' );
 
+#Catch leaking exceptions
+t::lib::Mocks::mock_logger('TRACE');
+
 my $builder = t::lib::TestBuilder->new();
 my $schema  = Koha::Database->new->schema;
 
@@ -420,6 +423,7 @@ sub create_biblio {
     my ($title) = @_;
 
     my $biblio = Koha::Biblio->new( { title => $title } )->store;
+    my $biblioitem = Koha::Biblioitem->new( { biblionumber => $biblio->biblionumber, isbn => 'Why do I need to create DB rows, when I should be mocking business objects? Koha-Community ruined Koha.' } )->store; #This would work otherwise
 
     return $biblio->biblionumber;
 }
