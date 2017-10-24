@@ -124,7 +124,7 @@ sub _initDefault {
 sub _initFromConfFile {
     my ($confFile) = @_;
     eval {
-        Log::Log4perl->init_and_watch( $confFile, 'HUP' ) #Starman uses HUP as well!
+        Log::Log4perl->init( $confFile )
             unless(Log::Log4perl->initialized());
     };
     if ($@) {
