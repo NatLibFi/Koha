@@ -145,8 +145,13 @@ sub search_compat {
     my (
         $self,     $query,            $simple_query, $sort_by,
         $servers,  $results_per_page, $offset,       $expanded_facet,
-        $branches, $query_type,       $scan
+        $branches, $item_types,       $query_type,   $scan
     ) = @_;
+
+    if ( $scan ) {
+        return $self->_aggregation_scan( $query, $results_per_page, $offset );
+    }
+
     my %options;
     $options{offset} = $offset;
     $options{expanded_facet} = $expanded_facet;
@@ -488,5 +493,53 @@ sub _convert_facets {
     return \@facets;
 }
 
+=head2 _aggregation_Scan
+
+Perform an aggregation request for scan purposes.
+
+=cut
+
+sub _aggregation_scan {
+    my ($self, $query, $results_per_page, $offset) = @_;
+
+    if (!scalar(keys $query->{aggregations})) {
+        my %result = {
+            biblioserver => {
+                hits => 0,
+                RECORDS => undef
+            }
+        };
+        return (undef, \%result, undef);
+    }
+    my ($field) = keys $query->{aggregations};
+    $query->{aggregations}{$field}{terms}{size} = 1000;
+    my $results = $self->search($query, 1, 0, undef);
+
+    # Convert each result into a MARC::Record
+    my (@records, $index);
+    $index = $offset - 1; # opac-search expects results to be put in the
+        # right place in the array, according to $offset
+
+    my $count = scalar(@{$results->{aggregations}{$field}{buckets}});
+    for (my $index = $offset; $index - $offset < $results_per_page && $index < $count; $index++) {
+        my $bucket = $results->{aggregations}{$field}{buckets}->[$index];
+        # Scan values are expressed as 100 a (count) and 245a (term)
+        my $marc = MARC::Record->new;
+        $marc->encoding('UTF-8');
+        $marc->append_fields(
+            MARC::Field->new((100, ' ',  ' ', 'a' => $bucket->{doc_count}))
+        );
+        $marc->append_fields(
+            MARC::Field->new((245, ' ',  ' ', 'a' => $bucket->{key}))
+        );
+        $records[$index] = $marc;
+    };
+    # consumers of this expect a name-spaced result, we provide the default
+    # configuration.
+    my %result;
+    $result{biblioserver}{hits} = $count;
+    $result{biblioserver}{RECORDS} = \@records;
+    return (undef, \%result, undef);
+}
 
 1;

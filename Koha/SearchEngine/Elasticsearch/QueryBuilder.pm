@@ -201,43 +201,53 @@ sub build_query_compat {
       = @_;
 
 #die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang );
-    my @sort_params  = $self->_convert_sort_fields(@$sort_by);
-    my @index_params = $self->_convert_index_fields(@$indexes);
-    my $limits       = $self->_fix_limit_special_cases($orig_limits);
 
-    # Merge the indexes in with the search terms and the operands so that
-    # each search thing is a handy unit.
-    unshift @$operators, undef;    # The first one can't have an op
-    my @search_params;
-    my $ea = each_array( @$operands, @$operators, @index_params );
-    while ( my ( $oand, $otor, $index ) = $ea->() ) {
-        next if ( !defined($oand) || $oand eq '' );
-        push @search_params, {
-            operand => $self->_clean_search_term($oand),      # the search terms
-            operator => defined($otor) ? uc $otor : undef,    # AND and so on
-            $index ? %$index : (),
-        };
+    my $query;
+    my $limits = ();
+    if ( $scan ) {
+        $query = $self->build_scan_query( $operands, $indexes );
+    } else {
+        my @sort_params  = $self->_convert_sort_fields(@$sort_by);
+        my @index_params = $self->_convert_index_fields(@$indexes);
+        $limits          = $self->_fix_limit_special_cases($orig_limits);
+
+        # Merge the indexes in with the search terms and the operands so that
+        # each search thing is a handy unit.
+        unshift @$operators, undef;    # The first one can't have an op
+        my @search_params;
+        my $ea = each_array( @$operands, @$operators, @index_params );
+        while ( my ( $oand, $otor, $index ) = $ea->() ) {
+            next if ( !defined($oand) || $oand eq '' );
+            push @search_params, {
+                operand => $self->_clean_search_term($oand),      # the search terms
+                operator => defined($otor) ? uc $otor : undef,    # AND and so on
+                $index ? %$index : (),
+            };
+        }
+
+        # We build a string query from limits and the queries. An alternative
+        # would be to pass them separately into build_query and let it build
+        # them into a structured ES query itself. Maybe later, though that'd be
+        # more robust.
+        my $query_str = join( ' AND ',
+            join( ' ', $self->_create_query_string(@search_params) ) || (),
+            $self->_join_queries( $self->_convert_index_strings(@$limits) ) || () );
+
+        # If there's no query on the left, let's remove the junk left behind
+        $query_str =~ s/^ AND //;
+        my %options;
+        $options{sort} = \@sort_params;
+        $options{expanded_facet} = $params->{expanded_facet};
+        $query = $self->build_query( $query_str, %options );
     }
-
-    # We build a string query from limits and the queries. An alternative
-    # would be to pass them separately into build_query and let it build
-    # them into a structured ES query itself. Maybe later, though that'd be
-    # more robust.
-    my $query_str = join( ' AND ',
-        join( ' ', $self->_create_query_string(@search_params) ) || (),
-        $self->_join_queries( $self->_convert_index_strings(@$limits) ) || () );
-
-    # If there's no query on the left, let's remove the junk left behind
-    $query_str =~ s/^ AND //;
-    my %options;
-    $options{sort} = \@sort_params;
-    $options{expanded_facet} = $params->{expanded_facet};
-    my $query = $self->build_query( $query_str, %options );
 
     #die Dumper($query);
     # We roughly emulate the CGI parameters of the zebra query builder
     my $query_cgi;
-    $query_cgi = 'idx=kw&q=' . uri_escape_utf8( $operands->[0] ) if @$operands;
+    my ($index) = @$indexes;
+    $index = 'kw' unless $index;
+    $query_cgi = "idx=$index&q=" . uri_escape_utf8( $operands->[0] ) if @$operands;
+    $query_cgi .= '&scan=1' if ( $scan );
     my $simple_query;
     $simple_query = $operands->[0] if @$operands == 1;
     my $query_desc   = $simple_query;
@@ -251,6 +261,63 @@ sub build_query_compat {
         undef,  $query,     $simple_query, $query_cgi, $query_desc,
         $limit, $limit_cgi, $limit_desc,   undef,      undef
     );
+}
+
+=head2 build_scan_query
+
+    my $simple_query = $builder->build_scan_query(\@operands, \@indexes)
+
+This will build an aggregation scan query that can be issued to elasticsearch from
+the provided string input.
+
+=cut
+
+our %scan_field_convert = (
+    'ti' => 'title',
+    'au' => 'author',
+    'su' => 'subject',
+    'se' => 'title-series',
+    'pb' => 'publisher',
+
+);
+
+sub build_scan_query {
+    my ( $self, $operands, $indexes ) = @_;
+
+    my $term = scalar( @$operands ) == 0 ? '' : $operands->[0];
+    my $index = scalar( @$indexes ) == 0 ? 'title' : $indexes->[0];
+
+    my ( $f, $d ) = split( /,/, $index);
+    $index = $scan_field_convert{$f} || $f;
+
+    my $res;
+    $res->{query} = {
+        query_string => {
+            query => '*'
+        }
+    };
+    $res->{aggregations} = {
+        $index => {
+            terms => {
+                field => $index . '__facet',
+                order => { '_term' => 'asc' },
+                include => $self->_create_regex_filter($term) . '.*'
+            }
+        }
+    };
+    return $res;
+}
+
+sub _create_regex_filter {
+    my ($self, $term) = @_;
+
+    my $result = '';
+    foreach my $c (split(//, quotemeta($term))) {
+        my $lc = lc($c);
+        my $uc = uc($c);
+        $result .= $lc ne $uc ? '[' . $lc . $uc . ']' : $c;
+    }
+    return $result;
 }
 
 =head2 build_authorities_query

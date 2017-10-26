@@ -1954,7 +1954,7 @@ sub searchResults {
         my $marcrecord;
         if ($scan) {
             # For Scan searches we built USMARC data
-            $marcrecord = MARC::Record->new_from_usmarc( $marcresults->[$i]);
+            $marcrecord = ref($marcresults->[$i]) == 'MARC::Record' ? $marcresults->[$i] : MARC::Record->new_from_usmarc( $marcresults->[$i]);
         } else {
             # Normal search, render from Zebra's output
             $marcrecord = new_record_from_zebra(
