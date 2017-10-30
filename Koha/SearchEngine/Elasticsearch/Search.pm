@@ -513,7 +513,7 @@ sub _aggregation_scan {
     }
     my ($field) = keys %{$query->{aggregations}};
     $query->{aggregations}{$field}{terms}{size} = 1000;
-    my $results = $self->search($query, 1, 0, undef);
+    my $results = $self->search($query, 1, 0);
 
     # Convert each result into a MARC::Record
     my (@records, $index);
