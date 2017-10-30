@@ -148,7 +148,7 @@
                             </xsl:when>
                             <xsl:when test="position() = 1000">
                               <span class="componentPartRecordTitle">
-                                [<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all</a>]
+                                [list truncated - <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all</a>]
                               </span>
                             </xsl:when>
                          </xsl:choose>
