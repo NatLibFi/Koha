@@ -502,7 +502,7 @@ Perform an aggregation request for scan purposes.
 sub _aggregation_scan {
     my ($self, $query, $results_per_page, $offset) = @_;
 
-    if (!scalar(keys $query->{aggregations})) {
+    if (!scalar(keys %{$query->{aggregations}})) {
         my %result = {
             biblioserver => {
                 hits => 0,
@@ -511,7 +511,7 @@ sub _aggregation_scan {
         };
         return (undef, \%result, undef);
     }
-    my ($field) = keys $query->{aggregations};
+    my ($field) = keys %{$query->{aggregations}};
     $query->{aggregations}{$field}{terms}{size} = 1000;
     my $results = $self->search($query, 1, 0, undef);
 
