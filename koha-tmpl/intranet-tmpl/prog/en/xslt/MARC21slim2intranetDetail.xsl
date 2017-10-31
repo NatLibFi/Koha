@@ -120,7 +120,7 @@
         </xsl:variable>
         <xsl:if test="marc:componentPartRecords/marc:componentPart">
                  <span class="componentPartRecordsContainer results_summary">
-                       <h5>Component part records (<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all <xsl:value-of select="marc:componentPartRecordCount"/></a>):</h5>
+                       <h5>Component part records (<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/>&amp;sort_by=id_asc</xsl:attribute>view all <xsl:value-of select="marc:componentPartRecordCount"/></a>):</h5>
                        <xsl:for-each select="marc:componentPartRecords/marc:componentPart">
                          <xsl:choose>
                             <xsl:when test="position() &lt; 1000">
@@ -148,7 +148,7 @@
                             </xsl:when>
                             <xsl:when test="position() = 1000">
                               <span class="componentPartRecordTitle">
-                                [list truncated - <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all</a>]
+                                [list truncated - <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/>&amp;sort_by=id_asc</xsl:attribute>view all</a>]
                               </span>
                             </xsl:when>
                          </xsl:choose>

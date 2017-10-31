@@ -336,7 +336,7 @@ sub simple_search_compat {
     unless (ref $query) {
         # We'll push it through the query builder to sanitise everything.
         my $qb = Koha::SearchEngine::QueryBuilder->new({index => $self->index});
-        (undef,$query) = $qb->build_query_compat(undef, [$query], undef, undef, undef, undef, undef, \%options);
+        (undef,$query) = $qb->build_query_compat(undef, [$query], undef, undef, $options{sort_by}, undef, undef, \%options);
     }
     my $results = $self->search($query, undef, $max_results, %options);
     my @records;

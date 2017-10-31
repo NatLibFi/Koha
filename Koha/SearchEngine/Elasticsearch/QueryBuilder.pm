@@ -102,10 +102,8 @@ sub build_query {
               if $d && ( $d ne 'asc' && $d ne 'desc' );
             $d = 'asc' unless $d;
 
-            # TODO account for fields that don't have a 'phrase' type
-
             $f = $self->_sort_field($f);
-            push @{ $res->{sort} }, { "$f.phrase" => { order => $d } };
+            push @{ $res->{sort} }, { $f => { order => $d } };
         }
     }
 
@@ -173,7 +171,7 @@ sub build_browse_query {
                 }
             }
         },
-        sort => [ { "$sort.phrase" => { order => "asc" } } ],
+        sort => [ { $sort => { order => "asc" } } ],
     };
 }
 
@@ -394,13 +392,11 @@ sub build_authorities_query {
     my $query_part  = { bool => { should => \@query_parts } };
     my $filter_part = { bool => { should => \@filter_parts } };
 
-    # We need to add '.phrase' to all the sort headings otherwise it'll sort
-    # based on the tokenised form.
     my %s;
     if ( exists $search->{sort} ) {
         foreach my $k ( keys %{ $search->{sort} } ) {
             my $f = $self->_sort_field($k);
-            $s{"$f.phrase"} = $search->{sort}{$k};
+            $s{$f} = $search->{sort}{$k};
         }
         $search->{sort} = \%s;
     }
@@ -552,6 +548,7 @@ sub _convert_sort_fields {
         relevance   => undef,       # default
         title       => 'title',
         pubdate     => 'pubdate',
+        id          => '_uid'
     );
     my %sort_order_convert =
       ( qw( dsc desc ), qw( asc asc ), qw( az asc ), qw( za desc ) );
@@ -849,6 +846,9 @@ sub _sort_field {
     if ($self->sort_fields()->{$f}) {
         $f .= '__sort';
     }
+    # We need to add '.phrase' to all the sort headings otherwise it'll sort
+    # based on the tokenised form.
+    $f .= '.phrase' unless $f =~ /\./ || $f eq '_uid';
     return $f;
 }
 
