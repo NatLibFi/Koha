@@ -591,6 +591,45 @@ biblios:
         sort: ~
         suggestible: ''
     type: string
+  access-restrictions:
+    label: access-restrictions
+    mappings:
+      - facet: ''
+        marc_field: 506a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506b
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506c
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506d
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506e
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506f
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 506u
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+    type: string
   acqdate:
     label: acqdate
     mappings:
@@ -1905,6 +1944,25 @@ biblios:
         sort: ~
         suggestible: ''
     type: boolean
+  other-control-number:
+    label: other-control-number
+    mappings:
+      - facet: ''
+        marc_field: 035a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 035z
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 0359
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+    type: string
   pl:
     label: pl
     mappings:
