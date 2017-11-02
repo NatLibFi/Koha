@@ -541,14 +541,15 @@ sub _convert_sort_fields {
 
     # Turn the sorting into something we care about.
     my %sort_field_convert = (
-        acqdate     => 'acqdate',
+        acqdate     => 'acqdate.raw',
         author      => 'author',
         call_number => 'callnum',
         popularity  => 'issues',
         relevance   => undef,       # default
-        title       => 'title',
-        pubdate     => 'pubdate',
-        id          => '_uid'
+        title       => 'title.raw',
+        pubdate     => 'pubdate.raw',
+        id          => '_uid',
+        datereceived => 'copydate.raw'
     );
     my %sort_order_convert =
       ( qw( dsc desc ), qw( asc asc ), qw( az asc ), qw( za desc ) );
@@ -843,12 +844,15 @@ the end. Maybe it'll be something else in the future, who knows?
 
 sub _sort_field {
     my ($self, $f) = @_;
+
+    my $mappings = $self->get_elasticsearch_mappings();
+    my $textField = $mappings->{data}{properties}{$f}{type} eq 'text';
     if ($self->sort_fields()->{$f}) {
         $f .= '__sort';
     }
-    # We need to add '.phrase' to all the sort headings otherwise it'll sort
+    # We need to add '.phrase' to text fields, otherwise it'll sort
     # based on the tokenised form.
-    $f .= '.phrase' unless $f =~ /\./ || $f eq '_uid';
+    $f .= '.phrase' if $textField;
     return $f;
 }
 

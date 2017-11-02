@@ -150,7 +150,13 @@ sub get_elasticsearch_settings {
                         filter    => ['lowercase'],
                     },
                 },
+                normalizer => {
+                    normalizer_keyword => {
+                        type => 'custom',
+                        filter => ['lowercase', 'asciifolding']
             }
+        }
+            },
         }
     };
     return $settings;
@@ -168,8 +174,11 @@ created.
 sub get_elasticsearch_mappings {
     my ($self) = @_;
 
-    # TODO cache in the object?
-    my $mappings = {
+    state $mappings = undef;
+
+    return $mappings if defined $mappings;
+
+    $mappings = {
         data => {
             properties => {
                 record => {
@@ -191,14 +200,19 @@ sub get_elasticsearch_mappings {
 
             # TODO be aware of date formats, but this requires pre-parsing
             # as ES will simply reject anything with an invalid date.
-            my $es_type =
-              $type eq 'boolean'
-              ? 'boolean'
-              : 'text';
+            my $es_type = 'text';
+            if ($type eq 'boolean') {
+                $es_type = 'boolean';
+            } elsif ($type eq 'number' || $type eq 'sum') {
+                $es_type = 'integer';
+            }
 
             if ($es_type eq 'boolean') {
                 $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_boolean( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
                 return; #Boolean cannot have facets nor sorting nor suggestions
+            } elsif ($es_type eq 'integer') {
+                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_integer( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+                return; #Nothing more needed
             } else {
                 $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_default( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
             }
@@ -246,6 +260,15 @@ Receives the same parameters from the $self->_foreach_mapping() dispatcher
 =cut
 
 sub _elasticsearch_mapping_for_boolean {
+    my ( $name, $type, $facet, $suggestible, $sort, $marc_type ) = @_;
+
+    return {
+        type            => $type,
+        null_value      => JSON::false,
+    };
+}
+
+sub _elasticsearch_mapping_for_integer {
     my ( $name, $type, $facet, $suggestible, $sort, $marc_type ) = @_;
 
     return {
@@ -348,7 +371,7 @@ sub get_fixer_rules {
                 # boolean gets special handling, basically if it doesn't exist,
                 # it's added and set to false. Otherwise we can't query it.
                 push @rules,
-                  "unless exists('$name') add_field('$name', 0) end";
+                  "unless exists('$name') add_field('$name', false) end";
             }
             if ($type eq 'sum' ) {
                 push @rules, "sum('$name')";
