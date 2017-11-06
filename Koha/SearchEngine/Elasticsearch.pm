@@ -19,6 +19,8 @@ package Koha::SearchEngine::Elasticsearch;
 
 use base qw(Class::Accessor);
 
+use utf8;
+
 use C4::Context;
 
 use Koha::Database;
@@ -143,20 +145,26 @@ sub get_elasticsearch_settings {
                 analyzer => {
                     analyser_phrase => {
                         tokenizer => 'icu_tokenizer',
-                        filter    => ['icu_folding'],
+                        filter    => ['finnish_folding', 'lowercase'],
                     },
                     analyser_standard => {
                         tokenizer => 'icu_tokenizer',
-                        filter    => ['icu_folding'],
+                        filter    => ['finnish_folding', 'lowercase'],
                     },
                 },
                 normalizer => {
                     normalizer_keyword => {
                         type => 'custom',
-                        filter => ['lowercase', 'asciifolding']
+                        filter => ['finnish_folding', 'lowercase']
+                    }
+                },
+                filter => {
+                    finnish_folding => {
+                        type => 'icu_folding',
+                        unicodeSetFilter => '[^åäöÅÄÖ]'
+                    }
+                }
             }
-        }
-            },
         }
     };
     return $settings;
