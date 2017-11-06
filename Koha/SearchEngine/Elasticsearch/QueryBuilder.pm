@@ -560,15 +560,15 @@ sub _convert_sort_fields {
 
     # Turn the sorting into something we care about.
     my %sort_field_convert = (
-        acqdate     => 'acqdate.raw',
+        acqdate     => 'acqdate',
         author      => 'author',
         call_number => 'callnum',
         popularity  => 'issues',
         relevance   => undef,       # default
-        title       => 'title.raw',
-        pubdate     => 'pubdate.raw',
+        title       => 'title',
+        pubdate     => 'pubdate',
         id          => '_uid',
-        datereceived => 'copydate.raw'
+        datereceived => 'copydate'
     );
     my %sort_order_convert =
       ( qw( dsc desc ), qw( asc asc ), qw( az asc ), qw( za desc ) );

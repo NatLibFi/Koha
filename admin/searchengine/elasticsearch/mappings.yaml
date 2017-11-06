@@ -636,17 +636,17 @@ biblios:
       - facet: ''
         marc_field: 952d
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: ''
         marc_field: 952d
         marc_type: normarc
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: ''
         marc_field: '9955'
         marc_type: unimarc
-        sort: ~
+        sort: 1
         suggestible: ''
     type: date
   an:
@@ -1179,12 +1179,12 @@ biblios:
       - facet: '1'
         marc_field: 100a
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: '1'
       - facet: '1'
         marc_field: 110a
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: '1'
       - facet: '1'
         marc_field: 111a
@@ -1361,12 +1361,12 @@ biblios:
       - facet: '1'
         marc_field: 260c
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: '1'
         marc_field: 260c
         marc_type: normarc
-        sort: ~
+        sort: 1
         suggestible: ''
     type: date
   ctype:
@@ -2002,17 +2002,17 @@ biblios:
       - facet: ''
         marc_field: 008_/7-10
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: ''
         marc_field: 008_/7-10
         marc_type: normarc
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: ''
         marc_field: 100a_/9-12
         marc_type: unimarc
-        sort: ~
+        sort: 1
         suggestible: ''
     type: ''
   publisher:
@@ -2408,12 +2408,12 @@ biblios:
       - facet: ''
         marc_field: '240'
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: ''
       - facet: ''
         marc_field: 245a
         marc_type: marc21
-        sort: ~
+        sort: 1
         suggestible: '1'
       - facet: ''
         marc_field: '246'

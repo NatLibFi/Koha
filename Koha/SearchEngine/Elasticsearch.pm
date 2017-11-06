@@ -389,9 +389,11 @@ sub get_fixer_rules {
             # fixer rules, we care about "true", or "undef" if there is
             # special handling of this field from other one. "undef" means
             # to do the default thing, which is make it sortable.
-            if ($self->sort_fields()->{$name}) {
+            my $sort_fields = $self->sort_fields();
+            if (defined $sort_fields->{$name} && $sort_fields->{$name}) {
                 if ($sort || !defined $sort) {
-                    push @rules, "marc_map('$marc_field','${name}__sort.\$append', $options)";
+                    push @rules, "marc_map('$marc_field','${name}__sort.\$append')";
+                    push @rules, "join_field('${name}__sort',' ')";
                 }
             }
         }
