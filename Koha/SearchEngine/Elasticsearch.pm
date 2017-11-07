@@ -506,7 +506,7 @@ sub _foreach_mapping {
     my ( $self, $sub ) = @_;
 
     # TODO use a caching framework here
-    my $search_fields = Koha::SearchMappingManager::get_search_mappings({index_name => 'biblios'});
+    my $search_fields = Koha::SearchMappingManager::get_search_mappings({index_name => $self->index});
 
     while ( my $search_field = $search_fields->next ) {
         $sub->(
