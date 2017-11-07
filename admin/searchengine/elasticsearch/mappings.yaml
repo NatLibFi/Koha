@@ -51,7 +51,47 @@ authorities:
         sort: ~
         suggestible: ''
       - facet: ''
+        marc_field: 110abcdefghklmnoprstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
         marc_field: 111acdefghjklnpqstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 130adfghklmnoprstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 147acdgvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 148avxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 150abgvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 151agvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 155avxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 162a
         marc_type: marc21
         sort: ~
         suggestible: ''
@@ -75,7 +115,47 @@ authorities:
         sort: ~
         suggestible: ''
       - facet: ''
+        marc_field: 110a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
         marc_field: 111a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 130a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 147a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 148a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 150a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 151a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 155a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 162a
         marc_type: marc21
         sort: ~
         suggestible: ''
@@ -183,7 +263,47 @@ authorities:
         sort: ~
         suggestible: ''
       - facet: ''
+        marc_field: 110abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
         marc_field: 111acdefghjklnpqstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 130abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 147abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 148abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 150abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 151abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 155abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 162abcdefghjklmnopqrstvxyz
         marc_type: marc21
         sort: ~
         suggestible: ''
