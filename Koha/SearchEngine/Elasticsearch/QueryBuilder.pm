@@ -386,7 +386,7 @@ sub build_authorities_query {
             # matches. Also, we lowercase our search because the ES
             # index lowercases its values, and term searches don't get the
             # search analyzer applied to them.
-            push @filter_parts, { term => { "$wh.phrase" => lc $val } };
+            push @query_parts, { term => { "$wh.phrase" => lc $val } };
         }
         elsif ( $op eq 'exact' ) {
 
@@ -406,15 +406,15 @@ sub build_authorities_query {
 
     # Merge the query and filter parts appropriately
     # 'should' behaves like 'or', if we want 'and', use 'must'
-    my $query_part  = {
-        bool => {
-            should => \@query_parts,
-            must => {
-                match => { authtype => $search->{authtypecode} }
-            }
-        }
-    };
+    my $query_part  = { bool => { should => \@query_parts } };
     my $filter_part = { bool => { should => \@filter_parts } };
+
+    # Add authtype if specified
+    if (defined $search->{authtypecode} && $search->{authtypecode}) {
+        $query_part->{bool}{must} = {
+            match => { authtype => $search->{authtypecode} }
+        };
+    }
 
     my %s;
     if ( exists $search->{sort} ) {
@@ -506,6 +506,7 @@ our $koha_to_index_name = {
     'match-heading' => 'Match-heading',
     'see-from'      => 'Match-heading-see-from',
     thesaurus       => 'Subject-heading-thesaurus',
+    any             => '',
     all              => ''
 };
 
