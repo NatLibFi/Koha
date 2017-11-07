@@ -19,6 +19,7 @@ package C4::AuthoritiesMarc;
 
 use strict;
 use warnings;
+use Modern::Perl;
 use C4::Context;
 use MARC::Record;
 use C4::Biblio;
@@ -43,7 +44,7 @@ BEGIN {
 	@ISA = qw(Exporter);
 	@EXPORT = qw(
 	    &GetTagsLabels
-    	&GetAuthMARCFromKohaField 
+    	&GetAuthMARCFromKohaField
 
     	&AddAuthority
     	&ModAuthority
@@ -54,12 +55,12 @@ BEGIN {
     	&CountUsage
     	&CountUsageChildren
     	&SearchAuthorities
-    
+
         &BuildSummary
         &BuildAuthHierarchies
         &BuildAuthHierarchy
         &GenerateHierarchy
-    
+
     	&merge
     	&FindDuplicateAuthority
 
@@ -73,7 +74,7 @@ BEGIN {
 
 C4::AuthoritiesMarc
 
-=head2 GetAuthMARCFromKohaField 
+=head2 GetAuthMARCFromKohaField
 
   ( $tag, $subfield ) = &GetAuthMARCFromKohaField ($kohafield,$authtypecode);
 
@@ -93,13 +94,13 @@ sub GetAuthMARCFromKohaField {
   my $sth = $dbh->prepare("select tagfield,tagsubfield from auth_subfield_structure where kohafield= ? and authtypecode=? ");
   $sth->execute($kohafield,$authtypecode);
   my ($tagfield,$tagsubfield) = $sth->fetchrow;
-    
+
   return  ($tagfield,$tagsubfield);
 }
 
-=head2 SearchAuthorities 
+=head2 SearchAuthorities
 
-  (\@finalresult, $nbresults)= &SearchAuthorities($tags, $and_or, 
+  (\@finalresult, $nbresults)= &SearchAuthorities($tags, $and_or,
      $excluding, $operator, $value, $offset,$length,$authtypecode,
      $sortby[, $skipmetadata])
 
@@ -273,7 +274,7 @@ sub SearchAuthorities {
     # my ($authidfield,$authidsubfield)=GetAuthMARCFromKohaField($dbh,"auth_header.authid",$authtypecode[0]);
     # my ($linkidfield,$linkidsubfield)=GetAuthMARCFromKohaField($dbh,"auth_header.linkid",$authtypecode[0]);
         while (($counter < $nbresults) && ($counter < ($offset + $length))) {
-        
+
         ##Here we have to extract MARC record and $authid from ZEBRA AUTHORITIES
         my $rec=$oAResult->record($counter);
         my $separator=C4::Context->preference('AuthoritySeparator');
@@ -340,11 +341,11 @@ sub SearchAuthorities {
     return (\@finalresult, $nbresults);
 }
 
-=head2 CountUsage 
+=head2 CountUsage
 
   $count= &CountUsage($authid)
 
-counts Usage of Authid in bibliorecords. 
+counts Usage of Authid in bibliorecords.
 
 =cut
 
@@ -365,7 +366,7 @@ sub CountUsage {
         return $result;
 }
 
-=head2 CountUsageChildren 
+=head2 CountUsageChildren
 
   $count= &CountUsageChildren($authid)
 
@@ -476,7 +477,7 @@ sub GuessAuthId {
 
 returns a ref to hashref of authorities tag and subfield structure.
 
-tagslabel usage : 
+tagslabel usage :
 
   $tagslabel->{$tag}->{$subfield}->{'attribute'}
 
@@ -511,9 +512,9 @@ sub GetTagsLabels {
   my ($total) = $sth->fetchrow;
   $authtypecode="" unless ($total >0);
   $sth= $dbh->prepare(
-"SELECT auth_tag_structure.tagfield,auth_tag_structure.liblibrarian,auth_tag_structure.libopac,auth_tag_structure.mandatory,auth_tag_structure.repeatable 
- FROM auth_tag_structure 
- WHERE authtypecode=? 
+"SELECT auth_tag_structure.tagfield,auth_tag_structure.liblibrarian,auth_tag_structure.libopac,auth_tag_structure.mandatory,auth_tag_structure.repeatable
+ FROM auth_tag_structure
+ WHERE authtypecode=?
  ORDER BY tagfield"
     );
 
@@ -528,8 +529,8 @@ sub GetTagsLabels {
   }
   $sth=      $dbh->prepare(
 "SELECT tagfield,tagsubfield,liblibrarian,libopac,tab, mandatory, repeatable,authorised_value,frameworkcode as authtypecode,value_builder,kohafield,seealso,hidden,isurl,defaultvalue
-FROM auth_subfield_structure 
-WHERE authtypecode=? 
+FROM auth_subfield_structure
+WHERE authtypecode=?
 ORDER BY tagfield,tagsubfield"
     );
     $sth->execute($authtypecode);
@@ -631,7 +632,7 @@ sub AddAuthority {
         MARC::Field->new('040','','',
 				'a' => C4::Context->preference('MARCOrgCode'),
 				'c' => C4::Context->preference('MARCOrgCode')
-				) 
+				)
 			);
     }
 	}
@@ -646,27 +647,37 @@ sub AddAuthority {
     }
     elsif ($record->field('100')){
           $record->field('100')->update('a'=>$date.$defaultfield100);
-    } else {      
+    } else {
         $record->append_fields(
         MARC::Field->new('100',' ',' '
             ,'a'=>$date.$defaultfield100)
         );
-    }      
+    }
   }
   my ($auth_type_tag, $auth_type_subfield) = get_auth_type_location($authtypecode);
   if (!$authid and $format eq "MARC21") {
     # only need to do this fix when modifying an existing authority
     C4::AuthoritiesMarc::MARC21::fix_marc21_auth_type_location($record, $auth_type_tag, $auth_type_subfield);
-  } 
+  }
   if (my $field=$record->field($auth_type_tag)){
     $field->update($auth_type_subfield=>$authtypecode);
   }
   else {
-    $record->add_fields($auth_type_tag,'','', $auth_type_subfield=>$authtypecode); 
+    $record->add_fields($auth_type_tag,'','', $auth_type_subfield=>$authtypecode);
   }
 
     # Save record into auth_header, update 001
-    if (!$authid ) {
+    if ($authid) {
+        # Make sure the record actually exists
+        state $sth = $dbh->prepare('SELECT authid FROM auth_header WHERE authid=?');
+        $sth->execute($authid);
+        my $exists = $sth->fetchrow;
+        $sth->finish;
+        if (!defined $exists) {
+            $dbh->do( "INSERT INTO auth_header (authid,datecreated,marcxml) values (?,NOW(),'')", undef, $authid );
+            logaction( "AUTHORITIES", "ADD", $authid, "authority" ) if C4::Context->preference("AuthoritiesLog");
+        }
+    } else {
         # Save a blank record, get authid
         $dbh->do( "INSERT INTO auth_header (datecreated,marcxml) values (NOW(),?)", undef, '' );
         $authid = $dbh->last_insert_id( undef, undef, 'auth_header', 'authid' );
@@ -721,7 +732,7 @@ sub ModAuthority {
     return $authid;
 }
 
-=head2 GetAuthorityXML 
+=head2 GetAuthorityXML
 
   $marcxml= &GetAuthorityXML( $authid)
 
@@ -739,19 +750,19 @@ sub GetAuthorityXML {
       my ($marcxml)=$sth->fetchrow;
       return $marcxml;
   }
-  else { 
+  else {
       # for MARC21, call GetAuthority instead of
       # getting the XML directly since we may
       # need to fix up the location of the authority
       # code -- note that this is reasonably safe
-      # because GetAuthorityXML is used only by the 
+      # because GetAuthorityXML is used only by the
       # indexing processes like zebraqueue_start.pl
       my $record = GetAuthority($authid);
       return $record->as_xml_record('MARC21');
   }
 }
 
-=head2 GetAuthority 
+=head2 GetAuthority
 
   $record= &GetAuthority( $authid)
 
@@ -1461,7 +1472,7 @@ sub merge {
     my $tags_new;
     if( $authtypeto && ( !$authtypefrom || $authtypeto->authtypecode ne $authtypefrom->authtypecode )) {
         $tags_new = $dbh->selectcol_arrayref( $sql, undef, ( $authtypeto->authtypecode ));
-    }  
+    }
 
     my $overwrite = C4::Context->preference( 'AuthorityMergeMode' ) eq 'strict';
     my $skip_subfields = $overwrite
@@ -1565,7 +1576,7 @@ for indexing purposes.  The C<$auth_type> parameter is
 optional; if it is not supplied, assume ''.
 
 This routine searches the MARC authority framework
-for the tag and subfield whose kohafield is 
+for the tag and subfield whose kohafield is
 C<auth_header.authtypecode>; if no such field is
 defined in the framework, default to the hardcoded value
 specific to the MARC format.
