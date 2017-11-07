@@ -165,6 +165,7 @@ sub do_reindex {
         # We know it's safe to not recreate the indexer because update_index
         # hasn't been called yet.
         $indexer->drop_index();
+        $indexer->create_index();
     }
 
     my $count        = 0;
