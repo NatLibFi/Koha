@@ -221,7 +221,6 @@ sub build_query_compat {
     }
 
     my $query;
-    my $limits = ();
     if ( $scan ) {
         $query = $self->build_scan_query( $operands, $indexes );
     } else {
@@ -407,7 +406,14 @@ sub build_authorities_query {
 
     # Merge the query and filter parts appropriately
     # 'should' behaves like 'or', if we want 'and', use 'must'
-    my $query_part  = { bool => { should => \@query_parts } };
+    my $query_part  = {
+        bool => {
+            should => \@query_parts,
+            must => {
+                match => { authtype => $search->{authtypecode} }
+            }
+        }
+    };
     my $filter_part = { bool => { should => \@filter_parts } };
 
     my %s;
@@ -871,10 +877,14 @@ sub _sort_field {
     my $textField = $mappings->{data}{properties}{$f}{type} eq 'text';
     if ($self->sort_fields()->{$f}) {
         $f .= '__sort';
+        # We need to add '.phrase' to text fields, otherwise it'll sort
+        # based on the tokenised form.
+        $f .= '.phrase' if $textField;
+    } else {
+        # We need to add '.raw' to text fields, otherwise it'll sort
+        # based on the tokenised form.
+        $f .= '.raw' if $textField;
     }
-    # We need to add '.phrase' to text fields, otherwise it'll sort
-    # based on the tokenised form.
-    $f .= '.phrase' if $textField;
     return $f;
 }
 
