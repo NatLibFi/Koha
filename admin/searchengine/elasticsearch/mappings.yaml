@@ -1587,6 +1587,36 @@ biblios:
         sort: ~
         suggestible: ''
       - facet: ''
+        marc_field: 024a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 025a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 026a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 026b
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 027a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 028a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
         marc_field: '010'
         marc_type: normarc
         sort: ~
@@ -1616,7 +1646,7 @@ biblios:
         marc_type: unimarc
         sort: ~
         suggestible: ''
-    type: ''
+    type: 'stdno'
   isbn:
     label: isbn
     mappings:
@@ -1635,7 +1665,7 @@ biblios:
         marc_type: unimarc
         sort: ~
         suggestible: ''
-    type: ''
+    type: isbn
   issn:
     label: issn
     mappings:
@@ -1654,7 +1684,7 @@ biblios:
         marc_type: unimarc
         sort: ~
         suggestible: ''
-    type: ''
+    type: stdno
   issues:
     label: issues
     mappings:
@@ -1965,7 +1995,7 @@ biblios:
     type: string
   pl:
     label: pl
-    mappings:
+    mappisngs:
       - facet: ''
         marc_field: 008_/15-17
         marc_type: marc21

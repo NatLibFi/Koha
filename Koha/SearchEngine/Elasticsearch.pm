@@ -151,6 +151,10 @@ sub get_elasticsearch_settings {
                         tokenizer => 'icu_tokenizer',
                         filter    => ['finnish_folding', 'lowercase'],
                     },
+                    analyser_stdno => {
+                        tokenizer => 'whitespace',
+                        filter    => ['finnish_folding', 'lowercase'],
+                    }
                 },
                 normalizer => {
                     normalizer_keyword => {
@@ -216,7 +220,10 @@ sub get_elasticsearch_mappings {
                 $es_type = 'integer';
             }
 
-            if ($es_type eq 'boolean') {
+            # isbn and stdno are mapped to string, so check $type
+            if ($type eq 'isbn' || $type eq 'stdno') {
+                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_stdno( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+            } elsif ($es_type eq 'boolean') {
                 $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_boolean( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
                 return; #Boolean cannot have facets nor sorting nor suggestions
             } elsif ($es_type eq 'integer') {
@@ -283,6 +290,26 @@ sub _elasticsearch_mapping_for_integer {
     return {
         type            => $type,
         null_value      => 0,
+    };
+}
+
+sub _elasticsearch_mapping_for_stdno {
+    my ( $name, $type, $facet, $suggestible, $sort, $marc_type ) = @_;
+
+    return {
+        search_analyzer => "analyser_stdno",
+        analyzer        => "analyser_stdno",
+        type            => $type,
+        fields          => {
+            phrase => {
+                search_analyzer => "analyser_stdno",
+                analyzer        => "analyser_stdno",
+                type            => "text",
+            },
+            raw => {
+                type    => "keyword",
+            }
+        },
     };
 }
 
@@ -384,6 +411,24 @@ sub get_fixer_rules {
             }
             if ($type eq 'sum' ) {
                 push @rules, "sum('$name')";
+            } elsif ($type eq 'isbn') {
+                push @rules, qq{
+do list(path:isbn, var:grp)
+  do list(path:grp, var:c)
+    copy_field(c,'isbn_tmp.\$append')
+    isbn_versions(c)
+    copy_field(c,'isbn_tmp.\$append')
+  end
+end
+move_field(isbn_tmp,isbn)
+flatten(isbn)
+};
+            } elsif ($type eq 'stdno') {
+                push @rules, qq{
+copy_field('$name','$name\_tmp_dashless')
+replace_all('$name\_tmp_dashless.*','-','')
+move_field('$name\_tmp_dashless','$name.\$append')
+};
             }
             # Sort is a bit special as it can be true, false, undef. For
             # fixer rules, we care about "true", or "undef" if there is
