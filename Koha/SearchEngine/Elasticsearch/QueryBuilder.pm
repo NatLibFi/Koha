@@ -524,12 +524,14 @@ sub build_authorities_query_compat {
             unless exists $koha_to_index_name->{$m};
     }
     for ( my $i = 0 ; $i < @$value ; $i++ ) {
-        push @searches,
-          {
-            where    => $koha_to_index_name->{$marclist->[$i]},
-            operator => $operator->[$i],
-            value    => $value->[$i],
-          };
+        if (defined $value->[$i]) {
+            push @searches,
+            {
+                where    => $koha_to_index_name->{$marclist->[$i]},
+                operator => $operator->[$i],
+                value    => $value->[$i],
+            };
+        }
     }
 
     my %sort;
