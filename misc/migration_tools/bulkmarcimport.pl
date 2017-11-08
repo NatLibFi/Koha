@@ -37,7 +37,7 @@ use Koha::SearchEngine::Search;
 use open qw( :std :encoding(UTF-8) );
 binmode( STDOUT, ":encoding(UTF-8)" );
 my ( $input_marc_file, $number, $offset) = ('',0,0);
-my ($version, $delete, $test_parameter, $skip_marc8_conversion, $char_encoding, $verbose, $commit, $fk_off,$format,$biblios,$authorities,$keepids,$match, $isbn_check, $logfile);
+my ($version, $delete, $test_parameter, $skip_marc8_conversion, $char_encoding, $verbose, $commit, $fk_off,$format,$biblios,$authorities,$keepids,$match, $isbn_check, $logfile, $skip_indexing);
 my ( $insert, $filters, $update, $all, $yamlfile, $authtypes, $append );
 my $cleanisbn = 1;
 my ($sourcetag,$sourcesubfield,$idmapfl, $dedup_barcode);
@@ -84,6 +84,7 @@ GetOptions(
     'custom:s'    => \$localcust,
     'oplibmatcher=s' => \$oplibMatcher,
     'oplibmatchlog=s' => \$oplibmatchlog,
+    'noindex' => \$skip_indexing
 );
 $biblios ||= !$authorities;
 $insert  ||= !$update;
@@ -274,7 +275,7 @@ RECORD: while (  ) {
          ($record, $guessed_charset, $charset_errors) = MarcToUTF8Record($record, $marcFlavour.(($authorities and $marcFlavour ne "MARC21")?'AUTH':''));
         if ($guessed_charset eq 'failed') {
             warn "ERROR: failed to perform character conversion for record $i\n";
-            next RECORD;            
+            next RECORD;
         }
     }
     SetUTF8Flag($record);
@@ -405,10 +406,10 @@ RECORD: while (  ) {
 				else{
 					printlog({id=>$originalid||$id||$authid, newid => $authid, op=>"edit",status=>"ok"}) if ($logfile);
 				}
-            }  
+            }
             elsif (defined $authid) {
             ## An authid is defined but no authority in database : add
-                eval { ( $authid ) = AddAuthority($record,$authid, $authtypecode) };
+                eval { ( $authid ) = AddAuthority($record,$authid, $authtypecode, $skip_indexing) };
                 if ($@){
                     warn "Problem with authority $authid Cannot Add ".$@;
 					printlog({id=>$originalid||$id||$authid, op=>"insert",status=>"ERROR"}) if ($logfile);
@@ -499,7 +500,7 @@ RECORD: while (  ) {
             if ( $error_adding ) {
                 warn "ERROR: Adding items to bib $biblionumber failed: $error_adding";
 				printlog({id=>$id||$originalid||$biblionumber, op=>"insertitem",status=>"ERROR"}) if ($logfile);
-                # if we failed because of an exception, assume that 
+                # if we failed because of an exception, assume that
                 # the MARC columns in biblioitems were not set.
                 next RECORD;
             }
@@ -591,7 +592,7 @@ sub GetRecordId{
 	my $id;
 	if ($tag lt "010"){
 		return $marcrecord->field($tag)->data() if $marcrecord->field($tag);
-	} 
+	}
 	elsif ($subfield){
 		if ($marcrecord->field($tag)){
 			return $marcrecord->subfield($tag,$subfield);

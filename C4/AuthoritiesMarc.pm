@@ -572,7 +572,7 @@ ORDER BY tagfield,tagsubfield"
 
 =head2 AddAuthority
 
-  $authid= &AddAuthority($record, $authid,$authtypecode)
+  $authid= &AddAuthority($record, $authid, $authtypecode, $skip_indexing)
 
 Either Create Or Modify existing authority.
 returns authid of the newly created authority
@@ -581,7 +581,7 @@ returns authid of the newly created authority
 
 sub AddAuthority {
 # pass the MARC::Record to this function, and it will create the records in the authority table
-  my ($record,$authid,$authtypecode) = @_;
+  my ($record,$authid,$authtypecode,$skip_indexing) = @_;
   my $dbh=C4::Context->dbh;
 	my $leader='     nz  a22     o  4500';#Leader for incomplete MARC21 record
 
@@ -688,7 +688,9 @@ sub AddAuthority {
     $record->insert_fields_ordered( MARC::Field->new( '001', $authid ) );
     # Update
     $dbh->do( "UPDATE auth_header SET authtypecode=?, marc=?, marcxml=? WHERE authid=?", undef, $authtypecode, $record->as_usmarc, $record->as_xml_record($format), $authid ) or die $DBI::errstr;
-    ModZebra( $authid, 'specialUpdate', 'authorityserver', $record );
+    if (!defined $skip_indexing || !$skip_indexing) {
+        ModZebra( $authid, 'specialUpdate', 'authorityserver', $record );
+    }
 
     return ( $authid );
 }
