@@ -875,8 +875,9 @@ sub _sort_field {
     my ($self, $f) = @_;
 
     my $mappings = $self->get_elasticsearch_mappings();
-    my $textField = $mappings->{data}{properties}{$f}{type} eq 'text';
-    if ($self->sort_fields()->{$f}) {
+    my $textField = defined $mappings->{data}{properties}{$f}{type} && $mappings->{data}{properties}{$f}{type} eq 'text';
+    my $sort_fields = $self->sort_fields();
+    if (defined $sort_fields->{$f} && $sort_fields->{$f}) {
         $f .= '__sort';
         # We need to add '.phrase' to text fields, otherwise it'll sort
         # based on the tokenised form.
