@@ -221,6 +221,7 @@ sub build_query_compat {
     }
 
     my $query;
+    my $query_str;
     if ( $scan ) {
         $query = $self->build_scan_query( $operands, $indexes );
     } else {
@@ -246,7 +247,7 @@ sub build_query_compat {
         # would be to pass them separately into build_query and let it build
         # them into a structured ES query itself. Maybe later, though that'd be
         # more robust.
-        my $query_str = join( ' AND ',
+        $query_str = join( ' AND ',
             join( ' ', $self->_create_query_string(@search_params) ) || (),
             $self->_join_queries( $self->_convert_index_strings(@$limits) ) || () );
 
@@ -268,7 +269,7 @@ sub build_query_compat {
     $query_cgi .= '&scan=1' if ( $scan );
     my $simple_query;
     $simple_query = $operands->[0] if @$operands == 1;
-    my $query_desc   = $simple_query;
+    my $query_desc   = $simple_query || $query_str;
     my $limit        = $self->_join_queries( $self->_convert_index_strings(@$limits));
     my $limit_cgi = ( $orig_limits and @$orig_limits )
       ? '&limit=' . join( '&limit=', map { uri_escape_utf8($_) } @$orig_limits )
