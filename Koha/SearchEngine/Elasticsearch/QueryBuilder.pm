@@ -405,17 +405,15 @@ sub build_authorities_query {
         }
     }
 
-    # Merge the query and filter parts appropriately
-    # 'should' behaves like 'or', if we want 'and', use 'must'
-    my $query_part  = { bool => { should => \@query_parts } };
-    my $filter_part = { bool => { should => \@filter_parts } };
-
     # Add authtype if specified
     if (defined $search->{authtypecode} && $search->{authtypecode}) {
-        $query_part->{bool}{must} = {
-            match => { authtype => $search->{authtypecode} }
-        };
+        push @query_parts, { match => { authtype => $search->{authtypecode} } };
     }
+
+    # Merge the query and filter parts appropriately
+    # 'should' behaves like 'or', if we want 'and', use 'must'
+    my $query_part  = { bool => { must => \@query_parts } };
+    my $filter_part = { bool => { must => \@filter_parts } };
 
     my %s;
     if ( exists $search->{sort} ) {
