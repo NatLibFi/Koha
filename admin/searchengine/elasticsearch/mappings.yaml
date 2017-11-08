@@ -769,6 +769,15 @@ biblios:
         sort: 1
         suggestible: ''
     type: date
+  alt-script:
+    label: alt-script
+    mappings:
+      - facet: ''
+        marc_field: 880abcdefghijklmnopqrstuvwxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+    type: ''
   an:
     label: an
     mappings:
