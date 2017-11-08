@@ -965,9 +965,16 @@
         </xsl:choose>
         </span>
                 <xsl:variable name="f773">
-                    <xsl:call-template name="chopPunctuation"><xsl:with-param name="chopString"><xsl:call-template name="subfieldSelect">
-                        <xsl:with-param name="codes">a_t</xsl:with-param>
-                    </xsl:call-template></xsl:with-param></xsl:call-template>
+                    <xsl:choose>
+                      <xsl:when test="marc:subfield[@code='t']">
+                        <xsl:call-template name="chopPunctuation"><xsl:with-param name="chopString"><xsl:call-template name="subfieldSelect">
+                            <xsl:with-param name="codes">a_t</xsl:with-param>
+                        </xsl:call-template></xsl:with-param></xsl:call-template>
+                      </xsl:when>
+                      <xsl:otherwise>
+                      [Title not specified]
+                      </xsl:otherwise>
+                    </xsl:choose>
                 </xsl:variable>
             <xsl:choose>
                 <xsl:when test="$UseControlNumber = '1' and marc:subfield[@code='w']">
