@@ -144,7 +144,7 @@ sub get_elasticsearch_settings {
             analysis => {
                 analyzer => {
                     analyser_phrase => {
-                        tokenizer => 'icu_tokenizer',
+                        tokenizer => 'keyword',
                         filter    => ['finnish_folding', 'lowercase'],
                     },
                     analyser_standard => {
