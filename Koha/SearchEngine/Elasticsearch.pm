@@ -187,82 +187,82 @@ sub get_elasticsearch_mappings {
     my ($self) = @_;
 
     state $mappings = undef;
+    state %sort_fields;
 
-    return $mappings if defined $mappings;
-
-    $mappings = {
-        data => {
-            _all => {type => "string", analyzer => "analyser_standard"},
-            properties => {
-                record => {
-                    store          => "true",
-                    include_in_all => JSON::false,
-                    type           => "text",
-                },
-            }
-        }
-    };
-    my %sort_fields;
-    my $marcflavour = lc C4::Context->preference('marcflavour');
-    $self->_foreach_mapping(
-        sub {
-            my ( $name, $type, $facet, $suggestible, $sort, $marc_type ) = @_;
-            return if $marc_type ne $marcflavour;
-            # TODO if this gets any sort of complexity to it, it should
-            # be broken out into its own function.
-
-            # TODO be aware of date formats, but this requires pre-parsing
-            # as ES will simply reject anything with an invalid date.
-            my $es_type = 'text';
-            if ($type eq 'boolean') {
-                $es_type = 'boolean';
-            } elsif ($type eq 'number' || $type eq 'sum') {
-                $es_type = 'integer';
-            }
-
-            # isbn and stdno are mapped to string, so check $type
-            if ($type eq 'isbn' || $type eq 'stdno') {
-                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_stdno( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
-            } elsif ($es_type eq 'boolean') {
-                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_boolean( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
-                return; #Boolean cannot have facets nor sorting nor suggestions
-            } elsif ($es_type eq 'integer') {
-                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_integer( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
-                return; #Nothing more needed
-            } else {
-                $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_default( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
-            }
-
-            if ($facet) {
-                $mappings->{data}{properties}{ $name . '__facet' } = {
-                    type  => "keyword",
-                };
-            }
-            if ($suggestible) {
-                $mappings->{data}{properties}{ $name . '__suggestion' } = {
-                    type => 'completion',
-                    analyzer => 'simple',
-                    search_analyzer => 'simple',
-                };
-            }
-            # Sort may be true, false, or undef. Here we care if it's
-            # anything other than undef.
-            if (defined $sort) {
-                $mappings->{data}{properties}{ $name . '__sort' } = {
-                    search_analyzer => "analyser_phrase",
-                    analyzer  => "analyser_phrase",
-                    type            => "text",
-                    include_in_all  => JSON::false,
-                    fields          => {
-                        phrase => {
-                            type            => "keyword",
-                        },
+    if (!defined $mappings) {
+        $mappings = {
+            data => {
+                _all => {type => "string", analyzer => "analyser_standard"},
+                properties => {
+                    record => {
+                        store          => "true",
+                        include_in_all => JSON::false,
+                        type           => "text",
                     },
-                };
-                $sort_fields{$name} = 1;
+                }
             }
-        }
-    );
+        };
+        my $marcflavour = lc C4::Context->preference('marcflavour');
+        $self->_foreach_mapping(
+            sub {
+                my ( $name, $type, $facet, $suggestible, $sort, $marc_type ) = @_;
+                return if $marc_type ne $marcflavour;
+                # TODO if this gets any sort of complexity to it, it should
+                # be broken out into its own function.
+
+                # TODO be aware of date formats, but this requires pre-parsing
+                # as ES will simply reject anything with an invalid date.
+                my $es_type = 'text';
+                if ($type eq 'boolean') {
+                    $es_type = 'boolean';
+                } elsif ($type eq 'number' || $type eq 'sum') {
+                    $es_type = 'integer';
+                }
+
+                # isbn and stdno are mapped to string, so check $type
+                if ($type eq 'isbn' || $type eq 'stdno') {
+                    $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_stdno( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+                } elsif ($es_type eq 'boolean') {
+                    $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_boolean( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+                    return; #Boolean cannot have facets nor sorting nor suggestions
+                } elsif ($es_type eq 'integer') {
+                    $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_integer( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+                    return; #Nothing more needed
+                } else {
+                    $mappings->{data}{properties}{$name} = _elasticsearch_mapping_for_default( $name, $es_type, $facet, $suggestible, $sort, $marc_type );
+                }
+
+                if ($facet) {
+                    $mappings->{data}{properties}{ $name . '__facet' } = {
+                        type  => "keyword",
+                    };
+                }
+                if ($suggestible) {
+                    $mappings->{data}{properties}{ $name . '__suggestion' } = {
+                        type => 'completion',
+                        analyzer => 'simple',
+                        search_analyzer => 'simple',
+                    };
+                }
+                # Sort may be true, false, or undef. Here we care if it's
+                # anything other than undef.
+                if (defined $sort) {
+                    $mappings->{data}{properties}{ $name . '__sort' } = {
+                        search_analyzer => "analyser_phrase",
+                        analyzer  => "analyser_phrase",
+                        type            => "text",
+                        include_in_all  => JSON::false,
+                        fields          => {
+                            phrase => {
+                                type            => "keyword",
+                            },
+                        },
+                    };
+                    $sort_fields{$name} = 1;
+                }
+            }
+        );
+    }
     $self->sort_fields(\%sort_fields);
     return $mappings;
 }
@@ -392,15 +392,14 @@ sub get_fixer_rules {
             # selects a range
             # The split makes everything into nested arrays, but that's not
             # really a big deal, ES doesn't mind.
-            $options = '-split => 1' unless $marc_field =~ m|_/| || $type eq 'sum';
+            $options = "join:' '" unless $marc_field =~ m|_/| || $type eq 'sum';
             push @rules, "marc_map('$marc_field','${name}.\$append', $options)";
             if ($facet) {
                 push @rules, "marc_map('$marc_field','${name}__facet.\$append', $options)";
             }
             if ($suggestible) {
                 push @rules,
-                    #"marc_map('$marc_field','${name}__suggestion.input.\$append', $options)"; #must not have nested data structures in .input
-                    "marc_map('$marc_field','${name}__suggestion.input.\$append')";
+                    "marc_map('$marc_field','${name}__suggestion.input.\$append', $options)";
             }
             if ( $type eq 'boolean' ) {
 
@@ -413,21 +412,12 @@ sub get_fixer_rules {
                 push @rules, "sum('$name')";
             } elsif ($type eq 'isbn') {
                 push @rules, qq{
-do list(path:isbn, var:grp)
-  do list(path:grp, var:c)
-    copy_field(c,'isbn_tmp.\$append')
+do list(path:isbn, var:c)
+    copy_field(c, isbn_tmp.\$append)
     isbn_versions(c)
-    copy_field(c,'isbn_tmp.\$append')
-  end
+    copy_field(c, isbn_tmp.\$append)
 end
-move_field(isbn_tmp,isbn)
-flatten(isbn)
-};
-            } elsif ($type eq 'stdno') {
-                push @rules, qq{
-copy_field('$name','$name\_tmp_dashless')
-replace_all('$name\_tmp_dashless.*','-','')
-move_field('$name\_tmp_dashless','$name.\$append')
+move_field(isbn_tmp, isbn)
 };
             }
             # Sort is a bit special as it can be true, false, undef. For
