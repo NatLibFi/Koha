@@ -214,7 +214,7 @@ sub build_query_compat {
     while ( my ( $oand, $otor, $index ) = $ea->() ) {
         next if ( !defined($oand) || $oand eq '' );
         push @search_params, {
-            operand => $self->_clean_search_term($oand),      # the search terms
+            operand => $self->_clean_search_term($oand, $index), # the search terms
             operator => defined($otor) ? uc $otor : undef,    # AND and so on
             $index ? %$index : (),
         };
@@ -237,7 +237,7 @@ sub build_query_compat {
         while ( my ( $oand, $otor, $index ) = $ea->() ) {
             next if ( !defined($oand) || $oand eq '' );
             push @search_params, {
-                operand => $self->_clean_search_term($oand),      # the search terms
+                operand => $self->_clean_search_term($oand, $index), # the search terms
                 operator => defined($otor) ? uc $otor : undef,    # AND and so on
                 $index ? %$index : (),
             };
@@ -622,7 +622,8 @@ our %index_field_convert = (
     'hi'      => 'Host-Item-Number',
     'hrcn'    => 'host-control-number',
     'cni'     => 'control-number-identifier',
-    'Control-number' => 'control-number'
+    'Control-number' => 'control-number',
+    'an'      => 'an'
 );
 
 sub _convert_index_fields {
@@ -810,9 +811,16 @@ to ensure those parts are correct.
 =cut
 
 sub _clean_search_term {
-    my ( $self, $term ) = @_;
+    my ( $self, $term, $index ) = @_;
 
     my $auto_truncation = C4::Context->preference("QueryAutoTruncate") || 0;
+
+    if ($auto_truncation && defined $index->{field}) {
+        my $f = $index->{field};
+        my $mappings = $self->get_elasticsearch_mappings();
+        my $textField = defined $mappings->{data}{properties}{$f}{type} && $mappings->{data}{properties}{$f}{type} eq 'text';
+        $auto_truncation = 0 if (!$textField);
+    }
 
     # Some hardcoded searches (like with authorities) produce things like
     # 'an=123', when it ought to be 'an:123' for our purposes.
