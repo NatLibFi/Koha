@@ -6,7 +6,8 @@ store:
       bags:
         data:
           cql_mapping:
-            default_index: cql.serverChoice
+            # Make sure to keep all index names lowercase
+            default_index: cql.serverchoice
             indexes:
               rec.id:
                 op:
@@ -109,19 +110,19 @@ store:
                   '=': true
                   'exact': true
                 field: 'material-type'
-              dc.resourceIdentifier:
+              dc.resourceidentifier:
                 op:
                   '=': true
                   'exact': true
                 field: 'Local-number'
-              bath.keyTitle:
+              bath.keytitle:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: 'title'
-              bath.possessingInstitution:
+              bath.possessinginstitution:
                 op:
                   'any': true
                   'all': true
@@ -135,21 +136,21 @@ store:
                   '=': true
                   'exact': true
                 field: 'author'
-              bath.personalName:
+              bath.personalname:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: 'Personal-name'
-              bath.corporateName:
+              bath.corporatename:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: 'author'
-              bath.conferenceName:
+              bath.conferencename:
                 op:
                   'any': true
                   'all': true
@@ -170,24 +171,38 @@ store:
                   '=': true
                   'exact': true
                 field: 'issn'
-              bath.geographicName:
+              bath.geographicname:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: 'su-geo'
-              bath.topicalSubject:
+              bath.topicalsubject:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: 'subject'
-              cql.serverChoice:
+              cql.serverchoice:
                 op:
                   'any': true
                   'all': true
                   '=': true
                   'exact': true
                 field: '_all'
+              koha.titlemain:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'title-main'
+              koha.biblevel:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'bib-level'
