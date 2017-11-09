@@ -815,10 +815,11 @@ sub _clean_search_term {
 
     my $auto_truncation = C4::Context->preference("QueryAutoTruncate") || 0;
 
-    if ($auto_truncation && defined $index->{field}) {
-        my $f = $index->{field};
+    my $field = defined $index->{field} ? $index->{field} : '';
+    ($field) = $term =~ /^([a-zA-Z0-9\-\_]+)\:/;
+    if ($auto_truncation && $field) {
         my $mappings = $self->get_elasticsearch_mappings();
-        my $textField = defined $mappings->{data}{properties}{$f}{type} && $mappings->{data}{properties}{$f}{type} eq 'text';
+        my $textField = defined $mappings->{data}{properties}{$field}{type} && $mappings->{data}{properties}{$field}{type} eq 'text';
         $auto_truncation = 0 if (!$textField);
     }
 
