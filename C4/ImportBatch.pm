@@ -65,7 +65,7 @@ BEGIN {
     GetImportBiblios
     GetImportRecordsRange
 	GetItemNumbersFromImportBatch
-    
+
     GetImportBatchStatus
     SetImportBatchStatus
     GetImportBatchOverlayAction
@@ -129,7 +129,7 @@ sub GetZ3950BatchId {
             } );
         return $batch_id;
     }
-    
+
 }
 
 =head2 GetWebserviceBatchId
@@ -258,7 +258,7 @@ sub AddImportBatch {
     return $dbh->{'mysql_insertid'};
 }
 
-=head2 GetImportBatch 
+=head2 GetImportBatch
 
   my $row = GetImportBatch($batch_id);
 
@@ -279,9 +279,9 @@ sub GetImportBatch {
 
 }
 
-=head2 AddBiblioToBatch 
+=head2 AddBiblioToBatch
 
-  my $import_record_id = AddBiblioToBatch($batch_id, $record_sequence, 
+  my $import_record_id = AddBiblioToBatch($batch_id, $record_sequence,
                 $marc_record, $encoding, $z3950random, $update_counts);
 
 =cut
@@ -378,7 +378,7 @@ sub BatchStageMarcRecords {
     my $parse_items = shift;
     my $leave_as_staging = shift;
 
-    # optional callback to monitor status 
+    # optional callback to monitor status
     # of job
     my $progress_interval = 0;
     my $progress_callback = undef;
@@ -387,8 +387,8 @@ sub BatchStageMarcRecords {
         $progress_callback = shift;
         $progress_interval = 0 unless $progress_interval =~ /^\d+$/ and $progress_interval > 0;
         $progress_interval = 0 unless 'CODE' eq ref $progress_callback;
-    } 
-    
+    }
+
     my $batch_id = AddImportBatch( {
             overlay_action => 'create_new',
             import_status => 'staging',
@@ -456,7 +456,7 @@ sub BatchStageMarcRecords {
 
 =head2 AddItemsToImportBiblio
 
-  my @import_items_ids = AddItemsToImportBiblio($batch_id, 
+  my @import_items_ids = AddItemsToImportBiblio($batch_id,
                 $import_record_id, $marc_record, $update_counts);
 
 =cut
@@ -468,8 +468,8 @@ sub AddItemsToImportBiblio {
     my $update_counts = @_ ? shift : 0;
 
     my @import_items_ids = ();
-   
-    my $dbh = C4::Context->dbh; 
+
+    my $dbh = C4::Context->dbh;
     my ($item_tag,$item_subfield) = &GetMarcFromKohaField("items.itemnumber",'');
     foreach my $item_field ($marc_record->field($item_tag)) {
         my $item_marc = MARC::Record->new();
@@ -498,17 +498,17 @@ sub AddItemsToImportBiblio {
   my $num_with_matches = BatchFindDuplicates($batch_id, $matcher,
              $max_matches, $progress_interval, $progress_callback);
 
-Goes through the records loaded in the batch and attempts to 
-find duplicates for each one.  Sets the matching status 
+Goes through the records loaded in the batch and attempts to
+find duplicates for each one.  Sets the matching status
 of each record to "no_match" or "auto_match" as appropriate.
 
 The $max_matches parameter is optional; if it is not supplied,
 it defaults to 10.
 
-The $progress_interval and $progress_callback parameters are 
+The $progress_interval and $progress_callback parameters are
 optional; if both are supplied, the sub referred to by
 $progress_callback will be invoked every $progress_interval
-records using the number of records processed as the 
+records using the number of records processed as the
 singular argument.
 
 =cut
@@ -518,7 +518,7 @@ sub BatchFindDuplicates {
     my $matcher = shift;
     my $max_matches = @_ ? shift : 10;
 
-    # optional callback to monitor status 
+    # optional callback to monitor status
     # of job
     my $progress_interval = 0;
     my $progress_callback = undef;
@@ -572,7 +572,7 @@ sub BatchCommitRecords {
     my $batch_id = shift;
     my $framework = shift;
 
-    # optional callback to monitor status 
+    # optional callback to monitor status
     # of job
     my $progress_interval = 0;
     my $progress_callback = undef;
@@ -636,7 +636,7 @@ sub BatchCommitRecords {
         }
 
         my ($record_result, $item_result, $record_match) =
-            _get_commit_action($overlay_action, $nomatch_action, $item_action, 
+            _get_commit_action($overlay_action, $nomatch_action, $item_action,
                                $rowref->{'overlay_status'}, $rowref->{'import_record_id'}, $record_type);
 
         my $recordid;
@@ -726,7 +726,7 @@ sub BatchCommitRecords {
 
 =head2 BatchCommitItems
 
-  ($num_items_added, $num_items_errored) = 
+  ($num_items_added, $num_items_errored) =
          BatchCommitItems($import_record_id, $biblionumber);
 
 =cut
@@ -805,7 +805,7 @@ sub BatchCommitItems {
 
 =head2 BatchRevertRecords
 
-  my ($num_deleted, $num_errors, $num_reverted, $num_items_deleted, 
+  my ($num_deleted, $num_errors, $num_reverted, $num_items_deleted,
       $num_ignored) = BatchRevertRecords($batch_id);
 
 =cut
@@ -1026,7 +1026,7 @@ sub DeleteImportBatches {
   my $results = GetAllImportBatches();
 
 Returns a references to an array of hash references corresponding
-to all import_batches rows (of batch_type 'batch'), sorted in 
+to all import_batches rows (of batch_type 'batch'), sorted in
 ascending order by import_batch_id.
 
 =cut
@@ -1512,7 +1512,7 @@ sub GetImportRecordMatches {
     $sth->finish();
 
     return $results;
-    
+
 }
 
 =head2 SetImportRecordMatches
@@ -1634,9 +1634,9 @@ sub _create_import_record {
     my ($batch_id, $record_sequence, $marc_record, $record_type, $encoding, $z3950random, $marc_type) = @_;
 
     my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare("INSERT INTO import_records (import_batch_id, record_sequence, marc, marcxml, 
-                                                         record_type, encoding, z3950random)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?)");
+    my $sth = $dbh->prepare("INSERT INTO import_records (import_batch_id, record_sequence, marc, marcxml,
+                                                         record_type, encoding, z3950random, marcxml_old)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, '')");
     $sth->execute($batch_id, $record_sequence, $marc_record->as_usmarc(), $marc_record->as_xml($marc_type),
                   $record_type, $encoding, $z3950random);
     my $import_record_id = $dbh->{'mysql_insertid'};
@@ -1678,7 +1678,7 @@ sub _add_biblio_fields {
     my $sth = $dbh->prepare("INSERT INTO import_biblios (import_record_id, title, author, isbn, issn) VALUES (?, ?, ?, ?, ?)");
     $sth->execute($import_record_id, $title, $author, $isbn, $issn);
     $sth->finish();
-                
+
 }
 
 sub _update_biblio_fields {
@@ -1729,7 +1729,7 @@ sub _update_batch_record_counts {
 
 sub _get_commit_action {
     my ($overlay_action, $nomatch_action, $item_action, $overlay_status, $import_record_id, $record_type) = @_;
-    
+
     if ($record_type eq 'biblio') {
         my ($bib_result, $bib_match, $item_result);
 
