@@ -69,6 +69,9 @@ if( $op eq 'delete_confirmed' && $id ) {
         recordtype checked servername servertype sru_options sru_fields
         add_xslt/;
     my $formdata = _form_data_hashref( $input, \@fields );
+    $formdata->{checked} = $formdata->{checked} ? 1 : 0;
+    $formdata->{rank} = 1 unless $formdata->{rank};
+    $formdata->{timeout} = 0 unless $formdata->{timeout};
     if( $id ) {
         my $server = $schema->resultset('Z3950server')->find($id);
         if ( $server ) {
