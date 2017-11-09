@@ -22,11 +22,14 @@ use Dancer::Config;
 use Catmandu;
 use Dancer::Plugin::Catmandu::SRU;
 use Koha::Config;
+use Koha::Logger;
+
+Koha::Logger->get;
 
 my $kohaConfig = Koha::Config->read_from_file( Koha::Config->guess_koha_conf() );
 die('Elasticsearch index_name missing from Koha config') unless $kohaConfig->{config}{elasticsearch}{index_name};
 
-Catmandu->load( setting('confdir') );
+Catmandu->load( Dancer::Config::setting('confdir') );
 my $catmanduConfig = Catmandu->config;
 $catmanduConfig->{store}{sru}{options}{index_name} = $kohaConfig->{config}{elasticsearch}{index_name} . '_biblios';
 
