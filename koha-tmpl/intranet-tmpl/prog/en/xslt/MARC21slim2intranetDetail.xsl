@@ -1460,6 +1460,7 @@
 
         </xsl:when>
         </xsl:choose>
+        </a>
 
     <!-- add relator code too between brackets-->
     <!-- #13383 include relator code j for field 111 -->
@@ -1472,7 +1473,10 @@
                                 <!-- Prefer j over 4 for fields 111 and 711-->
                                 <xsl:when test="marc:subfield[@code='j']">
                                     <xsl:for-each select="marc:subfield[@code='j']">
-                                        <xsl:value-of select="."/>
+                                        <a>
+                                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                            <xsl:value-of select="."/>
+                                        </a>
                                         <xsl:if test="position() != last()">, </xsl:if>
                                     </xsl:for-each>
                                 </xsl:when>
@@ -1487,7 +1491,10 @@
                         <!-- Prefer e over 4 for fields 111 and 711-->
                         <xsl:when test="marc:subfield[@code='e'][not(@tag=111) or not(@tag=711)]">
                             <xsl:for-each select="marc:subfield[@code='e']">
-                                <xsl:value-of select="."/>
+                                <a>
+                                    <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                    <xsl:value-of select="."/>
+                                </a>
                                 <xsl:if test="position() != last()">, </xsl:if>
                             </xsl:for-each>
                         </xsl:when>
@@ -1501,7 +1508,6 @@
                     <xsl:text>]</xsl:text>
                 </span>
             </xsl:if>
-        </a>
         <xsl:choose>
             <xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><span class="separator"><xsl:text> | </xsl:text></span></xsl:otherwise>
         </xsl:choose>

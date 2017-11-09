@@ -375,6 +375,7 @@
                         <xsl:text>:,;/ </xsl:text>
                     </xsl:with-param>
                 </xsl:call-template>
+            </a>
             <!-- Display title portion for 110 and 710 fields -->
             <xsl:if test="(@tag=110 or @tag=710) and boolean(marc:subfield[@code='c' or @code='d' or @code='n' or @code='t'])">
                 <span class="titleportion">
@@ -434,7 +435,6 @@
                 </xsl:call-template>
                 </span>
             </xsl:if>
-            </a>
             <!-- Display relators for 1XX and 7XX fields -->
             <xsl:if test="marc:subfield[@code='4' or @code='e'][not(parent::*[@tag=111])] or (self::*[@tag=111] and marc:subfield[@code='4' or @code='j'][. != ''])">
                 <span class="relatorcode">
@@ -445,8 +445,11 @@
                                 <!-- Prefer j over 4 -->
                                 <xsl:when test="marc:subfield[@code='j']">
                                     <xsl:for-each select="marc:subfield[@code='j']">
-                                        <xsl:value-of select="."/>
-                                        <xsl:if test="position() != last()">, </xsl:if>
+                                        <a>
+                                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                            <xsl:value-of select="."/>
+                                            <xsl:if test="position() != last()">, </xsl:if>
+                                        </a>
                                     </xsl:for-each>
                                 </xsl:when>
                                 <xsl:otherwise>
@@ -460,8 +463,11 @@
                         <!-- Prefer e over 4 -->
                         <xsl:when test="marc:subfield[@code='e']">
                             <xsl:for-each select="marc:subfield[@code='e'][not(@tag=111) or not(@tag=711)]">
-                                <xsl:value-of select="."/>
-                                <xsl:if test="position() != last()">, </xsl:if>
+                                <a>
+                                    <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                    <xsl:value-of select="."/>
+                                    <xsl:if test="position() != last()">, </xsl:if>
+                                </a>
                             </xsl:for-each>
                         </xsl:when>
                         <xsl:otherwise>
