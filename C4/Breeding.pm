@@ -79,7 +79,7 @@ sub BreedingSearch {
     $isbn = C4::Koha::GetNormalizedISBN($isbn);
 
     $query = "SELECT import_record_id, file_name, isbn, title, author
-              FROM  import_biblios 
+              FROM  import_biblios
               JOIN import_records USING (import_record_id)
               JOIN import_batches USING (import_batch_id)
               WHERE ";
@@ -105,9 +105,9 @@ sub BreedingSearch {
     $sth->execute(@bind);
     while (my $data = $sth->fetchrow_hashref) {
             $results[$count] = $data;
-            # FIXME - hack to reflect difference in name 
+            # FIXME - hack to reflect difference in name
             # of columns in old marc_breeding and import_records
-            # There needs to be more separation between column names and 
+            # There needs to be more separation between column names and
             # field names used in the templates </soapbox>
             $data->{'file'} = $data->{'file_name'};
             $data->{'id'} = $data->{'import_record_id'};
@@ -379,7 +379,7 @@ sub _add_rowdata {
 sub _isbn_replace {
     my ($isbn) = @_;
     return unless defined $isbn;
-    $isbn =~ s/ |-|\.//g;
+    $isbn =~ s/ |\.//g;
     $isbn =~ s/\|/ \| /g;
     $isbn =~ s/\(/ \(/g;
     return $isbn;
