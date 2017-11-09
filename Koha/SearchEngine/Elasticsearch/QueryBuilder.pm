@@ -264,8 +264,8 @@ sub build_query_compat {
     # We roughly emulate the CGI parameters of the zebra query builder
     my $query_cgi;
     my ($index) = @$indexes;
-    $index = 'kw' unless $index;
-    $query_cgi = "idx=$index&q=" . uri_escape_utf8( $operands->[0] ) if @$operands;
+    #$index = 'kw' unless $index;
+    $query_cgi = ($index ? "idx=$index" : '') . '&q=' . uri_escape_utf8( $operands->[0] ) if @$operands;
     $query_cgi .= '&scan=1' if ( $scan );
     my $simple_query;
     $simple_query = $operands->[0] if @$operands == 1;
