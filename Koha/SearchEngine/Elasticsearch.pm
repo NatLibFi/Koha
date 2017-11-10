@@ -396,6 +396,17 @@ sub get_fixer_rules {
             # really a big deal, ES doesn't mind.
             $options = "join:' '" unless $marc_field =~ m|_/| || $type eq 'sum';
             push @rules, "marc_map('$marc_field','${name}.\$append', $options)";
+            if ($marc_field !~ m|_/| && ($type eq '' || $type eq 'string')) {
+                # Handle linked fields
+                my $tag = substr($marc_field, 0, 3);
+                my $subfields = substr($marc_field, 3);
+                $subfields = 'abcdefghijklmnopqrstuvwxyz' unless $subfields;
+                my $rule = "{\$6/0-2/=\\$tag}";
+                # Add dollars and rules to subfields
+                $subfields =~ s/(.)/\$$1$rule/g;
+                # Create a marc_spec rule to select correct 880 fields
+                push @rules, "marc_spec('880${subfields}','${name}.\$append', $options)";
+            }
             if ($facet) {
                 push @rules, "marc_map('$marc_field','${name}__facet.\$append', $options)";
             }
