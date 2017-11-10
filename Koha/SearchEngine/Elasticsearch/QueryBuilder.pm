@@ -920,10 +920,10 @@ sub _truncate_terms {
     my @words = grep { $_ !~ /^\s*$/ } @tokens;
 
     # Append '*' to words if needed, ie. if it's not surrounded by quotes, not
-    # terminated by '*' and not a keyword
+    # terminated by '*' or any other non-word character and not a keyword
     my @terms = map {
         my $w = $_;
-        (/"$/ or /\*$/ or grep {lc($w) eq $_} qw/and or not/) ? $_ : "$_*";
+        (/"$/ or /\*$/ or /\W$/u or grep {lc($w) eq $_} qw/and or not/) ? $_ : "$_*";
     } @words;
 
     return join ' ', @terms;
