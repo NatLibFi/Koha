@@ -1,5 +1,5 @@
 
-<record marc="http://www.loc.gov/MARC21/slim">
+<record xmlns="http://www.loc.gov/MARC21/slim">
 [%- FOREACH field IN record %]
   [%- IF field.0 == 'LDR' %]
   <leader>[% field.4 | xml %]</leader>
