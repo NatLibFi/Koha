@@ -73,16 +73,16 @@ sub MARCfindbreeding {
     # remove the - in isbn, koha store isbn without any -
     if ($marc) {
         my $record = MARC::Record->new_from_usmarc($marc);
-        my ($isbnfield,$isbnsubfield) = GetMarcFromKohaField('biblioitems.isbn','');
-        if ( $record->field($isbnfield) ) {
-            foreach my $field ( $record->field($isbnfield) ) {
-                foreach my $subfield ( $field->subfield($isbnsubfield) ) {
-                    my $newisbn = $field->subfield($isbnsubfield);
-                    $newisbn =~ s/-//g;
-                    $field->update( $isbnsubfield => $newisbn );
-                }
-            }
-        }
+#        my ($isbnfield,$isbnsubfield) = GetMarcFromKohaField('biblioitems.isbn','');
+#        if ( $record->field($isbnfield) ) {
+#            foreach my $field ( $record->field($isbnfield) ) {
+#                foreach my $subfield ( $field->subfield($isbnsubfield) ) {
+#                    my $newisbn = $field->subfield($isbnsubfield);
+#                    $newisbn =~ s/-//g;
+#                    $field->update( $isbnsubfield => $newisbn );
+#                }
+#            }
+#        }
         # fix the unimarc 100 coded field (with unicode information)
         if (C4::Context->preference('marcflavour') eq 'UNIMARC' && $record->subfield(100,'a')) {
             my $f100a=$record->subfield(100,'a');
@@ -96,7 +96,7 @@ sub MARCfindbreeding {
                 $record->insert_fields_ordered($f100);
             }
         }
-		
+
         if ( !defined(ref($record)) ) {
             return -1;
         }
@@ -266,7 +266,7 @@ sub GetMandatoryFieldZ3950 {
     my @author = GetMarcFromKohaField('biblio.author',$frameworkcode);
     my @issn   = GetMarcFromKohaField('biblioitems.issn',$frameworkcode);
     my @lccn   = GetMarcFromKohaField('biblioitems.lccn',$frameworkcode);
-    
+
     return {
         $isbn[0].$isbn[1]     => 'isbn',
         $title[0].$title[1]   => 'title',
@@ -284,7 +284,7 @@ sub GetMandatoryFieldZ3950 {
 
 sub create_input {
     my ( $tag, $subfield, $value, $index_tag, $tabloop, $rec, $authorised_values_sth,$cgi ) = @_;
-    
+
     my $index_subfield = CreateKey(); # create a specifique key for each subfield
 
     $value =~ s/"/&quot;/g;
@@ -304,7 +304,7 @@ sub create_input {
         # And <<USER>> with surname (?)
         my $username=(C4::Context->userenv?C4::Context->userenv->{'surname'}:"superlibrarian");
         $value=~s/<<USER>>/$username/g;
-    
+
     }
     my $dbh = C4::Context->dbh;
 
@@ -503,16 +503,16 @@ sub build_tabs {
     my @BIG_LOOP;
     my %seen;
     my @tab_data; # all tags to display
-    
+
     foreach my $used ( @$usedTagsLib ){
         push @tab_data,$used->{tagfield} if not $seen{$used->{tagfield}};
         $seen{$used->{tagfield}}++;
     }
-        
+
     my $max_num_tab=-1;
     foreach(@$usedTagsLib){
         if($_->{tab} > -1 && $_->{tab} >= $max_num_tab && $_->{tagfield} != '995'){ # FIXME : MARC21 ?
-            $max_num_tab = $_->{tab}; 
+            $max_num_tab = $_->{tab};
         }
     }
     if($max_num_tab >= 9){
@@ -540,7 +540,7 @@ sub build_tabs {
 		}
 		# loop through each field
                 foreach my $field (@fields) {
-                    
+
                     my @subfields_data;
                     if ( $tag < 10 ) {
                         my ( $value, $subfield );
@@ -609,7 +609,7 @@ sub build_tabs {
                     }
                     if ( $#subfields_data >= 0 ) {
                         # build the tag entry.
-                        # note that the random() field is mandatory. Otherwise, on repeated fields, you'll 
+                        # note that the random() field is mandatory. Otherwise, on repeated fields, you'll
                         # have twice the same "name" value, and cgi->param() will return only one, making
                         # all subfields to be merged in a single field.
                         my %tag_data = (
@@ -670,7 +670,7 @@ sub build_tabs {
                         tagfirstsubfield => $subfields_data[0],
                         fixedfield       => $tag < 10?1:0,
                     );
-                    
+
                     push @loop_data, \%tag_data ;
                 }
             }
@@ -823,7 +823,7 @@ if ($parentbiblio) {
 }
 
 $is_a_modif = 0;
-    
+
 if ($biblionumber) {
     $is_a_modif = 1;
     my $title = C4::Context->preference('marcflavour') eq "UNIMARC" ? $record->subfield('200', 'a') : $record->title;
@@ -834,7 +834,7 @@ if ($biblionumber) {
 	&GetMarcFromKohaField( "biblio.biblionumber", $frameworkcode );
     ( $biblioitemnumtagfield, $biblioitemnumtagsubfield ) =
 	&GetMarcFromKohaField( "biblioitems.biblioitemnumber", $frameworkcode );
-	    
+
     # search biblioitems value
     my $sth =  $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
     $sth->execute($biblionumber);
@@ -861,7 +861,7 @@ if ( $op eq "addbiblio" ) {
         my $oldbibitemnum;
         if (C4::Context->preference("BiblioAddsAuthorities")){
             BiblioAutoLink( $record, $frameworkcode );
-        } 
+        }
         if ( $is_a_modif ) {
             ModBiblio( $record, $biblionumber, $frameworkcode );
         }
@@ -924,7 +924,7 @@ if ( $op eq "addbiblio" ) {
             itemtype => $frameworkcode,
           );
           output_html_with_http_headers $input, $cookie, $template->output;
-          exit;     
+          exit;
         }
     } else {
     # it may be a duplicate, warn the user and do nothing
@@ -939,17 +939,17 @@ if ( $op eq "addbiblio" ) {
     }
 }
 elsif ( $op eq "delete" ) {
-    
+
     my $error = &DelBiblio($biblionumber);
     if ($error) {
         warn "ERROR when DELETING BIBLIO $biblionumber : $error";
         print "Content-Type: text/html\n\n<html><body><h1>ERROR when DELETING BIBLIO $biblionumber : $error</h1></body></html>";
 	exit;
     }
-    
+
     print $input->redirect('/cgi-bin/koha/catalogue/search.pl');
     exit;
-    
+
 } else {
    #----------------------------------------------------------------------------
    # If we're in a duplication case, we have to set to "" the biblionumber
