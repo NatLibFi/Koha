@@ -713,7 +713,7 @@ sub _modify_string_by_type {
     $str =~ s/'//g if ($cnt % 2 == 1);
 
     $str .= '*' if $type eq 'right-truncate';
-    $str = '"' . $str . '"' if $type eq 'phrase';
+    $str = '"' . $str . '"' if $type eq 'phrase' && $str !~ /^".*"$/;
     return $str;
 }
 
