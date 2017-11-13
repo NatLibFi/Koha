@@ -201,33 +201,17 @@ sub build_query_compat {
       = @_;
 
 #die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang );
-    my @sort_params  = $self->_convert_sort_fields(@$sort_by);
-    my @index_params = $self->_convert_index_fields(@$indexes);
-    my $limits       = $self->_fix_limit_special_cases($orig_limits);
-    if ( $params->{suppress} ) { push @$limits, "suppress:0"; }
-
-    # Merge the indexes in with the search terms and the operands so that
-    # each search thing is a handy unit.
-    unshift @$operators, undef;    # The first one can't have an op
-    my @search_params;
-    my $ea = each_array( @$operands, @$operators, @index_params );
-    while ( my ( $oand, $otor, $index ) = $ea->() ) {
-        next if ( !defined($oand) || $oand eq '' );
-        push @search_params, {
-            operand => $self->_clean_search_term($oand, $index), # the search terms
-            operator => defined($otor) ? uc $otor : undef,    # AND and so on
-            $index ? %$index : (),
-        };
-    }
 
     my $query;
     my $query_str;
+    my $limits;
     if ( $scan ) {
         $query = $self->build_scan_query( $operands, $indexes );
     } else {
         my @sort_params  = $self->_convert_sort_fields(@$sort_by);
         my @index_params = $self->_convert_index_fields(@$indexes);
         $limits          = $self->_fix_limit_special_cases($orig_limits);
+        if ( $params->{suppress} ) { push @$limits, "suppress:0"; }
 
         # Merge the indexes in with the search terms and the operands so that
         # each search thing is a handy unit.
@@ -644,7 +628,7 @@ sub _convert_index_fields {
             $f =~ s/^mc-//;
         }
         my $r = {
-            field => $index_field_convert{$f},
+            field => $index_field_convert{$f} // $f,
             type  => $index_type_convert{ $t // '__default' }
         };
         $r->{field} = ($mc . $r->{field}) if $mc && $r->{field};
@@ -699,9 +683,9 @@ will have to wait for a real query parser.
 
 sub _convert_index_strings_freeform {
     my ( $self, $search ) = @_;
-    while ( my ( $zeb, $es ) = each %index_field_convert ) {
-        $search =~ s/\b$zeb(?:,[\w-]*)?:/$es:/g;
-    }
+#    while ( my ( $zeb, $es ) = each %index_field_convert ) {
+#        $search =~ s/\b$zeb(?:,[\w-]*)?:/$es:/g;
+#    }
     return $search;
 }
 
@@ -721,6 +705,12 @@ sub _modify_string_by_type {
     my $type = $idx{type} || '';
     my $str = $idx{operand};
     return $str unless $str;    # Empty or undef, we can't use it.
+
+    # Remove any quotes first if they're unbalanced
+    my $cnt = () = $str =~ /"/g;
+    $str =~ s/"//g if ($cnt % 2 == 1);
+    $cnt = () = $str =~ /'/g;
+    $str =~ s/'//g if ($cnt % 2 == 1);
 
     $str .= '*' if $type eq 'right-truncate';
     $str = '"' . $str . '"' if $type eq 'phrase';
@@ -763,19 +753,21 @@ sub _join_queries {
         $grouped_mc || () );
 }
 
-=head2 _make_phrases
+=head2 _make_phrase
 
-    my @phrased_queries = $self->_make_phrases(@query_parts);
+    my @phrased_query = $self->_make_phrase($query);
 
-This takes the supplied queries and forces them to be phrases by wrapping
-quotes around them. It understands field prefixes, e.g. 'subject:' and puts
-the quotes outside of them if they're there.
+This takes the supplied query and forces them to be phrases by wrapping
+quotes around it It understands field prefixes, e.g. 'subject:' and puts
+the quotes outside of it if present.
 
 =cut
 
-sub _make_phrases {
-    my ( $self, @parts ) = @_;
-    map { s/^\s*(\w*?:)(.*)$/$1"$2"/r } @parts;
+sub _make_phrase {
+    my ( $self, $query ) = @_;
+
+    $query = s/^\s*(\w*?:)(.*)$/$1"$2"/r;
+    return $query;
 }
 
 =head2 _create_query_string
@@ -794,8 +786,17 @@ sub _create_query_string {
     map {
         my $otor  = $_->{operator} ? $_->{operator} . ' ' : '';
         my $field = $_->{field}    ? $_->{field} . ':'    : '';
+        my $oand  = $_->{operand}  ? $_->{operand}        : '';
 
-        my $oand = $self->_modify_string_by_type(%$_);
+        if (!$field && $oand =~ s/^\s*([\w,-]+?)://) {
+            my @indexes = ($1);
+            my @params = $self->_convert_index_fields(@indexes);
+            $field = $_->{field} = $params[0]->{field} . ':';
+            $_->{type} = $params[0]->{type};
+            $_->{operand} = $oand;
+        }
+
+        $oand = $self->_modify_string_by_type(%$_);
         "$otor($field$oand)";
     } @queries;
 }
@@ -819,7 +820,7 @@ sub _clean_search_term {
     ($field) = $term =~ /^([a-zA-Z0-9\-\_]+)\:/;
     if ($auto_truncation && $field) {
         my $mappings = $self->get_elasticsearch_mappings();
-        my $textField = defined $mappings->{data}{properties}{$field}{type} && $mappings->{data}{properties}{$field}{type} eq 'text';
+        my $textField = !defined $mappings->{data}{properties}{$field}{type} || $mappings->{data}{properties}{$field}{type} eq 'text';
         $auto_truncation = 0 if (!$textField);
     }
 
