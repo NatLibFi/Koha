@@ -146,14 +146,17 @@ sub get_elasticsearch_settings {
                     analyser_phrase => {
                         tokenizer => 'keyword',
                         filter    => ['finnish_folding', 'lowercase'],
+                        char_filter => ['punctuation'],
                     },
                     analyser_standard => {
                         tokenizer => 'icu_tokenizer',
                         filter    => ['finnish_folding', 'lowercase'],
+                        char_filter => ['punctuation'],
                     },
                     analyser_stdno => {
                         tokenizer => 'whitespace',
                         filter    => ['finnish_folding', 'lowercase'],
+                        char_filter => ['punctuation'],
                     }
                 },
                 normalizer => {
@@ -166,6 +169,22 @@ sub get_elasticsearch_settings {
                     finnish_folding => {
                         type => 'icu_folding',
                         unicodeSetFilter => '[^åäöÅÄÖ]'
+                    }
+                },
+                char_filter => {
+                    punctuation => {
+                        type => 'mapping',
+                        mappings => [
+                            '- => ',
+                            ', => ',
+                            '. => ',
+                            ': => ',
+                            '= => ',
+                            '; => ',
+                            '! => ',
+                            '% => ',
+                            '\/ => ',
+                        ]
                     }
                 }
             }
