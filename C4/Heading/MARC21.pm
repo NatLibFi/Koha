@@ -161,6 +161,22 @@ sub valid_bib_heading_tag {
 
 }
 
+=head2 valid_bib_heading_subfield
+
+=cut
+
+sub valid_bib_heading_subfield {
+    my $self          = shift;
+    my $tag           = shift;
+    my $subfield      = shift;
+    my $frameworkcode = shift;
+
+    if ( exists $bib_heading_fields->{$tag} ) {
+        return 1 if ($bib_heading_fields->{$tag}->{subfields} =~ /$subfield/);
+    }
+    return 0;
+}
+
 =head2 parse_heading
 
 =cut

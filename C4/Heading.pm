@@ -50,7 +50,7 @@ headings found in bibliographic and authority records.
 
   my $heading = C4::Heading->new_from_bib_field($field, $frameworkcode, [, $marc_flavour]);
 
-Given a C<MARC::Field> object containing a heading from a 
+Given a C<MARC::Field> object containing a heading from a
 bib record, create a C<C4::Heading> object.
 
 The optional second parameter is the MARC flavour (i.e., MARC21
@@ -141,7 +141,7 @@ sub search_form {
 
   my $authorities = $heading->authorities([$skipmetadata]);
 
-Return a list of authority records for this 
+Return a list of authority records for this
 heading. If passed a true value for $skipmetadata,
 SearchAuthorities will return only authids.
 
@@ -168,6 +168,23 @@ sub preferred_authorities {
     my $skipmetadata = shift || undef;
     my ( $results, $total ) = _search( 'see-from', $skipmetadata );
     return $results;
+}
+
+=head2 valid_bib_heading_subfield
+
+    if (C4::Heading::valid_bib_heading_subfield('100', 'e', '')) ...
+
+=cut
+
+sub valid_bib_heading_subfield {
+    my $tag           = shift;
+    my $subfield      = shift;
+    my $frameworkcode = shift;
+    my $marcflavour   = @_ ? shift : C4::Context->preference('marcflavour');
+
+    my $marc_handler = _marc_format_handler($marcflavour);
+
+    return $marc_handler->valid_bib_heading_subfield( $tag, $subfield, $frameworkcode );
 }
 
 =head1 INTERNAL METHODS
