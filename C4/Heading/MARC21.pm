@@ -68,11 +68,6 @@ my $bib_heading_fields = {
         subfields  => 'adfghklmnoprst',
         main_entry => 1
     },
-    '162' => {
-        auth_type  => 'MED_PERFOR',
-        subfields  => 'a',
-        main_entry => 1
-    },
     '440' => { auth_type => 'UNIF_TITLE', subfields => 'anp', series => 1 },
     '600' => {
         auth_type => 'PERSO_NAME',
