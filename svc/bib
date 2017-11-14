@@ -113,6 +113,10 @@ sub update_bib {
             }
         }
 
+        if (C4::Context->preference("BiblioAddsAuthorities")){
+            BiblioAutoLink( $record, $frameworkcode );
+        }
+
         ModBiblio( $record, $biblionumber, $frameworkcode );
         my $new_record =
           GetMarcBiblio( $biblionumber, $query->url_param('items') );
