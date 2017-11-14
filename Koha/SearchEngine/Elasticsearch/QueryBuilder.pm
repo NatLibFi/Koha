@@ -396,7 +396,7 @@ sub build_authorities_query {
         }
         else {
             # regular wordlist stuff
-            push @query_parts, { match => { $wh => $val } };
+            push @query_parts, { match => { $wh => { query => $val, operator => 'AND' } } };
         }
     }
 
