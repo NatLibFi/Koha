@@ -181,7 +181,7 @@ sub search_compat {
 =head2 search_auth_compat
 
     my ( $results, $total ) =
-      $searcher->search_auth_compat( $query, $page, $count, %options );
+      $searcher->search_auth_compat( $query, $offset, $count, %options );
 
 This has a similar calling convention to L<search>, however it returns its
 results in a form the same as L<C4::AuthoritiesMarc::SearchAuthorities>.
@@ -189,12 +189,17 @@ results in a form the same as L<C4::AuthoritiesMarc::SearchAuthorities>.
 =cut
 
 sub search_auth_compat {
-    my $self = shift;
+    my ($self, $query, $offset, $count, %options) = @_;
 
-    # TODO handle paging
+    if ( !defined $offset or $offset < 0 ) {
+        $offset = 1;
+    }
+    # Uh, authority search uses 1-based offset..
+    $options{offset} = $offset - 1;
+
     my $database = Koha::Database->new();
     my $schema   = $database->schema();
-    my $res      = $self->search(@_);
+    my $res      = $self->search($query, undef, $count, %options);
     my $bib_searcher = Koha::SearchEngine::Elasticsearch::Search->new({index => 'biblios'});
     my @records;
     $res->each(
