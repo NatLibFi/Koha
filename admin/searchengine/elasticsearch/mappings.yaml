@@ -387,7 +387,47 @@ authorities:
         sort: ~
         suggestible: ''
       - facet: ''
+        marc_field: 110abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
         marc_field: 111acdefghjklnpqstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 130abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 147abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 148abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 150abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 151abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 155abcdefghjklmnopqrstvxyz
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: 162abcdefghjklmnopqrstvxyz
         marc_type: marc21
         sort: ~
         suggestible: ''
