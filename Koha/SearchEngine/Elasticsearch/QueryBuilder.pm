@@ -525,11 +525,13 @@ sub build_authorities_query_compat {
     }
     for ( my $i = 0 ; $i < @$value ; $i++ ) {
         if (defined $value->[$i]) {
+            my $escaped_value = $value->[$i];
+            $escaped_value =~ s/(["()\\])/\\$1/g;
             push @searches,
             {
                 where    => $koha_to_index_name->{$marclist->[$i]},
                 operator => $operator->[$i],
-                value    => $value->[$i],
+                value    => $escaped_value,
             };
         }
     }
