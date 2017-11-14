@@ -379,7 +379,7 @@ sub build_authorities_query {
     foreach my $s ( @{ $search->{searches} } ) {
         my ( $wh, $op, $val ) = @{$s}{qw(where operator value)};
         $wh = '_all' if $wh eq '';
-        if ( $op eq 'is' || $op eq '=' ) {
+        if ( $op eq 'is' || $op eq '='  || $op eq 'exact' ) {
 
             # look for something that matches completely
             # note, '=' is about numerical vals. May need special handling.
@@ -387,12 +387,7 @@ sub build_authorities_query {
             # matches. Also, we lowercase our search because the ES
             # index lowercases its values, and term searches don't get the
             # search analyzer applied to them.
-            push @query_parts, { term => { "$wh.phrase" => lc $val } };
-        }
-        elsif ( $op eq 'exact' ) {
-
-            # left and right truncation, otherwise an exact phrase
-            push @query_parts, { match_phrase => { $wh => $val } };
+            push @query_parts, { match_phrase => { "$wh.phrase" => lc $val } };
         }
         elsif ( $op eq 'start' ) {
 
@@ -471,9 +466,9 @@ Also ignored.
 
 =item operator
 
-What form of search to do. Options are: is (phrase, no trunction, whole field
-must match), = (number exact match), exact (phrase, but with left and right
-truncation). If left blank, then word list, right truncted, anywhere is used.
+What form of search to do. Options are: is (phrase, no truncation, whole field
+must match), = (number exact match), exact (phrase, no truncation, whole field
+must match). If left blank, then word list, right truncated, anywhere is used.
 
 =item value
 
