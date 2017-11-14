@@ -230,9 +230,9 @@ sub _search {
     my $search_query = $builder->build_authorities_query_compat(
         \@marclist, \@and_or, \@excluding, \@operator,
         \@value,    0,        20,          $self->{'auth_type'},
-        'AuthidAsc',         $skipmetadata
+        'AuthidAsc'
     );
-    return $searcher->search_auth_compat( $search_query, 0, 20 );
+    return $searcher->search_auth_compat( $search_query, 0, 20, $skipmetadata );
 }
 
 =head1 INTERNAL FUNCTIONS

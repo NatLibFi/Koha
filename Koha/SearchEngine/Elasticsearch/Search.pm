@@ -181,7 +181,7 @@ sub search_compat {
 =head2 search_auth_compat
 
     my ( $results, $total ) =
-      $searcher->search_auth_compat( $query, $offset, $count, %options );
+      $searcher->search_auth_compat( $query, $offset, $count, $skipmetadata, %options );
 
 This has a similar calling convention to L<search>, however it returns its
 results in a form the same as L<C4::AuthoritiesMarc::SearchAuthorities>.
@@ -189,9 +189,9 @@ results in a form the same as L<C4::AuthoritiesMarc::SearchAuthorities>.
 =cut
 
 sub search_auth_compat {
-    my ($self, $query, $offset, $count, %options) = @_;
+    my ($self, $query, $offset, $count, $skipmetadata, %options) = @_;
 
-    if ( !defined $offset or $offset < 0 ) {
+    if ( !defined $offset or $offset <= 0 ) {
         $offset = 1;
     }
     # Uh, authority search uses 1-based offset..
@@ -200,13 +200,13 @@ sub search_auth_compat {
     my $database = Koha::Database->new();
     my $schema   = $database->schema();
     my $res      = $self->search($query, undef, $count, %options);
+
     my $bib_searcher = Koha::SearchEngine::Elasticsearch::Search->new({index => 'biblios'});
     my @records;
     $res->each(
         sub {
             my %result;
-            my $record    = $_[0];
-            my $marc_json = $record->{record};
+            my $record = $_[0];
 
             # I wonder if these should be real values defined in the mapping
             # rather than hard-coded conversions.
@@ -214,6 +214,7 @@ sub search_auth_compat {
             $authid = @$authid[0] if (ref $authid eq 'ARRAY');
             $result{authid} = $authid;
 
+            if (!defined $skipmetadata || !$skipmetadata) {
             # TODO put all this info into the record at index time so we
             # don't have to go and sort it all out now.
             my $authtypecode = $record->{authtype};
@@ -227,7 +228,7 @@ sub search_auth_compat {
             # it's not reproduced here yet.
             my $authtype           = $rs->single;
             my $auth_tag_to_report = $authtype->auth_tag_to_report;
-            my $marc               = $self->json2marc($marc_json);
+                my $marc               = $self->json2marc($record->{record});
             my $mainentry          = $marc->field($auth_tag_to_report);
             my $reported_tag;
             if ($mainentry) {
@@ -248,6 +249,7 @@ sub search_auth_compat {
               C4::AuthoritiesMarc::BuildSummary( $marc, $result{authid},
                 $authtypecode );
             $result{used} = $self->count_auth_use($bib_searcher, $authid);
+            }
             push @records, \%result;
         }
     );
