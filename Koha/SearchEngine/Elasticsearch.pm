@@ -120,6 +120,9 @@ sub get_elasticsearch_params {
     $es->{index_name} .= '_' . $self->index;
 
     $es->{key_prefix} = 'es_';
+
+    $es->{cxn} = 'HTTPTinyNoKeepAlive' unless $es->{cxn};
+
     return $es;
 }
 
