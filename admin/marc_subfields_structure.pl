@@ -125,6 +125,11 @@ if ( $op eq 'add_form' ) {
     while ( ( my $field ) = $sth2->fetchrow_array ) {
         push @kohafields, "items." . $field;
     }
+    $sth2 = $dbh->prepare("SHOW COLUMNS from holdings");
+    $sth2->execute;
+    while ( ( my $field ) = $sth2->fetchrow_array ) {
+        push @kohafields, "holdings." . $field;
+    }
 
     # build authorised value list
     $sth2->finish;
@@ -258,7 +263,7 @@ elsif ( $op eq 'add_validate' ) {
     my @link              = $input->multi_param('link');
     my @defaultvalue      = $input->multi_param('defaultvalue');
     my @maxlength         = $input->multi_param('maxlength');
-    
+
     for ( my $i = 0 ; $i <= $#tagsubfield ; $i++ ) {
         my $tagfield    = $input->param('tagfield');
         my $tagsubfield = $tagsubfield[$i];
@@ -279,7 +284,7 @@ elsif ( $op eq 'add_validate' ) {
         my $link   = $link[$i];
         my $defaultvalue = $defaultvalue[$i];
         my $maxlength = $maxlength[$i] ? $maxlength[$i] : 9999;
-        
+
         if (defined($liblibrarian) && $liblibrarian ne "") {
             my $is_demo = C4::Context->config('demo') || '';
             if ( $is_demo ne '1' ) {

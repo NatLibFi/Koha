@@ -323,6 +323,21 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
+=head2 holdings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->has_many(
+  "holdings",
+  "Koha::Schema::Result::Holding",
+  { "foreign.biblioitemnumber" => "self.biblioitemnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 items
 
 Type: has_many
@@ -339,8 +354,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2017-01-13 08:36:25
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cAlg2aIZ7hxeq+Hgl1AJcA
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:wCuSTGRpVUJyPo59OQrvFg
 
 __PACKAGE__->belongs_to( biblio => "Koha::Schema::Result::Biblio", "biblionumber" );
 

@@ -4,6 +4,7 @@
 [% USE AuthorisedValues %]
 [% USE Branches %]
 [% USE Biblio %]
+[% USE Holdings %]
 
 [% IF Koha.Preference('AmazonAssocTag') %]
     [% AmazonAssocTag = '?tag=' _ Koha.Preference('AmazonAssocTag') %]
@@ -196,6 +197,10 @@ function verify_images() {
 
             return false;
         });
+        $('a.delete').click(function() {
+            return confirm(_('Are you sure?'));
+        });
+
     [%# inject no images message %]
     [% IF ( LocalCoverImages && ! localimages.0 ) %]
         showNoImageMessage();
@@ -488,7 +493,7 @@ function verify_images() {
         [% END %]
 [% IF ( MARCSERIES ) %]
 		<li><strong>Series: </strong><ul>[% FOREACH MARCSERIE IN MARCSERIES %]
-		<li>[% FOREACH MARCSERIES_SUBFIELDS_LOO IN MARCSERIE.MARCSERIES_SUBFIELDS_LOOP %] [% IF ( MARCSERIES_SUBFIELDS_LOO.value ) %]<a href="/cgi-bin/koha/catalogue/search.pl?q=se:[% MARCSERIES_SUBFIELDS_LOO.value |url %]">[% MARCSERIES_SUBFIELDS_LOO.value %]</a>[% END %][% IF ( MARCSERIES_SUBFIELDS_LOO.volumenum ) %]. [% MARCSERIES_SUBFIELDS_LOO.volumenum %][% END %][% END %]</li> 
+		<li>[% FOREACH MARCSERIES_SUBFIELDS_LOO IN MARCSERIE.MARCSERIES_SUBFIELDS_LOOP %] [% IF ( MARCSERIES_SUBFIELDS_LOO.value ) %]<a href="/cgi-bin/koha/catalogue/search.pl?q=se:[% MARCSERIES_SUBFIELDS_LOO.value |url %]">[% MARCSERIES_SUBFIELDS_LOO.value %]</a>[% END %][% IF ( MARCSERIES_SUBFIELDS_LOO.volumenum ) %]. [% MARCSERIES_SUBFIELDS_LOO.volumenum %][% END %][% END %]</li>
 		[% END %]
 		</ul>
 		</li>
@@ -505,11 +510,11 @@ function verify_images() {
                 [% IF ( size ) %][% size %][% END %]
         </li>
 [% IF ( MARCURLS ) %]<li>
-    
+
     <strong>Online resources:</strong>
     <ul>    [% FOREACH MARCurl IN MARCURLS %]
 		<li>[% IF ( MARCurl.part ) %][% MARCurl.part %]
-			<br />[% END %] 
+			<br />[% END %]
 		<!-- here you might do a tmpl_if name="toc" and use greybox or equivalent for table of contents -->
 		<a href="[% MARCurl.MARCURL %]" title="[% MARCurl.MARCURL %]">[% MARCurl.linktext %]</a>
 			[% IF ( MARCurl.notes ) %]<ul>[% FOREACH note IN MARCurl.notes %]<li>[% note.note %]</li>[% END %]</ul>[% END %]</li>
@@ -533,7 +538,7 @@ function verify_images() {
         </li>
         </ul>
         </div>
-       
+
     [% IF ( AmazonCoverImages  || LocalCoverImages ) %]
         <div class="yui-u" id="bookcoverimg">
         [% IF ( LocalCoverImages ) %]
@@ -548,7 +553,7 @@ function verify_images() {
         [% END %]
         </div>
     [% END %]
-        
+
         <div class="yui-u" style="margin-top: 1em;">
         <ul>
         [% IF ( MARCISBNS ) %]
@@ -567,7 +572,7 @@ function verify_images() {
             </li>
         [% END %]
         [% IF ( MARCSUBJCTS ) %]
-            <li><strong>Subjects:</strong> 
+            <li><strong>Subjects:</strong>
             <ul>
                 [% FOREACH MARCSUBJCT IN MARCSUBJCTS %]
                 <li>[% FOREACH MARCSUBJECT_SUBFIELDS_LOO IN MARCSUBJCT.MARCSUBJECT_SUBFIELDS_LOOP %] [% MARCSUBJECT_SUBFIELDS_LOO.separator %] <a title="‡[% MARCSUBJECT_SUBFIELDS_LOO.code %] [% MARCSUBJECT_SUBFIELDS_LOO.value %]" href="/cgi-bin/koha/catalogue/search.pl?q=[% FOREACH link_loo IN MARCSUBJECT_SUBFIELDS_LOO.link_loop %][% link_loo.operator |url %][% link_loo.limit %]:[% link_loo.link |url %][% END %]">[% MARCSUBJECT_SUBFIELDS_LOO.value |html %]</a>[% END %]</li>
@@ -578,7 +583,7 @@ function verify_images() {
         [% IF ( copyrightdate ) %]
             <li><strong>Copyright:</strong> [% copyrightdate %]</li>
         [% END %]
-     
+
         [% IF ( classification ) %]
             <li><strong>Classification:</strong> [% subclass %][% classification %]</li>
         [% END %]
@@ -625,11 +630,14 @@ function verify_images() {
 <div id="bibliodetails" class="toptabs">
 
 <ul>
+    [% IF (show_summary_holdings) %]
+        <li><a href="#summaryholdings">Holdings</a></li>
+    [% END %]
     [% IF (SeparateHoldings) %]
-        <li><a href="#holdings">[% LoginBranchname %] holdings</a></li>
-        <li><a href="#otherholdings">Other holdings</a></li>
+        <li><a href="#holdings">[% LoginBranchname %] items</a></li>
+        <li><a href="#otherholdings">Other items</a></li>
     [% ELSE %]
-        <li><a href="#holdings">Holdings</a></li>
+        <li><a href="#holdings">Items</a></li>
     [% END %]
 [% IF ( MARCNOTES || notes ) %]<li><a href="#description">Descriptions</a></li>[% END %]
 [% IF ( subscriptionsnumber ) %]<li><a href="#subscriptions">Subscriptions</a></li>[% END %]
@@ -641,6 +649,51 @@ function verify_images() {
     <li class="NovelistSelect" style="display:none;"><a href="#NovelistSelect">NoveList Select</a></li>
 [% END %]
 </ul>
+
+[% IF ( show_summary_holdings ) %]
+    <div id="summaryholdings">
+
+    [% IF ( summary_holdings ) %]
+        <div class="[% tab %]_table_controls">
+        </div>
+        <table class="summaryholdings_table">
+            <thead>
+                <tr>
+                    <th>Library</th>
+                    <th>Location</th>
+                    <th>Call number</th>
+                    <th>Status</th>
+                    [% IF ( CAN_user_editcatalogue_edit_items ) %]<th class="NoSort">&nbsp;</th>[% END %]
+                </tr>
+            </thead>
+            <tbody>
+                [% FOREACH holding IN summary_holdings %]
+                    <tr>
+                        <td class="branch">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( holding.holdingbranch ) %] [% END %]</td>
+                        <td class="location"><span class="shelvingloc">[% holding.location %][% IF ( holding.sub_location ) %] ([% holding.sub_location %])[% END %]</span>
+                        <td class="itemcallnumber">[% IF ( holding.callnumber ) %] [% holding.callnumber %][% END %]</td>
+                        <td class="status">
+                            [% IF ( holding.suppress ) %]
+                                <span class="suppressed">Suppressed from patrons</span>
+                            [% END %]
+                        </td>
+                    [% IF CAN_user_editcatalogue_edit_items %]
+                        <td class="actions">
+                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&biblionumber=[% holding.biblionumber %]&holdingnumber=[% holding.holdingnumber %]#editholding"><i class="fa fa-pencil"></i> Edit</a>
+                            <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/cataloguing/addholding.pl?op=delete&biblionumber=[% holding.biblionumber %]&holdingnumber=[% holding.holdingnumber %]"><i class="fa fa-eraser"></i> Delete</a>
+                        </td>
+                    [% END %]
+                    </tr>
+                [% END %]
+            </tbody>
+        </table>
+    [% ELSE %]
+        <div id="noitems">No holdings records</div>
+    [% END %]
+
+    </div>
+[% END %]
+
 
 [% items_table_block_iter = 0 %]
 [% BLOCK items_table %]
@@ -665,6 +718,7 @@ function verify_images() {
             <tr>
                 [% IF (StaffDetailItemSelection) %]<th class="NoSort"></th>[% END %]
                 [% IF ( item_level_itypes ) %]<th>Item type</th>[% END %]
+                [% IF (show_summary_holdings) %]<th>Holding</th>[% END %]
                 <th>Current location</th>
                 <th>Home library</th>
                 [% IF ( itemdata_ccode ) %]<th>Collection</th>[% END %]
@@ -701,6 +755,9 @@ function verify_images() {
                             [% END %]
                             [% item.translated_description %]
                         </td>
+                    [% IF (show_summary_holdings) %]
+                        <td class="holding">[% Holdings.GetLocation(item.holdingnumber) %]</td>
+                    [% END %]
                     [% END %]
                     <td class="location">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( item.branchcode ) %] [% END %]</td>
                     <td class="homebranch">[% Branches.GetName( item.homebranch ) %]<span class="shelvingloc">[% item.location %][% IF ( item.sub_location ) %] ([% item.sub_location %])[% END %]</span><span class="genre">[% item.genre %]</span>
@@ -899,7 +956,7 @@ function verify_images() {
         [% END %]
                 [% IF ( hiddencount ) %]
                    <p><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber %]&amp;showallitems=1">Show all items ([% hiddencount %] hidden)</a>
-                [% END %] 		
+                [% END %]
 		[% IF ( debug_display ) %]
 		<br /><br />
 		<table>
@@ -966,7 +1023,7 @@ function verify_images() {
 <div class="yui-g">
 <div id="catalogue_detail_subscriptions">
     <h2>This is a serial subscription</h2>
-    <p> (There are [% subscriptionsnumber %] subscriptions associated with this title).</p> 
+    <p> (There are [% subscriptionsnumber %] subscriptions associated with this title).</p>
     [% FOREACH subscription IN subscriptions %]
             [% IF subscription.branchcode %]
                 <h3>At library: [% Branches.GetName(subscription.branchcode) || subscription.branchcode %]</h3>

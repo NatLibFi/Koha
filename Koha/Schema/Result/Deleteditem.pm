@@ -53,6 +53,12 @@ __PACKAGE__->table("deleteditems");
   datetime_undef_if_invalid: 1
   is_nullable: 1
 
+=head2 datereceived
+
+  data_type: 'timestamp'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
+
 =head2 booksellerid
 
   data_type: 'mediumtext'
@@ -288,12 +294,6 @@ __PACKAGE__->table("deleteditems");
   is_nullable: 1
   size: 10
 
-=head2 datereceived
-
-  data_type: 'timestamp'
-  datetime_undef_if_invalid: 1
-  is_nullable: 1
-
 =head2 circulation_level
 
   data_type: 'varchar'
@@ -319,6 +319,12 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 30 },
   "dateaccessioned",
   { data_type => "date", datetime_undef_if_invalid => 1, is_nullable => 1 },
+  "datereceived",
+  {
+    data_type => "timestamp",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "booksellerid",
   { data_type => "mediumtext", is_nullable => 1 },
   "homebranch",
@@ -414,12 +420,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "sub_location",
   { data_type => "varchar", is_nullable => 1, size => 10 },
-  "datereceived",
-  {
-    data_type => "timestamp",
-    datetime_undef_if_invalid => 1,
-    is_nullable => 1,
-  },
   "circulation_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "reserve_level",
@@ -439,8 +439,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2016-03-31 17:10:17
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:npNexLgE7AxLp6iVy1FxgQ
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:YLnfbwOLwWKW/mRJMQKgVw
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

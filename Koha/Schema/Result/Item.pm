@@ -55,6 +55,12 @@ __PACKAGE__->table("items");
   datetime_undef_if_invalid: 1
   is_nullable: 1
 
+=head2 datereceived
+
+  data_type: 'timestamp'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
+
 =head2 booksellerid
 
   data_type: 'mediumtext'
@@ -292,12 +298,6 @@ __PACKAGE__->table("items");
   is_nullable: 1
   size: 10
 
-=head2 datereceived
-
-  data_type: 'timestamp'
-  datetime_undef_if_invalid: 1
-  is_nullable: 1
-
 =head2 circulation_level
 
   data_type: 'varchar'
@@ -333,6 +333,12 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 30 },
   "dateaccessioned",
   { data_type => "date", datetime_undef_if_invalid => 1, is_nullable => 1 },
+  "datereceived",
+  {
+    data_type => "timestamp",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "booksellerid",
   { data_type => "mediumtext", is_nullable => 1 },
   "homebranch",
@@ -428,12 +434,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "sub_location",
   { data_type => "varchar", is_nullable => 1, size => 10 },
-  "datereceived",
-  {
-    data_type => "timestamp",
-    datetime_undef_if_invalid => 1,
-    is_nullable => 1,
-  },
   "circulation_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "reserve_level",
@@ -734,8 +734,8 @@ __PACKAGE__->might_have(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2016-10-24 13:56:21
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Vf1sBZrpUo0Cvi896fjNuA
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vVso0a+uMD5ht5MKo5VXdQ
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 

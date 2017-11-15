@@ -3159,6 +3159,8 @@ sub TransformMarcToKoha {
     my %tables = ();
     if ( defined $limit_table && $limit_table eq 'items' ) {
         $tables{'items'} = 1;
+    } elsif ( defined $limit_table && $limit_table eq 'holdings' ) {
+        $tables{'holdings'} = 1;
     } else {
         $tables{'items'}       = 1;
         $tables{'biblio'}      = 1;

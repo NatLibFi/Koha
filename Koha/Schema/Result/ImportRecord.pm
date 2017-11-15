@@ -194,6 +194,21 @@ __PACKAGE__->set_primary_key("import_record_id");
 
 =head1 RELATIONS
 
+=head2 batch_overlay_diff_headers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BatchOverlayDiffHeader>
+
+=cut
+
+__PACKAGE__->has_many(
+  "batch_overlay_diff_headers",
+  "Koha::Schema::Result::BatchOverlayDiffHeader",
+  { "foreign.breedingid" => "self.import_record_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 import_auths
 
 Type: has_many
@@ -270,8 +285,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-07-11 09:26:55
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jhzXlqw5mA1lGsI9SZEv/Q
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:OUlhjTeiyDnLMoNmm5TKtQ
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

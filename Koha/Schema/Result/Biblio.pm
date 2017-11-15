@@ -167,6 +167,36 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 batch_overlay_diff_headers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BatchOverlayDiffHeader>
+
+=cut
+
+__PACKAGE__->has_many(
+  "batch_overlay_diff_headers",
+  "Koha::Schema::Result::BatchOverlayDiffHeader",
+  { "foreign.biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 batch_overlay_diffs
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BatchOverlayDiff>
+
+=cut
+
+__PACKAGE__->has_many(
+  "batch_overlay_diffs",
+  "Koha::Schema::Result::BatchOverlayDiff",
+  { "foreign.biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 biblio_metadatas
 
 Type: has_many
@@ -223,6 +253,21 @@ Related object: L<Koha::Schema::Result::HoldFillTarget>
 __PACKAGE__->has_many(
   "hold_fill_targets",
   "Koha::Schema::Result::HoldFillTarget",
+  { "foreign.biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 holdings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->has_many(
+  "holdings",
+  "Koha::Schema::Result::Holding",
   { "foreign.biblionumber" => "self.biblionumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -348,7 +393,7 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2017-01-13 08:36:25
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jis7Sm5+9lVKav+o18JLtA
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:FoK1Gnb2VOm63PHt0PeQLA
 
 1;

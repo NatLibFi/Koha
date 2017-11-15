@@ -798,6 +798,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 batch_overlay_reports
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BatchOverlayReport>
+
+=cut
+
+__PACKAGE__->has_many(
+  "batch_overlay_reports",
+  "Koha::Schema::Result::BatchOverlayReport",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 borrower_attributes
 
 Type: has_many
@@ -858,21 +873,6 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 borrower_syncs
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::BorrowerSync>
-
-=cut
-
-__PACKAGE__->has_many(
-  "borrower_syncs",
-  "Koha::Schema::Result::BorrowerSync",
-  { "foreign.borrowernumber" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
 =head2 borrower_permissions
 
 Type: has_many
@@ -884,6 +884,21 @@ Related object: L<Koha::Schema::Result::BorrowerPermission>
 __PACKAGE__->has_many(
   "borrower_permissions",
   "Koha::Schema::Result::BorrowerPermission",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 borrower_syncs
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BorrowerSync>
+
+=cut
+
+__PACKAGE__->has_many(
+  "borrower_syncs",
+  "Koha::Schema::Result::BorrowerSync",
   { "foreign.borrowernumber" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -1218,21 +1233,6 @@ __PACKAGE__->might_have(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 ratings
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::Rating>
-
-=cut
-
-__PACKAGE__->has_many(
-  "ratings",
-  "Koha::Schema::Result::Rating",
-  { "foreign.borrowernumber" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
 =head2 payments_transactions
 
 Type: has_many
@@ -1244,6 +1244,21 @@ Related object: L<Koha::Schema::Result::PaymentsTransaction>
 __PACKAGE__->has_many(
   "payments_transactions",
   "Koha::Schema::Result::PaymentsTransaction",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 ratings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Rating>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ratings",
+  "Koha::Schema::Result::Rating",
   { "foreign.borrowernumber" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -1429,8 +1444,8 @@ Composing rels: L</aqorder_users> -> ordernumber
 __PACKAGE__->many_to_many("ordernumbers", "aqorder_users", "ordernumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2017-05-09 21:24:02
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7llO928plwtX2Q+I9nQA8A
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:osxlJQz/WjDhS1pAEg0pNg
 
 __PACKAGE__->belongs_to(
     "guarantor",

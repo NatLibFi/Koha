@@ -28,6 +28,7 @@ use C4::Koha;
 use C4::Serials;    #uses getsubscriptionfrom biblionumber
 use C4::Output;
 use C4::Biblio;
+use C4::Holdings;
 use C4::Items;
 use C4::Circulation;
 use C4::Reserves;
@@ -35,7 +36,7 @@ use C4::Members; # to use GetMember
 use C4::Serials;
 use C4::XISBN qw(get_xisbns get_biblionumber_from_isbn);
 use C4::External::Amazon;
-use C4::Search;		# enabled_staff_search_views
+use C4::Search;                # enabled_staff_search_views
 use C4::Tags qw(get_tags);
 use C4::XSLT;
 use C4::Images;
@@ -78,7 +79,7 @@ if ( not defined $record ) {
     exit;
 }
 
-if($query->cookie("holdfor")){ 
+if($query->cookie("holdfor")){
     my $holdfor_patron = GetMember('borrowernumber' => $query->cookie("holdfor"));
     $template->param(
         holdfor => $query->cookie("holdfor"),
@@ -191,6 +192,11 @@ foreach my $subscription (@subscriptions) {
     push @subs, \%cell;
 }
 
+# Summary holdings
+my $summary_holdings;
+if (C4::Context->preference('SummaryHoldings')) {
+    $summary_holdings = C4::Holdings::GetHoldingsByBiblionumber($biblionumber);
+}
 
 # Get acquisition details
 if ( C4::Context->preference('AcquisitionDetails') ) {
@@ -322,7 +328,7 @@ foreach my $item (@items) {
         $item->{hostbiblionumber} = $item->{biblionumber};
 	$item->{hosttitle} = GetBiblioData($item->{biblionumber})->{title};
     }
-	
+
     #count if item is used in analytical bibliorecords
     my $countanalytics= GetAnalyticsCount($item->{itemnumber});
     if ($countanalytics > 0){
@@ -384,14 +390,16 @@ $template->param(
 	itemdata_uri        => $itemfields{uri},
 	itemdata_copynumber => $itemfields{copynumber},
 	itemdata_stocknumber => $itemfields{stocknumber},
-	volinfo				=> $itemfields{enumchron},
+    volinfo                                => $itemfields{enumchron},
         itemdata_itemnotes  => $itemfields{itemnotes},
         itemdata_nonpublicnotes => $itemfields{itemnotes_nonpublic},
-	z3950_search_params	=> C4::Search::z3950_search_args($dat),
+    z3950_search_params        => C4::Search::z3950_search_args($dat),
         hostrecords         => $hostrecords,
-	analytics_flag	=> $analytics_flag,
+    analytics_flag        => $analytics_flag,
 	C4::Search::enabled_staff_search_views,
         materials       => $materials_flag,
+    show_summary_holdings => C4::Context->preference('SummaryHoldings') ? 1 : 0,
+    summary_holdings => $summary_holdings,
 );
 
 if (C4::Context->preference("AlternateHoldingsField") && scalar @items == 0) {

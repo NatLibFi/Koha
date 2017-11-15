@@ -31,6 +31,7 @@ use C4::Circulation;
 use C4::Koha;
 use C4::ClassSource;
 use Koha::DateUtils;
+use Koha::Holdings;
 use Koha::ItemTypes;
 use Koha::Libraries;
 use List::MoreUtils qw/any/;
@@ -106,26 +107,26 @@ sub _increment_barcode {
 
 sub generate_subfield_form {
         my ($tag, $subfieldtag, $value, $tagslib,$subfieldlib, $branches, $biblionumber, $temp, $loop_data, $i, $restrictededition) = @_;
-  
+
         my $frameworkcode = &GetFrameworkCode($biblionumber);
 
         my %subfield_data;
         my $dbh = C4::Context->dbh;
-        
-        my $index_subfield = int(rand(1000000)); 
+
+        my $index_subfield = int(rand(1000000));
         if ($subfieldtag eq '@'){
             $subfield_data{id} = "tag_".$tag."_subfield_00_".$index_subfield;
         } else {
             $subfield_data{id} = "tag_".$tag."_subfield_".$subfieldtag."_".$index_subfield;
         }
-        
+
         $subfield_data{tag}        = $tag;
         $subfield_data{subfield}   = $subfieldtag;
         $subfield_data{marc_lib}   ="<span id=\"error$i\" title=\"".$subfieldlib->{lib}."\">".$subfieldlib->{lib}."</span>";
         $subfield_data{mandatory}  = $subfieldlib->{mandatory};
         $subfield_data{repeatable} = $subfieldlib->{repeatable};
         $subfield_data{maxlength}  = $subfieldlib->{maxlength};
-        
+
         $value =~ s/"/&quot;/g;
         if ( ! defined( $value ) || $value eq '')  {
             $value = $subfieldlib->{defaultvalue};
@@ -141,9 +142,9 @@ sub generate_subfield_form {
             my $username=(C4::Context->userenv?C4::Context->userenv->{'surname'}:"superlibrarian");
             $value=~s/<<USER>>/$username/g;
         }
-        
+
         $subfield_data{visibility} = "display:none;" if (($subfieldlib->{hidden} > 4) || ($subfieldlib->{hidden} <= -4));
-        
+
         my $pref_itemcallnumber = C4::Context->preference('itemcallnumber');
         if (!$value && $subfieldlib->{kohafield} eq 'items.itemcallnumber' && $pref_itemcallnumber) {
             my $CNtag       = substr($pref_itemcallnumber, 0, 3);
@@ -156,7 +157,7 @@ sub generate_subfield_form {
                 $value =~ s/^\s+|\s+$//g;
             }
         }
-        
+
         if ($frameworkcode eq 'FA' && $subfieldlib->{kohafield} eq 'items.barcode' && !$value){
 	    my $input = new CGI;
 	    $value = $input->param('barcode');
@@ -194,15 +195,15 @@ sub generate_subfield_form {
                       $itype_sth->execute( $biblionumber );
                       ( $value ) = $itype_sth->fetchrow_array;
                   }
-          
+
                   #---- class_sources
             }
             elsif ( $subfieldlib->{authorised_value} eq "cn_source" ) {
                   push @authorised_values, "" unless ( $subfieldlib->{mandatory} );
-                    
+
                   my $class_sources = GetClassSources();
                   my $default_source = C4::Context->preference("DefaultClassificationSource");
-                  
+
                   foreach my $class_source (sort keys %$class_sources) {
                       next unless $class_sources->{$class_source}->{'used'} or
                                   ($value and $class_source eq $value)      or
@@ -211,8 +212,18 @@ sub generate_subfield_form {
                       $authorised_lib{$class_source} = $class_sources->{$class_source}->{'description'};
                   }
         		  $value = $default_source unless ($value);
-        
+
                   #---- "true" authorised value
+            }
+            elsif ( $subfieldlib->{authorised_value} eq "holdings" ) {
+                push @authorised_values, "" unless ( $subfieldlib->{mandatory} );
+                my $holdings = Koha::Holdings->search({biblionumber => $biblionumber}, { order_by => ['holdingbranch'] })->unblessed;# build once ahead of time, instead of multiple times later.
+                for my $holding ( @$holdings ) {
+                    push @authorised_values, $holding->{holdingnumber};
+                    $authorised_lib{$holding->{holdingnumber}} = $holding->{holdingnumber} . ' ' . $holding->{holdingbranch} . ' ' . $holding->{location} . $holding->{callnumber};
+                }
+        	    my $input = new CGI;
+                $value = $input->param('holdingnumber') unless ($value);
             }
             else {
                   push @authorised_values, qq{} unless ( $subfieldlib->{mandatory} );
@@ -331,7 +342,7 @@ sub generate_subfield_form {
                 value       => $value,
             };
         }
-        
+
         return \%subfield_data;
 }
 
@@ -669,7 +680,7 @@ if ($op eq "additem") {
             }
             undef($itemrecord);
         }
-    }	
+    }
     if ($frameworkcode eq 'FA' && $fa_circborrowernumber){
         print $input->redirect(
            '/cgi-bin/koha/circ/circulation.pl?'
@@ -883,14 +894,14 @@ foreach my $field (@fields) {
         my $subfieldcode = $subfield->[0];
         my $subfieldvalue= $subfield->[1];
 
-        next if ($tagslib->{$field->tag()}->{$subfieldcode}->{tab} ne 10 
-                && ($field->tag() ne $itemtagfield 
+        next if ($tagslib->{$field->tag()}->{$subfieldcode}->{tab} ne 10
+                && ($field->tag() ne $itemtagfield
                 && $subfieldcode   ne $itemtagsubfield));
         $witness{$subfieldcode} = $tagslib->{$field->tag()}->{$subfieldcode}->{lib} if ($tagslib->{$field->tag()}->{$subfieldcode}->{tab}  eq 10);
 		if ($tagslib->{$field->tag()}->{$subfieldcode}->{tab}  eq 10) {
 		    $this_row{$subfieldcode} .= " | " if($this_row{$subfieldcode});
         	$this_row{$subfieldcode} .= GetAuthorisedValueDesc( $field->tag(),
-                        $subfieldcode, $subfieldvalue, '', $tagslib) 
+                        $subfieldcode, $subfieldvalue, '', $tagslib)
 						|| $subfieldvalue;
         }
 
