@@ -58,7 +58,7 @@ If that's a problem, clone them first.
 =cut
 
 sub update_index {
-    my ($self, $biblionums, $records) = @_;
+    my ($self, $biblionums, $records, $commit) = @_;
 
     # TODO should have a separate path for dealing with a large number
     # of records at once where we use the bulk update functions in ES.
@@ -80,7 +80,12 @@ sub update_index {
 
     #print Data::Dumper::Dumper( $from->to_array );
     $self->store->bag->add_many($from);
-    $self->store->bag->commit;
+    if ( !defined $commit || $commit ) {
+        $self->store->bag->commit;
+    } else {
+        # TODO: nicer way to do this
+        $self->store->bag->_bulk->flush;
+    }
     return 1;
 }
 
@@ -98,8 +103,8 @@ it to be updated by a regular index cron job in the future.
 =cut
 
 sub update_index_background {
-    my $self = shift;
-    $self->update_index(@_);
+    my ($self, $biblionums, $records) = @_;
+    $self->update_index($biblionums, $records, 0);
 }
 
 =head2 $indexer->delete_index($biblionums)
@@ -211,11 +216,14 @@ sub _sanitise_records {
 sub _convert_marc_to_json {
     my $self    = shift;
     my $records = shift;
+
+    # Use state to speed up repeated calls in batch processes
+    state $fixer = Catmandu::Fix->new( fixes => $self->get_fixer_rules() );
+
     my $importer =
-      Catmandu::Importer::MARC->new( records => $records, id => '999c' );
-    my $fixer = Catmandu::Fix->new( fixes => $self->get_fixer_rules() );
-    $importer = $fixer->fix($importer);
-    return $importer;
+        Catmandu::Importer::MARC->new( records => $records, id => '999c' );
+
+    return $fixer->fix($importer);
 }
 
 1;

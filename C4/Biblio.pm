@@ -323,7 +323,9 @@ sub ModBiblio {
     # update biblionumber and biblioitemnumber in MARC
     # FIXME - this is assuming a 1 to 1 relationship between
     # biblios and biblioitems
-    my $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
+    # Use state to speed up repeated calls in batch processes
+    state $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
+
     $sth->execute($biblionumber);
     my ($biblioitemnumber) = $sth->fetchrow;
     $sth->finish();
@@ -3968,7 +3970,8 @@ sub ModBiblioMarc {
     if ( !$frameworkcode ) {
         $frameworkcode = "";
     }
-    my $sth = $dbh->prepare("UPDATE biblio SET frameworkcode=? WHERE biblionumber=?");
+    # Use state to speed up repeated calls in batch processes
+    state $sth = $dbh->prepare("UPDATE biblio SET frameworkcode=? WHERE biblionumber=?");
     $sth->execute( $frameworkcode, $biblionumber );
     $sth->finish;
     my $encoding = C4::Context->preference("marcflavour");
