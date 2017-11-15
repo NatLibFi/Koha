@@ -5,7 +5,6 @@ my $dbh = C4::Context->dbh();
 my $atomicUpdater = Koha::AtomicUpdater->new();
 
 unless ($atomicUpdater->find('NLF-2')) {
-
     $dbh->do(q{
         CREATE TABLE `holdings` ( -- table that stores summary holdings information
         `holdingnumber` int(11) NOT NULL auto_increment, -- unique identifier assigned to each holding record
