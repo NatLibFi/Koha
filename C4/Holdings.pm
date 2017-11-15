@@ -491,7 +491,7 @@ sub _koha_delete_holding {
     my ( $dbh, $holdingnumber ) = @_;
 
     # get all the data for this holding
-    my $sth = $dbh->prepare("SELECT * FROM holding WHERE holdingnumber=?");
+    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holdingnumber=?");
     $sth->execute($holdingnumber);
 
     # FIXME There is a transaction in _koha_delete_holding_metadata
@@ -513,7 +513,7 @@ sub _koha_delete_holding {
         $bkup_sth->execute(@bind);
         $bkup_sth->finish;
 
-        _koha_delete_holdings_metadata( $holdingnumber );
+        _koha_delete_holding_metadata( $holdingnumber );
 
         # delete the holding
         my $sth2 = $dbh->prepare("DELETE FROM holdings WHERE holdingnumber=?");

@@ -679,10 +679,10 @@ elsif ( $op eq "delete" ) {
     if ($error) {
         warn "ERROR when DELETING HOLDING $holdingnumber : $error";
         print "Content-Type: text/html\n\n<html><body><h1>ERROR when DELETING HOLDING $holdingnumber : $error</h1></body></html>";
-	exit;
+        exit;
     }
 
-    print $input->redirect('/cgi-bin/koha/catalogue/search.pl');
+    print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&searchid=$searchid");
     exit;
 
 } else {
