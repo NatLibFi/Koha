@@ -1572,8 +1572,8 @@ sub GetMarcItemFields {
         # Set correct item type
         if ( !$item_level_itype || !$item->{itype} ) {
             warn 'item-level_itypes set but no itemtype set for item (' . $item->{itemnumber} . ')' if ( !$item->{itype} );
-            my $biblioitem = Koha::Biblioitem::find( $item->{biblioitemnumber} );
-            $item->itype = $biblioitem->itemtype();
+            my $biblioitem = Koha::Biblioitems->find( $item->{biblioitemnumber} );
+            $item->{itype} = $biblioitem->itemtype();
         }
 
         my $mungeditem = {
