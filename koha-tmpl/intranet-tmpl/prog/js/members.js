@@ -305,9 +305,9 @@ function reset_autofill_for_quick_form(disable) {
                 }
                 if(jQuery.inArray( idvalue, dates ) > -1) {
                     quick_form_date_reset(idvalue);
-                } 
+                }
            }
-           
+
         });
     } else {
         $('#'+formname+' :input').each(function(index){
@@ -325,6 +325,9 @@ function reset_autofill_for_quick_form(disable) {
 
 function updateOthername() {
     var othernames = $("#othernames");
+    if (othernames.length === 0) {
+        return;
+    }
     var firstname = ($("#entryform").find("#firstname").val() != '') ? $("#entryform").find("#firstname") : $("#quick_add_form").find("#firstname");
     var surname = ($("#entryform").find("#surname").val() != '') ? $("#entryform").find("#surname") : $("#quick_add_form").find("#surname");
     
