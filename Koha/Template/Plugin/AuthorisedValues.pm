@@ -48,7 +48,7 @@ sub GetAuthValueDropbox {
             category => $category,
         },
         {
-            group_by => 'lib',
+# TODO: this doesn't work, but what is it for?            group_by => 'lib',
             order_by => [ 'category', 'lib', 'lib_opac' ],
         }
     );
