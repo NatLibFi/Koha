@@ -26,7 +26,7 @@ search - a search script for finding records in a Koha system (Version 3)
 
 =head1 OVERVIEW
 
-This script utilizes a new search API for Koha 3. It is designed to be 
+This script utilizes a new search API for Koha 3. It is designed to be
 simple to use and configure, yet capable of performing feats like stemming,
 field weighting, relevance ranking, support for multiple  query language
 formats (CCL, CQL, PQF), full support for the bib1 attribute set, extended
@@ -44,7 +44,7 @@ I will attempt to describe what is happening at each part of this script.
 
 This script performs two functions:
 
-=over 
+=over
 
 =item 1. interacts with Koha to retrieve and display the results of a search
 
@@ -66,7 +66,7 @@ This is fairly straightforward, and I won't go into detail ;-)
 If we're performing a search, this script  performs three primary
 operations:
 
-=over 
+=over
 
 =item 1. builds query strings (yes, plural)
 
@@ -87,22 +87,22 @@ There are several types of queries needed in the process of search and retrieve:
 
 =item 1 $query - the fully-built query passed to zebra
 
-This is the most complex query that needs to be built. The original design goal 
+This is the most complex query that needs to be built. The original design goal
 was to use a custom CCL2PQF query parser to translate an incoming CCL query into
-a multi-leaf query to pass to Zebra. It needs to be multi-leaf to allow field 
-weighting, koha-specific relevance ranking, and stemming. When I have a chance 
+a multi-leaf query to pass to Zebra. It needs to be multi-leaf to allow field
+weighting, koha-specific relevance ranking, and stemming. When I have a chance
 I'll try to flesh out this section to better explain.
 
-This query incorporates query profiles that aren't compatible with most non-Zebra 
+This query incorporates query profiles that aren't compatible with most non-Zebra
 Z39.50 targets to acomplish the field weighting and relevance ranking.
 
 =item 2 $simple_query - a simple query that doesn't contain the field weighting,
 stemming, etc., suitable to pass off to other search targets
 
-This query is just the user's query expressed in CCL CQL, or PQF for passing to a 
+This query is just the user's query expressed in CCL CQL, or PQF for passing to a
 non-zebra Z39.50 target (one that doesn't support the extended profile that Zebra does).
 
-=item 3 $query_cgi - passed to the template / saved for future refinements of 
+=item 3 $query_cgi - passed to the template / saved for future refinements of
 the query (by user)
 
 This is a simple string that completely expresses the query as a CGI string that
@@ -118,12 +118,12 @@ This is a simple string that is human readable. It will contain '=', ',', etc.
 =head3 2. Perform the Search
 
 This section takes the query strings and performs searches on the named servers,
-including the Koha Zebra server, stores the results in a deeply nested object, 
+including the Koha Zebra server, stores the results in a deeply nested object,
 builds 'faceted results', and returns these objects.
 
 =head3 3. Build HTML
 
-The final major section of this script takes the objects collected thusfar and 
+The final major section of this script takes the objects collected thusfar and
 builds the HTML for output to the template and user.
 
 =head3 Additional Notes
@@ -136,7 +136,7 @@ use strict;            # always use
 #use warnings; FIXME - Bug 2505
 
 ## STEP 1. Load things that are used in both search page and
-# results page and decide which template to load, operations 
+# results page and decide which template to load, operations
 # to perform, etc.
 
 ## load Koha modules
@@ -195,7 +195,7 @@ if (C4::Context->preference("IntranetNumbersPreferPhrase")) {
     $template->param('numbersphr' => 1);
 }
 
-if($cgi->cookie("holdfor")){ 
+if($cgi->cookie("holdfor")){
     my $holdfor_patron = GetMember('borrowernumber' => $cgi->cookie("holdfor"));
     $template->param(
         holdfor => $cgi->cookie("holdfor"),
@@ -282,7 +282,7 @@ if ( $template_type eq 'advsearch' ) {
     # load the servers (used for searching -- to do federated searching, etc.)
     my $primary_servers_loop;# = displayPrimaryServers();
     $template->param(outer_servers_loop =>  $primary_servers_loop,);
-    
+
     my $secondary_servers_loop;
     $template->param(outer_sup_servers_loop => $secondary_servers_loop,);
 
@@ -383,7 +383,7 @@ unless (@servers) {
 my @operators = map uri_unescape($_), $cgi->multi_param('op');
 
 # indexes are query qualifiers, like 'title', 'author', etc. They
-# can be single or multiple parameters separated by comma: kw,right-Truncation 
+# can be single or multiple parameters separated by comma: kw,right-Truncation
 my @indexes = map uri_unescape($_), $cgi->multi_param('idx');
 
 # if a simple index (only one)  display the index used in the top search box
@@ -521,7 +521,7 @@ for my $this_cgi ( split('&',$limit_cgi) ) {
     next unless $this_cgi;
     # handle special case limit-yr
     if ($this_cgi =~ /yr,st-numeric/) {
-        push @limit_inputs, { input_name => 'limit-yr', input_value => $limit_yr_value };   
+        push @limit_inputs, { input_name => 'limit-yr', input_value => $limit_yr_value };
         next;
     }
     $this_cgi =~ m/(.*=)(.*)/;
@@ -588,7 +588,8 @@ for (my $i=0;$i<@servers;$i++) {
         }
 
         ## If there's just one result, redirect to the detail page
-        if ($total == 1) {         
+        # TODO: make this a pref
+        if ($total == 1 && 0) {
             my $biblionumber = $newresults[0]->{biblionumber};
             my $defaultview = C4::Context->preference('IntranetBiblioDefaultView');
             my $views = { C4::Search::enabled_staff_search_views };
@@ -600,7 +601,7 @@ for (my $i=0;$i<@servers;$i++) {
                 print $cgi->redirect("/cgi-bin/koha/catalogue/labeledMARCdetail.pl?biblionumber=$biblionumber");
             } else {
                 print $cgi->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber");
-            } 
+            }
             exit;
         }
 
@@ -666,9 +667,9 @@ for (my $i=0;$i<@servers;$i++) {
                         highlight => $this_page_number == $current_page_number,
                         sort_by   => join ' ', @sort_by
                       };
-                                
+
                 }
-                        
+
             }
 
             # now, show twenty pages, with the current one smack in the middle
@@ -714,7 +715,7 @@ for (my $i=0;$i<@servers;$i++) {
                 'link' => "&amp;idx=an&amp;q=".$marc_record_object->field('001')->as_string(),
             };
         }
-        push @sup_results_array, {  servername => $server, 
+        push @sup_results_array, {  servername => $server,
                                     inner_sup_results_loop => \@inner_sup_results_array} if @inner_sup_results_array;
     }
     # FIXME: can add support for other targets as needed here
