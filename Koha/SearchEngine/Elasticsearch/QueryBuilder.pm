@@ -620,7 +620,8 @@ our %index_field_convert = (
     'hrcn'    => 'host-control-number',
     'cni'     => 'control-number-identifier',
     'Control-number' => 'control-number',
-    'an'      => 'an'
+    'an'      => 'an',
+    'Provider' => 'publisher'
 );
 
 sub _convert_index_fields {
