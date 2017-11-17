@@ -113,7 +113,7 @@
                 magneto-optical disc
             </xsl:if>
             <xsl:if test="marc:controlfield[@tag=007][substring(text(),1,1)='c'][substring(text(),2,1)='r']">
-		available online
+        available online
             </xsl:if>
             <xsl:if test="marc:controlfield[@tag=007][substring(text(),1,1)='c'][substring(text(),2,1)='a']">
                 tape cartridge
@@ -509,9 +509,19 @@
                 <xsl:when test="$leader6='m'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/computer_link.png" alt="computer file" title="computer file" class="materialtype"/> Computer file</xsl:when>
                 <xsl:when test="$leader6='e' or $leader6='f'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/map.png" alt="map" title="map" class="materialtype"/> Map</xsl:when>
                 <xsl:when test="$leader6='g' or $leader6='k' or $leader6='r'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/film.png" alt="visual material" title="visual material" class="materialtype"/> Visual material</xsl:when>
-                <xsl:when test="$leader6='c' or $leader6='d'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/music.png" alt="score" title="score" class="materialtype"/> Score</xsl:when>
+                <xsl:when test="$leader6='c' or $leader6='d'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/music.png" alt="score" title="score" class="materialtype"/>
+                    <xsl:choose>
+                        <xsl:when test="$leader7='a' or $leader7='b'"> Score (Component) </xsl:when> 
+                        <xsl:otherwise> Score </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
                 <xsl:when test="$leader6='i'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/sound.png" alt="sound" title="sound" class="materialtype"/> Sound</xsl:when>
-                <xsl:when test="$leader6='j'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/sound.png" alt="music" title="music" class="materialtype"/> Music</xsl:when>
+                <xsl:when test="$leader6='j'"><img src="/intranet-tmpl/prog/img/famfamfam/silk/sound.png" alt="music" title="music" class="materialtype"/>
+                    <xsl:choose>
+                        <xsl:when test="$leader7='a' or $leader7='b'"> Music (Component) </xsl:when> 
+                        <xsl:otherwise> Music </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
             </xsl:choose>
         </span>
     </xsl:if>
@@ -527,7 +537,7 @@
         <xsl:if test="$typeOf008='CR'">
         <span class="results_typeofcontinueing">
         <xsl:if test="$controlField008-21 and $controlField008-21 !='|' and $controlField008-21 !=' '">
-	    <span class="label">; Type of continuing resource: </span>
+        <span class="label">; Type of continuing resource: </span>
         </xsl:if>
             <xsl:choose>
                 <xsl:when test="$controlField008-21='l'">
@@ -554,7 +564,7 @@
                     abstract or summary
                 </xsl:when>
                 <xsl:when test="contains($controlField008-24,'b')">
-		    bibliography
+                    bibliography
                 </xsl:when>
                 <xsl:when test="contains($controlField008-24,'c')">
                     catalog
@@ -643,7 +653,7 @@
                 festschrift
             </xsl:if>
 
-            <xsl:if test="$controlField008-33 and $controlField008-33!='|' and $controlField008-33!='u' and $controlField008-33!=' '">
+            <xsl:if test="$controlField008-33 and $controlField008-33!='|' and $controlField008-33!='u' and $controlField008-33!=' ' and $controlField008-30-31!='nn'">
             <span class="label">; Literary form: </span>
             </xsl:if>
             <xsl:choose>
@@ -679,6 +689,12 @@
                 </xsl:when>
                 <xsl:when test="$controlField008-33='s'">
                     Speeches
+                </xsl:when>
+                <xsl:when test="$controlField008-33='z'">
+                    Other
+                </xsl:when>
+                <xsl:when test="$controlField008-33='|'">
+                    Unspecified
                 </xsl:when>
             </xsl:choose>
         </span>
@@ -794,7 +810,7 @@
             </xsl:choose>
         </span>
         </xsl:if>
-	</xsl:if>
+    </xsl:if>
 
     <xsl:if test="($typeOf008='BK' or $typeOf008='CF' or $typeOf008='MU' or $typeOf008='VM') and ($controlField008-22='a' or $controlField008-22='b' or $controlField008-22='c' or $controlField008-22='d' or $controlField008-22='e' or $controlField008-22='g' or $controlField008-22='j' or $controlField008-22='f')">
     <span class="results_audience">
@@ -828,7 +844,7 @@
     </span>
     </xsl:if>
 <xsl:text> </xsl:text> <!-- added blank space to fix font display problem, see Bug 3671 -->
-	</span>
+    </span>
 </xsl:if> <!-- DisplayIconsXSLT -->
 
     <!-- Publisher Statement: Alternate Graphic Representation (MARC 880) -->
@@ -921,6 +937,22 @@
     </span>
     </xsl:if>
 
+    <!-- Other identifiers: ISRC & ISMN & Publisher numbers -->
+    
+    <xsl:if test="marc:datafield[@tag=024] or marc:datafield[@tag=028]">
+        <span class="results_summary otherid"><span class="label">Other identifiers: </span>
+        <xsl:for-each select="marc:datafield[@tag=024 or @tag=028]">
+            <xsl:call-template name="subfieldSelect">
+                <xsl:with-param name="codes">ba</xsl:with-param>
+            </xsl:call-template>
+            <xsl:choose>
+                <xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when>
+                <xsl:otherwise><xsl:text>; </xsl:text></xsl:otherwise>
+            </xsl:choose>
+        </xsl:for-each>
+        </span>
+    </xsl:if>
+    
     <xsl:if test="marc:datafield[@tag=250]">
     <span class="results_summary">
     <span class="label">Edition: </span>
@@ -954,7 +986,7 @@
     </xsl:if>
 
     <xsl:if test="marc:datafield[@tag=246]">
-	<span class="results_summary">
+    <span class="results_summary">
     <span class="label">Other title: </span>
             <xsl:for-each select="marc:datafield[@tag=246]">
                     <xsl:call-template name="subfieldSelect">
@@ -963,14 +995,14 @@
                 <!-- #13386 added separator | -->
                 <xsl:choose><xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><span class="separator"><xsl:text> | </xsl:text></span></xsl:otherwise></xsl:choose>
             </xsl:for-each>
-	</span>
+    </span>
     </xsl:if>
     <xsl:if test="marc:datafield[@tag=856]">
          <span class="results_summary">
-			   <span class="label">Online access: </span>
+               <span class="label">Online access: </span>
                             <xsl:for-each select="marc:datafield[@tag=856]">
                             <xsl:variable name="SubqText"><xsl:value-of select="marc:subfield[@code='q']"/></xsl:variable>
-				   <a><xsl:attribute name="href"><xsl:value-of select="util:urlencode(marc:subfield[@code='u'])"/></xsl:attribute>
+                   <a><xsl:attribute name="href"><xsl:value-of select="util:urlencode(marc:subfield[@code='u'])"/></xsl:attribute>
                                     <xsl:choose>
                                      <xsl:when test="($Show856uAsImage='Results' or $Show856uAsImage='Both') and (substring($SubqText,1,6)='image/' or $SubqText='img' or $SubqText='bmp' or $SubqText='cod' or $SubqText='gif' or $SubqText='ief' or $SubqText='jpe' or $SubqText='jpeg' or $SubqText='jpg' or $SubqText='jfif' or $SubqText='png' or $SubqText='svg' or $SubqText='tif' or $SubqText='tiff' or $SubqText='ras' or $SubqText='cmx' or $SubqText='ico' or $SubqText='pnm' or $SubqText='pbm' or $SubqText='pgm' or $SubqText='ppm' or $SubqText='rgb' or $SubqText='xbm' or $SubqText='xpm' or $SubqText='xwd')">
                                         <xsl:element name="img"><xsl:attribute name="src"><xsl:value-of select="marc:subfield[@code='u']"/></xsl:attribute><xsl:attribute name="alt"><xsl:value-of select="marc:subfield[@code='y']"/></xsl:attribute><xsl:attribute name="height">100</xsl:attribute></xsl:element><xsl:text></xsl:text>
@@ -981,14 +1013,14 @@
                                         </xsl:call-template>
                                     </xsl:when>
                                     <xsl:when test="not(marc:subfield[@code='y']) and not(marc:subfield[@code='3']) and not(marc:subfield[@code='z'])">
-					<xsl:choose>
-					<xsl:when test="$URLLinkText!=''">
-						<xsl:value-of select="$URLLinkText"/>
-					</xsl:when>
-					<xsl:otherwise>
-						<xsl:text>Click here to access online</xsl:text>
-					</xsl:otherwise>
-					</xsl:choose>
+                    <xsl:choose>
+                    <xsl:when test="$URLLinkText!=''">
+                        <xsl:value-of select="$URLLinkText"/>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:text>Click here to access online</xsl:text>
+                    </xsl:otherwise>
+                    </xsl:choose>
                                     </xsl:when>
                                     </xsl:choose>
                                     </a>

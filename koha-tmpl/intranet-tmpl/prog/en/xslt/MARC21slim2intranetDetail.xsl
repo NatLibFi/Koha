@@ -88,9 +88,19 @@
                 <xsl:when test="$leader6='m'">Computer file</xsl:when>
                 <xsl:when test="$leader6='e' or $leader6='f'">Map</xsl:when>
                 <xsl:when test="$leader6='g' or $leader6='k' or $leader6='r'">Visual material</xsl:when>
-                <xsl:when test="$leader6='j'">Music</xsl:when>
+                <xsl:when test="$leader6='j'">
+                    <xsl:choose>
+                        <xsl:when test="$leader7='a' or $leader7='b'">Music (Component)</xsl:when>
+                        <xsl:otherwise>Music</xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
                 <xsl:when test="$leader6='i'">Sound</xsl:when>
-                <xsl:when test="$leader6='c' or $leader6='d'">Score</xsl:when>
+                <xsl:when test="$leader6='c' or $leader6='d'">
+                    <xsl:choose>
+                        <xsl:when test="$leader7='a' or $leader7='b'">Score (Component)</xsl:when>
+                        <xsl:otherwise>Score</xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
             </xsl:choose>
         </xsl:variable>
 
@@ -1291,9 +1301,9 @@
     </xsl:template>
 
     <xsl:template name="showAuthor">
-	<xsl:param name="authorfield"/>
+    <xsl:param name="authorfield"/>
     <xsl:param name="UseAuthoritiesForTracings"/>
-	<xsl:if test="count($authorfield)&gt;0">
+    <xsl:if test="count($authorfield)&gt;0">
         <h5 class="author">
         <xsl:for-each select="$authorfield">
         <xsl:choose>
@@ -1538,7 +1548,7 @@
         </xsl:for-each>
         </h5>
 
-	</xsl:if>
+    </xsl:if>
     </xsl:template>
 
     <!-- #1807 Strip unwanted parenthesis from subjects for searching -->
