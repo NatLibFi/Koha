@@ -1,4 +1,4 @@
-@import url("../../lib/yui/reset-fonts-grids.css") screen;
+﻿@import url("../../lib/yui/reset-fonts-grids.css") screen;
 
 input:focus, textarea:focus {
     border-color:#538200;
@@ -3017,3 +3017,14 @@ fieldset.rows + fieldset.action {
 #patron_search #filters {
     display: none;
 }
+
+.author .relatorcode {
+	font-weight: normal;
+	font-size:85%
+}
+
+.icon-authoritylink {
+	padding-bottom: 10px;
+	padding-left: 2px;
+}
+
