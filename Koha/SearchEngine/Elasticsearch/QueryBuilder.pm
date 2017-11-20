@@ -534,7 +534,7 @@ sub build_authorities_query_compat {
     my %sort;
     my $sort_field =
         ( $orderby =~ /^Heading/ ) ? 'Heading'
-      : ( $orderby =~ /^Auth/ )    ? 'Local-Number'
+      : ( $orderby =~ /^Auth/ )    ? 'Local-number'
       :                              undef;
     if ($sort_field) {
         my $sort_order = ( $orderby =~ /Asc$/ ) ? 'asc' : 'desc';

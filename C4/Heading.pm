@@ -226,10 +226,9 @@ sub _search {
     my $searcher = Koha::SearchEngine::Search->new(
         {index => $Koha::SearchEngine::AUTHORITIES_INDEX} );
 
-
     my $search_query = $builder->build_authorities_query_compat(
         \@marclist, \@and_or, \@excluding, \@operator,
-        \@value,    0,        20,          $self->{'auth_type'},
+        \@value,    $self->{'auth_type'},
         'AuthidAsc'
     );
     return $searcher->search_auth_compat( $search_query, 0, 20, $skipmetadata );
