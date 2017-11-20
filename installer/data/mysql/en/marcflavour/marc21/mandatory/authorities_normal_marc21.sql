@@ -31,7 +31,8 @@ INSERT INTO auth_types (authtypecode, authtypetext, auth_tag_to_report, summary)
 		('CHRON_TERM', 'Chronological Term', '148', 'Chronological Term'),
 		('TOPIC_TERM', 'Topical Term', '150', 'Topical Term'),
 		('GEOGR_NAME', 'Geographic Name', '151', 'Geographic Name'),
-		('GENRE/FORM', 'Genre/Form Term', '155', 'Genre/Form Term');
+		('GENRE/FORM', 'Genre/Form Term', '155', 'Genre/Form Term'),
+		('MED_PERFOR', 'Medium of Performance', '162', 'Medium of Performance');
 
 
 -- ******************************************************
