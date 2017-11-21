@@ -208,11 +208,12 @@ created.
 sub get_elasticsearch_mappings {
     my ($self) = @_;
 
-    state $mappings = undef;
+    state %all_mappings;
     state %sort_fields;
 
-    if (!defined $mappings) {
-        $mappings = {
+    if (!defined $all_mappings{$self->index}) {
+        $sort_fields{$self->index} = {};
+        my $mappings = {
             data => {
                 _all => {type => "string", analyzer => "analyser_standard"},
                 properties => {
@@ -280,13 +281,14 @@ sub get_elasticsearch_mappings {
                             },
                         },
                     };
-                    $sort_fields{$name} = 1;
+                    $sort_fields{$self->index}{$name} = 1;
                 }
             }
         );
+        $all_mappings{$self->index} = $mappings;
     }
-    $self->sort_fields(\%sort_fields);
-    return $mappings;
+    $self->sort_fields(\%{$sort_fields{$self->index}});
+    return $all_mappings{$self->index};
 }
 
 =head2 _elasticsearch_mapping_for_*
