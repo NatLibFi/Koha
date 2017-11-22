@@ -36,6 +36,7 @@ use Koha::IssuingRules;
 use Koha::Subscriptions;
 use Koha::Item::Transfer::Limits;
 use Koha::Libraries;
+use Koha::Holdings;
 
 use Koha::Exceptions::Library;
 
@@ -325,6 +326,51 @@ sub items {
     $self->{_items} ||= Koha::Items->search( { biblionumber => $self->biblionumber() } );
 
     return wantarray ? $self->{_items}->as_list : $self->{_items};
+}
+
+=head3 holdings
+
+my @holdings = $biblio->holdings();
+my $holdings = $biblio->holdings();
+
+Returns the related Koha::Holdings object for this biblio in scalar context,
+or list of Koha::Holding objects in list context.
+
+=cut
+
+sub holdings {
+    my ($self) = @_;
+
+    $self->{_holdings} ||= Koha::Holdings->search( { biblionumber => $self->biblionumber() } );
+
+    return wantarray ? $self->{_holdings}->as_list : $self->{_holdings};
+}
+
+=head3 holdings_full
+
+my @holdings = $biblio->holdings_full();
+
+Returns the related Koha::Holdings object including metadata for this biblio as an array ref.
+
+=cut
+
+sub holdings_full {
+    my ($self) = @_;
+
+    if ( !$self->{_holdings_full} ) {
+        my $schema = Koha::Database->new()->schema();
+        my @holdings = $schema->resultset('Holding')->search(
+            { 'biblionumber' => $self->biblionumber() },
+            {
+                join         => 'holdings_metadatas',
+                '+columns'   => [ qw/ holdings_metadatas.format holdings_metadatas.marcflavour holdings_metadatas.metadata / ],
+                collapse     => 1,
+                result_class => 'DBIx::Class::ResultClass::HashRefInflator'
+            }
+        );
+        $self->{_holdings_full} = \@holdings;
+    }
+    return $self->{_holdings_full};
 }
 
 =head3 itemtype

@@ -110,6 +110,35 @@ subtest 'getexpanded() tests' => sub {
       ->json_hasnt('/biblio/title_remainder');
 };
 
+subtest 'getholdings() tests' => sub {
+    plan tests => 8;
+
+    my ($bibnum, $title, $bibitemnum) = create_helper_biblio({
+        itemtype => 'BK',
+        remainder_of_title => 'Remainder'
+    });
+
+    my $tx = $t->ua->build_tx(GET => "/api/v1/biblios/$bibnum/holdings");
+    $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
+    $tx->req->cookies({name => 'CGISESSID', value => $session->id});
+    $t->request_ok($tx)
+      ->status_is(200);
+
+    $t->json_is('/biblio/biblionumber' => $bibnum)
+      ->json_is('/biblio/title_remainder' => 'Remainder');
+
+    ($bibnum, $title, $bibitemnum) = create_helper_biblio({ itemtype => 'BK' });
+
+    $tx = $t->ua->build_tx(GET => "/api/v1/biblios/$bibnum/holdings");
+    $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
+    $tx->req->cookies({name => 'CGISESSID', value => $session->id});
+    $t->request_ok($tx)
+      ->status_is(200);
+
+    $t->json_is('/biblio/biblionumber' => $bibnum)
+      ->json_hasnt('/biblio/title_remainder');
+};
+
 subtest 'Delete biblio' => sub {
 	plan tests => 4;
 

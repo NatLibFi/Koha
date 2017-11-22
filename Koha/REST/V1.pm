@@ -97,7 +97,7 @@ sub default_exception_handling {
             # display the detailed error if some DEBUG variable is enabled.
             # Of course the error is still logged if log4perl is configured
             # appropriately...
-            json => { error => 'Something went wrong, check the logs.' }
+            json => { error => 'Something went wrong, check the logs.' . Koha::Exceptions::to_str($e) }
         );
     }
 }
