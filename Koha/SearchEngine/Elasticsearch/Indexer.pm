@@ -218,12 +218,15 @@ sub _convert_marc_to_json {
     my $records = shift;
 
     # Use state to speed up repeated calls in batch processes
-    state $fixer = Catmandu::Fix->new( fixes => $self->get_fixer_rules() );
+    state %fixers;
+    if ( !defined $fixers{$self->index} ) {
+        $fixers{$self->index} = Catmandu::Fix->new( fixes => $self->get_fixer_rules() );
+    }
 
     my $importer =
         Catmandu::Importer::MARC->new( records => $records, id => '999c' );
 
-    return $fixer->fix($importer);
+    return $fixers{$self->index}->fix($importer);
 }
 
 1;
