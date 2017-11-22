@@ -206,20 +206,6 @@ sub build_query_compat {
     my $limits       = $self->_fix_limit_special_cases($orig_limits);
     if ( $params->{suppress} ) { push @$limits, "suppress:0"; }
 
-    # Merge the indexes in with the search terms and the operands so that
-    # each search thing is a handy unit.
-    unshift @$operators, undef;    # The first one can't have an op
-    my @search_params;
-    my $ea = each_array( @$operands, @$operators, @index_params );
-    while ( my ( $oand, $otor, $index ) = $ea->() ) {
-        next if ( !defined($oand) || $oand eq '' );
-        push @search_params, {
-            operand => $self->_clean_search_term($oand, $index), # the search terms
-            operator => defined($otor) ? uc $otor : undef,    # AND and so on
-            $index ? %$index : (),
-        };
-    }
-
     my $query;
     my $query_str;
     if ( $scan ) {
@@ -260,13 +246,17 @@ sub build_query_compat {
         $query = $self->build_query( $query_str, %options );
     }
 
-    #die Dumper($query);
     # We roughly emulate the CGI parameters of the zebra query builder
-    my $query_cgi;
-    my ($index) = @$indexes;
-    #$index = 'kw' unless $index;
-    $query_cgi = ($index ? "idx=$index" : '') . '&q=' . uri_escape_utf8( $operands->[0] ) if @$operands;
+    my $query_cgi = '';
+    shift @$operators; # Shift out the one we unshifted before
+    my $ea = each_array( @$operands, @$operators, @$indexes );
+    while ( my ( $oand, $otor, $index ) = $ea->() ) {
+        $query_cgi .= '&' if $query_cgi;
+        $query_cgi .= 'idx=' . uri_escape_utf8( $index ) . '&q=' . uri_escape_utf8( $oand );
+        $query_cgi .= '&op=' . uri_escape_utf8( $otor ) if $otor;
+    }
     $query_cgi .= '&scan=1' if ( $scan );
+
     my $simple_query;
     $simple_query = $operands->[0] if @$operands == 1;
     my $query_desc   = $simple_query || $query_str;
