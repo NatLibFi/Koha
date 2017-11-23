@@ -310,6 +310,12 @@ __PACKAGE__->table("items");
   is_nullable: 1
   size: 10
 
+=head2 holdingnumber
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -438,6 +444,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "reserve_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
+  "holdingnumber",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -623,6 +631,26 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 holdingnumber
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "holdingnumber",
+  "Koha::Schema::Result::Holding",
+  { holdingnumber => "holdingnumber" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 homebranch
 
 Type: belongs_to
@@ -734,8 +762,8 @@ __PACKAGE__->might_have(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vVso0a+uMD5ht5MKo5VXdQ
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-23 11:13:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:t4ictB54SS8w/SczkjDDNw
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 

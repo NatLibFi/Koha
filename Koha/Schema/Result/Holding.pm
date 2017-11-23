@@ -206,9 +206,24 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 items
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zaK0iSYBcqKayMVoXUNXGw
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Item>
+
+=cut
+
+__PACKAGE__->has_many(
+  "items",
+  "Koha::Schema::Result::Item",
+  { "foreign.holdingnumber" => "self.holdingnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-23 11:13:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QjAejEkE+BQVeMP+4ykW0Q
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

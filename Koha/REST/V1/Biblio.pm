@@ -47,7 +47,8 @@ sub getitems {
     unless ($biblio) {
         return $c->render(status => 404, openapi => {error => "Biblio not found"});
     }
-    return $c->render(status => 200, openapi => { biblio => $biblio, items => $biblio->items });
+    my @items = $biblio->items;
+    return $c->render(status => 200, openapi => { biblio => $biblio, items => \@items });
 }
 
 sub getexpanded {
