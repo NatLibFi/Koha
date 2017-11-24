@@ -4510,13 +4510,13 @@ INSERT IGNORE INTO `marc_tag_structure` (`tagfield`, `liblibrarian`, `libopac`, 
 		('878', 'ITEM INFORMATION--INDEXES', 'ITEM INFORMATION--INDEXES', 1, 0, NULL, 'HLD');
 
 INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
-		('000', '@', 'fixed length control field', 'fixed length control field', 0, 1, '', 0, '', '', 'marc21_leader.pl', 0, 0, 'HLD', '', '', NULL),
+		('000', '@', 'fixed length control field', 'fixed length control field', 0, 1, '', 0, '', '', 'marc21_leader_holdings.pl', 0, 0, 'HLD', '', '', NULL),
 		('001', '@', 'control field', 'control field', 0, 0, '', 0, '', '', '', 0, 0, 'HLD', '', '', NULL),
         ('003', '@', 'control field', 'control field', 0, 1, '', 0, '', '', 'marc21_orgcode.pl', 0, 0, 'HLD', '', '', NULL),
 		('005', '@', 'control field', 'control field', 0, 1, '', 0, '', '', 'marc21_field_005.pl', 0, 0, 'HLD', '', '', NULL),
 		('006', '@', 'fixed length control field', 'fixed length control field', 0, 0, '', 0, '', '', 'marc21_field_006.pl', 0, -1, 'HLD', '', '', NULL),
 		('007', '@', 'fixed length control field', 'fixed length control field', 0, 0, '', 0, '', '', 'marc21_field_007.pl', 0, 0, 'HLD', '', '', NULL),
-		('008', '@', 'fixed length control field', 'fixed length control field', 0, 1, '', 0, '', '', 'marc21_field_008.pl', 0, 0, 'HLD', '', '', NULL),
+		('008', '@', 'fixed length control field', 'fixed length control field', 0, 1, '', 0, '', '', 'marc21_field_008_holdings.pl', 0, 0, 'HLD', '', '', NULL),
 		('850', '8', 'Field link and sequence number', 'Field link and sequence number', 1, 0, NULL, 8, NULL, NULL, '', NULL, 4, 'HLD', '', '', NULL),
 		('850', 'a', 'Holding institution', 'Holding institution', 1, 0, NULL, 8, NULL, NULL, '', NULL, 4, 'HLD', '', '', NULL),
 		('850', 'b', 'Holdings (NR) (MU VM SE) [OBSOLETE]', 'Holdings (NR) (MU VM SE) [OBSOLETE]', 0, 0, NULL, 8, NULL, NULL, '', NULL, 4, 'HLD', '', '', NULL),
