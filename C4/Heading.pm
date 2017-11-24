@@ -17,6 +17,8 @@ package C4::Heading;
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
+use Modern::Perl;
+
 use strict;
 use warnings;
 use MARC::Record;
@@ -221,9 +223,13 @@ sub _search {
     require Koha::SearchEngine::QueryBuilder;
     require Koha::SearchEngine::Search;
 
-    my $builder = Koha::SearchEngine::QueryBuilder->new(
+    # Use state variables to avoid recreating the objects every time.
+    # This is also important so that batch processes don't create massive
+    # number of Elasticsearch connectors that eventually run out of file
+    # descriptors.
+    state $builder = Koha::SearchEngine::QueryBuilder->new(
         { index => $Koha::SearchEngine::AUTHORITIES_INDEX } );
-    my $searcher = Koha::SearchEngine::Search->new(
+    state $searcher = Koha::SearchEngine::Search->new(
         {index => $Koha::SearchEngine::AUTHORITIES_INDEX} );
 
     my $search_query = $builder->build_authorities_query_compat(
