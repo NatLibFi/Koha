@@ -39,6 +39,7 @@ sub insert {
     $self->{quantityreceived} ||= 0;
     $self->{entrydate} ||=
       output_pref( { dt => dt_from_string, dateformat => 'iso' } );
+    $self->{discount} ||= 0;
 
     my @columns = $schema->source('Aqorder')->columns;
 

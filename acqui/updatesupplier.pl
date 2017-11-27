@@ -92,8 +92,8 @@ $data{'listincgst'}=$input->param('list_gst');
 $data{'invoiceincgst'}=$input->param('invoice_gst');
 #have to transform this into fraction so it's easier to use
 $data{'tax_rate'} = $input->param('tax_rate');
-$data{'discount'} = $input->param('discount');
-$data{deliverytime} = $input->param('deliverytime');
+$data{'discount'} = $input->param('discount') || 0;
+$data{deliverytime} = $input->param('deliverytime') || undef;
 $data{'active'}=$input->param('status');
 my @contacts;
 my %contact_info;

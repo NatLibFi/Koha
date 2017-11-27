@@ -117,8 +117,9 @@ elsif ( $op eq 'add_validate' ) {
 	if ( $budget_period_id ne '' ) {
 		$$budget_period_hashref{$_}||=0 for qw(budget_period_active budget_period_locked);
 		my $status=ModBudgetPeriod($budget_period_hashref);
-	} 
+	}
 	else {    # ELSE ITS AN ADD
+        delete $budget_period_hashref->{budget_period_id}; # Remove the key if it exists
 		my $budget_period_id=AddBudgetPeriod($budget_period_hashref);
 	}
 	$op='else';
