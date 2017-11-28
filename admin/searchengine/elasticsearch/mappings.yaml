@@ -2391,6 +2391,11 @@ biblios:
         sort: ~
         suggestible: ''
       - facet: '1'
+        marc_field: 830a
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: '1'
         marc_field: 440a
         marc_type: normarc
         sort: ~
