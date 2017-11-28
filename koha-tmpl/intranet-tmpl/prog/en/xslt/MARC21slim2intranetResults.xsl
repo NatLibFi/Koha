@@ -996,17 +996,6 @@
     </span>
     </xsl:if>
 
-    <xsl:if test="marc:datafield[@tag=773]">
-        <xsl:for-each select="marc:datafield[@tag=773]">
-            <xsl:if test="marc:subfield[@code='t']">
-    <span class="results_summary">
-    <span class="label">Source: </span>
-            <xsl:value-of select="marc:subfield[@code='t']"/>
-    </span>
-            </xsl:if>
-        </xsl:for-each>
-    </xsl:if>
-
     <!-- Other Title  Statement: Alternate Graphic Representation (MARC 880) -->
     <xsl:if test="$display880">
        <xsl:call-template name="m880Select">
@@ -1063,6 +1052,71 @@
                             </xsl:for-each>
                             </span>
                         </xsl:if>
+
+        <!-- 773 -->
+        <xsl:if test="marc:datafield[@tag=773]">
+            <xsl:for-each select="marc:datafield[@tag=773]">
+                <xsl:if test="@ind1 !=1">
+                    <span class="results_summary in"><span class="label">
+                    <xsl:choose>
+                        <xsl:when test="@ind2=' '">
+                            Host: <img src="/intranet-tmpl/prog/img/test/famfamfam/silk/bullet_go.png" class="icon-host" alt="host"/>
+                        </xsl:when>
+                        <xsl:when test="@ind2=8">
+                            <xsl:if test="marc:subfield[@code='i']">
+                                <xsl:value-of select="marc:subfield[@code='i']"/>
+                            </xsl:if>
+                        </xsl:when>
+                    </xsl:choose>
+                    </span>
+                    <xsl:variable name="f773">
+                        <xsl:choose>
+                            <xsl:when test="marc:subfield[@code='t']">
+                                <xsl:call-template name="chopPunctuation"><xsl:with-param name="chopString"><xsl:call-template name="subfieldSelect">
+                                    <xsl:with-param name="codes">a_t</xsl:with-param>
+                                </xsl:call-template></xsl:with-param></xsl:call-template>
+                            </xsl:when>
+                          <xsl:otherwise>
+                                [Title not specified]
+                          </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:variable>
+                    <xsl:choose>
+                        <xsl:when test="$UseControlNumber = '1' and marc:subfield[@code='w']">
+                            <span class="host_link">
+                            <a>
+                                <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template><xsl:if test="$controlField003"> AND cni:<xsl:value-of select="$controlField003"/></xsl:if></xsl:attribute>
+                                    <xsl:value-of select="translate($f773, '()', '')"/>
+                            </a>    
+                            </span>   
+                            <xsl:if test="marc:subfield[@code='g']"><xsl:text> </xsl:text><xsl:value-of select="marc:subfield[@code='g']"/></xsl:if>
+                        </xsl:when>
+                        <xsl:when test="marc:subfield[@code='0']">
+                            <span class="host_link">
+                            <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/detail.pl?biblionumber=<xsl:value-of select="marc:subfield[@code='0']"/></xsl:attribute>
+                                <xsl:value-of select="$f773"/>!
+                            </a>
+                            </span>
+                            <xsl:if test="marc:subfield[@code='g']"><xsl:text> </xsl:text><xsl:value-of select="marc:subfield[@code='g']"/></xsl:if>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <span class="host_link">
+                            <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=ti,phr:<xsl:value-of select="util:urlencode(translate($f773, '()', ''))"/></xsl:attribute>
+                                <xsl:value-of select="$f773"/>
+                            </a>
+                            </span>
+                            <xsl:if test="marc:subfield[@code='g']"><xsl:text> </xsl:text><xsl:value-of select="marc:subfield[@code='g']"/></xsl:if>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                    </span>
+
+                    <xsl:if test="marc:subfield[@code='n']">
+                        <span class="results_summary"><xsl:value-of select="marc:subfield[@code='n']"/></span>
+                    </xsl:if>
+
+                </xsl:if>
+            </xsl:for-each>
+        </xsl:if>                        
     </xsl:template>
 
     <xsl:template name="nameABCQ">
