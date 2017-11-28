@@ -1591,6 +1591,7 @@ sub GetMarcItemFields {
 
         push @item_fields, $itemmarc->field( $itemtag );
     }
+    $sth->finish();
 
     return \@item_fields;
 }

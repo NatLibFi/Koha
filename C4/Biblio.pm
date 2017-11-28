@@ -1288,13 +1288,13 @@ sub GetMarcBiblio {
     }
 
     # Use state to speed up repeated calls in batch processes
-    state $sth  = C4::Context->dbh->prepare("SELECT biblioitemnumber FROM biblioitems WHERE biblionumber=? ");
+    state $marcflavour = C4::Context->preference('marcflavour');
+    state $sth = C4::Context->dbh->prepare("SELECT biblioitemnumber FROM biblioitems WHERE biblionumber=? ");
     $sth->execute($biblionumber);
     my ($biblioitemnumber) = $sth->fetchrow;
     my $marcxml = GetXmlBiblio( $biblionumber );
     $marcxml = StripNonXmlChars( $marcxml );
-    my $frameworkcode = GetFrameworkCode($biblionumber);
-    my $marcflavour = C4::Context->preference('marcflavour');
+    my $frameworkcode = GetFrameworkCode( $biblionumber );
     MARC::File::XML->default_record_format( $marcflavour );
     my $record = MARC::Record->new();
 
@@ -1331,6 +1331,7 @@ sub GetXmlBiblio {
     return unless $biblionumber;
 
     # Use state to speed up repeated calls in batch processes
+    state $marcflavour = C4::Context->preference('marcflavour');
     state $sth = C4::Context->dbh->prepare(
         q|
         SELECT metadata
@@ -1341,8 +1342,9 @@ sub GetXmlBiblio {
         |
     );
 
-    $sth->execute( $biblionumber, C4::Context->preference('marcflavour') );
+    $sth->execute( $biblionumber, $marcflavour );
     my ($marcxml) = $sth->fetchrow();
+    $sth->finish();
     return $marcxml;
 }
 
@@ -2554,6 +2556,7 @@ sub GetFrameworkCode {
     state $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM biblio WHERE biblionumber=?");
     $sth->execute($biblionumber);
     my ($frameworkcode) = $sth->fetchrow;
+    $sth->finish();
     return $frameworkcode;
 }
 
@@ -3498,9 +3501,10 @@ sub EmbedItemsInMarcBiblio {
 
     $itemnumbers = [] unless defined $itemnumbers;
 
-    $frameworkcode = GetFrameworkCode($biblionumber) unless defined $frameworkcode;
+    $frameworkcode = GetFrameworkCode( $biblionumber ) unless defined $frameworkcode;
     _strip_item_fields($marc, $frameworkcode);
 
+    # Use state to speed up repeated calls in batch processes
     state $hidingrules;
     my $yaml = $opac ? C4::Context->preference('OpacHiddenItems') : '';
     if ( $yaml =~ /\S/ && !defined $hidingrules ) {
@@ -3515,7 +3519,7 @@ sub EmbedItemsInMarcBiblio {
 
     require C4::Items;
 
-    my $item_fields = C4::Items::GetMarcItemFields( $biblionumber, $frameworkcode, $itemnumbers, $hidingrules );
+    my $item_fields = C4::Items::GetMarcItemFields( $biblionumber, $frameworkcode, $itemnumbers, $opac ? $hidingrules : undef );
 
     $marc->append_fields(@$item_fields) if ( @$item_fields );
 }
