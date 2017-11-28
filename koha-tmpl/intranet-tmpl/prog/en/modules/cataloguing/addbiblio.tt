@@ -155,8 +155,8 @@ function Dopop(link,i) {
 function PopupZ3950() {
     var strQuery = GetZ3950Terms();
 	if(strQuery){
-        window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=[% biblionumber %]"+strQuery,"z3950search",'width=740,height=450,location=yes,toolbar=no,scrollbars=yes,resize=yes');
-    } 
+        window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=[% biblionumber %]"+strQuery,"z3950search",'width=820,height=520,location=yes,toolbar=yes,scrollbars=yes,resize=yes');
+    }
 }
 
 function PopupMARCFieldDoc(field) {
@@ -236,7 +236,7 @@ function AreMandatoriesNotOk(){
     var tab = new Array();
     var label = new Array();
     var flag=0;
-    var tabflag= new Array();  
+    var tabflag= new Array();
     [% FOREACH BIG_LOO IN BIG_LOOP %]
     	[% FOREACH innerloo IN BIG_LOO.innerloop %]
 	        [% IF ( innerloo.mandatory ) %]
@@ -256,9 +256,9 @@ function AreMandatoriesNotOk(){
         var tag=mandatories[i].substr(4,3);
         var subfield=mandatories[i].substr(17,1);
         var tagnumber=mandatories[i].substr(19,mandatories[i].lastIndexOf("_")-19);
-        if (tabflag[tag+subfield+tagnumber] ==  null) { 
+        if (tabflag[tag+subfield+tagnumber] ==  null) {
 	    tabflag[tag+subfield+tagnumber]=new Array();
-            tabflag[tag+subfield+tagnumber][0]=0; 
+            tabflag[tag+subfield+tagnumber][0]=0;
 	}
         if( tabflag[tag+subfield+tagnumber][0] != 1 && (document.getElementById(mandatories[i]) != null && ! document.getElementById(mandatories[i]).value || document.getElementById(mandatories[i]) == null)){
             tabflag[tag+subfield+tagnumber][0] = 0 + tabflag[tag+subfield+tagnumber] ;
@@ -268,40 +268,40 @@ function AreMandatoriesNotOk(){
             tabflag[tag+subfield+tagnumber][2]=tab[i];
         } else {
             tabflag[tag+subfield+tagnumber][0] = 1;
-        }    
+        }
     }
     for (var tagsubfieldid in tabflag){
       if (tabflag[tagsubfieldid][0]==0){
         var tag=tagsubfieldid.substr(0,3);
-        var subfield=tagsubfieldid.substr(3,1);    
+        var subfield=tagsubfieldid.substr(3,1);
         StrAlert += "\t* "+_("tag %s subfield %s %s in tab %s").format(tag, subfield, tabflag[tagsubfieldid][1], tabflag[tagsubfieldid][2]) + "\n";
-        //StrAlert += "\t* "+label[i]+_(" in tab ")+tab[i]+"\n"; 
-        flag=1;    
-      }   
-    }   
-    
+        //StrAlert += "\t* "+label[i]+_(" in tab ")+tab[i]+"\n";
+        flag=1;
+      }
+    }
+
     /* Check for mandatories field(not subfields) */
     for(var i=0,len=mandatoriesfields.length; i<len; i++){
 	    isempty  = true;
 		arr      = mandatoriesfields[i];
     	divid    = "tag_" + arr[0] + "_" + arr[1];
     	varegexp = new RegExp("^tag_" + arr[0] + "_code_");
-    	
+
 		if(parseInt(arr[0]) >= 10){
 	    	elem = document.getElementById(divid);
 	    	eleminputs = elem.getElementsByTagName('input');
-	    	
+
 	    	for(var j=0,len2=eleminputs.length; j<len2; j++){
-	
+
 	    		if(eleminputs[j].name.match(varegexp) && eleminputs[j].value){
 					inputregexp = new RegExp("^tag_" + arr[0] + "_subfield_" + eleminputs[j].value + "_" + arr[2]);
-					
+
 					for( var k=0; k<len2; k++){
 						if(eleminputs[k].id.match(inputregexp) && eleminputs[k].value){
 							isempty = false
 						}
 					}
-					
+
 					elemselect = elem.getElementsByTagName('select');
 					for( var k=0; k<elemselect.length; k++){
 						if(elemselect[k].id.match(inputregexp) && elemselect[k].value){
@@ -321,14 +321,14 @@ function AreMandatoriesNotOk(){
     	}else{
     		isempty = false;
     	}
-    	
+
     	if(isempty){
     		flag = 1;
                 StrAlert += "\t* " + _("Field %s is mandatory, at least one of its subfields must be filled.").format(arr[0]) + "\n";
     	}
-    	
+
     }
-    
+
     if(flag){
 	    return StrAlert;
 	} else {
@@ -351,7 +351,7 @@ function Check(){
     }
 }
 
-/** 
+/**
  * check if z3950 mandatories are set or not
  */
 function GetZ3950Terms(){
@@ -361,7 +361,7 @@ function GetZ3950Terms(){
     var mandatories_label = new Array();
     [% FOREACH BIG_LOO IN BIG_LOOP %][% FOREACH innerloo IN BIG_LOO.innerloop %][% FOREACH subfield_loo IN innerloo.subfield_loop %][% IF ( subfield_loo.z3950_mandatory ) %]mandatories.push("[% subfield_loo.id %]");
         mandatories_label.push("[% subfield_loo.z3950_mandatory %]");[% END %][% END %][% END %][% END %]
-    
+
     for(var i=0,len=mandatories.length; i<len ; i++){
         var field_value = document.getElementById(mandatories[i]).value;
         if( field_value ){
@@ -559,7 +559,7 @@ function Changefwk() {
 
 [% FOREACH BIG_LOO IN BIG_LOOP %]
     <div id="tab[% BIG_LOO.number %]XX">
-    
+
     [% FOREACH innerloo IN BIG_LOO.innerloop %]
     [% IF ( innerloo.tag ) %]
     <div class="tag" id="tag_[% innerloo.tag %]_[% innerloo.index %][% innerloo.random %]">
@@ -654,7 +654,7 @@ function Changefwk() {
                     </span>
                     </label>
                 [% END %]
-                
+
                 [% SET mv = subfield_loo.marc_value %]
                 [% IF ( mv.type == 'text' ) %]
                     [% IF ( mv.readonly == 1 ) %]
@@ -690,7 +690,7 @@ function Changefwk() {
                     [% END %]
                     </select>
                 [% END %]
-                
+
                 <span class="subfield_controls">
                 [% IF ( subfield_loo.repeatable ) %]
                     <a href="#" class="buttonPlus" tabindex="1" onclick="CloneSubfield('subfield[% subfield_loo.tag %][% subfield_loo.subfield %][% subfield_loo.random %]','[% advancedMARCEditor %]'); return false;">
@@ -701,7 +701,7 @@ function Changefwk() {
                     </a>
                 [% END %]
                 </span>
-                
+
             </div>
             <!-- End of the line -->
         [% END %]
