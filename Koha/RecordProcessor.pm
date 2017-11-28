@@ -107,7 +107,7 @@ sub new {
         next unless $filter_name;
         # Fully qualify the module name.
         my $filter_module = $filter_name =~ m/:/ ? $filter_name : "Koha::Filter::${schema}::${filter_name}";
-        if (can_load( modules => { $filter_module => undef } )) {
+        if (can_load( modules => { $filter_module => undef }, verbose => 1 )) {
             my $filter = $filter_module->new();
             $filter->initialize($param);
             push @filters, $filter;
@@ -164,6 +164,7 @@ sub DESTROY {
     my $self = shift;
 
     foreach my $filterobj (@{$self->filters}) {
+        next unless $filterobj;
         $filterobj->destroy();
     }
 }
