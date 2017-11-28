@@ -1290,18 +1290,17 @@ sub GetMarcBiblio {
     # Use state to speed up repeated calls in batch processes
     state $sth  = C4::Context->dbh->prepare("SELECT biblioitemnumber FROM biblioitems WHERE biblionumber=? ");
     $sth->execute($biblionumber);
-    my $row     = $sth->fetchrow_hashref;
-    my $biblioitemnumber = $row->{'biblioitemnumber'};
+    my ($biblioitemnumber) = $sth->fetchrow;
     my $marcxml = GetXmlBiblio( $biblionumber );
     $marcxml = StripNonXmlChars( $marcxml );
     my $frameworkcode = GetFrameworkCode($biblionumber);
-    MARC::File::XML->default_record_format( C4::Context->preference('marcflavour') );
+    my $marcflavour = C4::Context->preference('marcflavour');
+    MARC::File::XML->default_record_format( $marcflavour );
     my $record = MARC::Record->new();
 
     if ($marcxml) {
         $record = eval {
-            MARC::Record::new_from_xml( $marcxml, "utf8",
-                C4::Context->preference('marcflavour') );
+            MARC::Record::new_from_xml( $marcxml, "utf8", $marcflavour );
         };
         if ($@) { warn " problem with :$biblionumber : $@ \n$marcxml"; }
         return unless $record;
@@ -3502,9 +3501,9 @@ sub EmbedItemsInMarcBiblio {
     $frameworkcode = GetFrameworkCode($biblionumber) unless defined $frameworkcode;
     _strip_item_fields($marc, $frameworkcode);
 
-    my $hidingrules;
+    state $hidingrules;
     my $yaml = $opac ? C4::Context->preference('OpacHiddenItems') : '';
-    if ( $yaml =~ /\S/ ) {
+    if ( $yaml =~ /\S/ && !defined $hidingrules ) {
         $yaml = "$yaml\n\n"; # YAML is anal on ending \n. Surplus does not hurt
         eval {
             $hidingrules = YAML::Load($yaml);
