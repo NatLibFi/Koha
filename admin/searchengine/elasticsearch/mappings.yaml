@@ -558,6 +558,20 @@ biblios:
         sort: ~
         suggestible: ''
     type: number
+  host-control-number:
+    label: host-control-number
+    mappings:
+      - facet: ''
+        marc_field: '773w'
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: '773w'
+        marc_type: normarc
+        sort: ~
+        suggestible: ''
+    type: string
   Local-number:
     label: Local-number
     mappings:
@@ -1284,6 +1298,20 @@ biblios:
         suggestible: ''
       - facet: ''
         marc_field: '001'
+        marc_type: normarc
+        sort: ~
+        suggestible: ''
+    type: ''
+  control-number-identifier:
+    label: control-number-identifier
+    mappings:
+      - facet: ''
+        marc_field: '003'
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
+      - facet: ''
+        marc_field: '003'
         marc_type: normarc
         sort: ~
         suggestible: ''

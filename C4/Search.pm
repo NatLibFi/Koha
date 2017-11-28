@@ -1183,6 +1183,7 @@ sub getIndexes{
                     'Heading-use-main-or-added-entry',
                     'Heading-use-series-added-entry ',
                     'Heading-use-subject-added-entry',
+                    'Host-control-number',
                     'Host-item',
                     'id-other',
                     'ident',
@@ -1872,8 +1873,8 @@ sub _build_initial_query {
 
 =head2 searchResults
 
-  my @search_results = searchResults($search_context, $searchdesc, $hits, 
-                                     $results_per_page, $offset, $scan, 
+  my @search_results = searchResults($search_context, $searchdesc, $hits,
+                                     $results_per_page, $offset, $scan,
                                      @marcresults);
 
 Format results in a form suitable for passing to the template

@@ -4341,7 +4341,7 @@ sub getComponentRecords {
     my @componentBiblios;
     if ($resultSetSize && !$error) {
         foreach my $componentRecordXML (@$componentPartRecordXMLs) {
-            my $marcrecord = MARC::Record->new_from_xml( $componentRecordXML, 'UTF-8', $marcflavour );
+            my $marcrecord = ref($componentRecordXML) eq 'MARC::Record' ? $componentRecordXML : MARC::Record->new_from_xml( $componentRecordXML, 'UTF-8', $marcflavour );
             my $componentBiblio = TransformMarcToKoha( $marcrecord, '' );
             push @componentBiblios, $componentBiblio;
         }
@@ -4387,16 +4387,19 @@ sub _getComponentParts {
     }
 
     my ($error, $componentPartRecordXMLs, $resultSetSize);
+    my $id_index = C4::Context->preference('SearchEngine') eq 'Elasticsearch' ? 'hrcn' : 'rcn';
     if ($parentsField001 && $parentsField003) {
-        require C4::Search; #For some reason importing this to C4::Biblio's namespace makes other modules unable to import these functions into their namespace.
-        ($error, $componentPartRecordXMLs, $resultSetSize) = C4::Search::SimpleSearch("rcn='$parentsField001' and cni='$parentsField003'");
+        require Koha::SearchEngine::Search;
+        my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
+        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("($id_index='$parentsField001' AND cni='$parentsField003') OR $id_index='\\($parentsField003\\)$parentsField001'");
     }
     elsif ($parentsField001) {
-        require C4::Search; #For some reason importing this to C4::Biblio's namespace makes other modules unable to import these functions into their namespace.
-        ($error, $componentPartRecordXMLs, $resultSetSize) = C4::Search::SimpleSearch("rcn='$parentsField001'");
+        require Koha::SearchEngine::Search;
+        my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
+        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("$id_index='$parentsField001'");
     }
     else {
-        warn "Record with no field 001 or 003 found! This is an outrage!" unless $parentrecord;
+        warn "Record with no field 001 encountered!" unless $parentrecord;
     }
 
     return ($parentsField001, $parentsField003, $parentrecord, $error, $componentPartRecordXMLs, $resultSetSize);
