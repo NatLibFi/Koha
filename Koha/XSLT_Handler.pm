@@ -270,7 +270,7 @@ sub _urlencode {
     my ($str) = @_;
 
     utf8::decode($str);
-    return uri_escape_utf8($str); #Encode::encode_utf8($str));
+    return uri_escape_utf8($str);
 }
 
 # _load
