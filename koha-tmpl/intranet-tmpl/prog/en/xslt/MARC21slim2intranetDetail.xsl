@@ -980,7 +980,7 @@
         <span class="results_summary in"><span class="label">
         <xsl:choose>
         <xsl:when test="@ind2=' '">
-            Host: <img src="/intranet-tmpl/prog/img/test/famfamfam/silk/bullet_go.png" class="icon-host" alt="host"/>
+            Host:
         </xsl:when>
         <xsl:when test="@ind2=8">
             <xsl:if test="marc:subfield[@code='i']">
@@ -1003,22 +1003,22 @@
                 </xsl:variable>
             <xsl:choose>
                 <xsl:when test="$UseControlNumber = '1' and marc:subfield[@code='w']">
-                    <span class="host_link">
-                    <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template><xsl:if test="$controlField003"> and cni:<xsl:value-of select="$controlField003"/></xsl:if></xsl:attribute>
+                    <span class="host-link">
+                    <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template><xsl:if test="$controlField003"> AND cni:<xsl:value-of select="$controlField003"/></xsl:if></xsl:attribute>
                         <xsl:value-of select="translate($f773, '()', '')"/>
                     </a>
                     </span>
                     <xsl:if test="marc:subfield[@code='g']"><xsl:text> </xsl:text><xsl:value-of select="marc:subfield[@code='g']"/></xsl:if>
                 </xsl:when>
                 <xsl:when test="marc:subfield[@code='0']">
-                    <span class="host_link">
+                    <span class="host-link">
                     <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/detail.pl?biblionumber=<xsl:value-of select="marc:subfield[@code='0']"/></xsl:attribute>
                         <xsl:value-of select="$f773"/>
                     </a>
                     </span>
                 </xsl:when>
                 <xsl:otherwise>
-                    <span class="host_link">
+                    <span class="host-link">
                     <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=ti,phr:<xsl:value-of select="util:urlencode(translate($f773, '()', ''))"/></xsl:attribute>
                         <xsl:value-of select="$f773"/>
                     </a>
