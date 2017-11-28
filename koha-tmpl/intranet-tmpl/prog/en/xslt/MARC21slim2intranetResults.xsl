@@ -5,7 +5,8 @@
   xmlns:marc="http://www.loc.gov/MARC21/slim"
   xmlns:items="http://www.koha-community.org/items"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-  exclude-result-prefixes="marc items">
+  xmlns:util="urn:kohautil"
+  exclude-result-prefixes="marc items util">
     <xsl:import href="MARC21slimUtils.xsl"/>
     <xsl:output method = "html" indent="yes" omit-xml-declaration = "yes" encoding="UTF-8"/>
     <xsl:key name="item-by-status" match="items:item" use="items:status"/>
@@ -355,7 +356,7 @@
                         <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=an:<xsl:value-of select="marc:subfield[@code=9]"/></xsl:attribute>
                     </xsl:when>
                     <xsl:otherwise>
-                        <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="marc:subfield[@code='a']"/>"</xsl:attribute>
+                        <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="util:urlencode(marc:subfield[@code='a'])"/>"</xsl:attribute>
                     </xsl:otherwise>
                 </xsl:choose>
                 <xsl:call-template name="chopPunctuation">
@@ -446,7 +447,7 @@
                                 <xsl:when test="marc:subfield[@code='j']">
                                     <xsl:for-each select="marc:subfield[@code='j']">
                                         <a>
-                                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="util:urlencode(../marc:subfield[@code='a'])"/>%20<xsl:value-of select="util:urlencode(.)"/>"</xsl:attribute>
                                             <xsl:value-of select="."/>
                                             <xsl:if test="position() != last()">, </xsl:if>
                                         </a>
@@ -464,7 +465,7 @@
                         <xsl:when test="marc:subfield[@code='e']">
                             <xsl:for-each select="marc:subfield[@code='e'][not(@tag=111) or not(@tag=711)]">
                                 <a>
-                                    <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="../marc:subfield[@code='a']"/>%20<xsl:value-of select="."/>"</xsl:attribute>
+                                    <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=au:"<xsl:value-of select="util:urlencode(../marc:subfield[@code='a'])"/>%20<xsl:value-of select="util:urlencode(.)"/>"</xsl:attribute>
                                     <xsl:value-of select="."/>
                                     <xsl:if test="position() != last()">, </xsl:if>
                                 </a>
@@ -969,7 +970,7 @@
 			   <span class="label">Online access: </span>
                             <xsl:for-each select="marc:datafield[@tag=856]">
                             <xsl:variable name="SubqText"><xsl:value-of select="marc:subfield[@code='q']"/></xsl:variable>
-				   <a><xsl:attribute name="href"><xsl:value-of select="marc:subfield[@code='u']"/></xsl:attribute>
+				   <a><xsl:attribute name="href"><xsl:value-of select="util:urlencode(marc:subfield[@code='u'])"/></xsl:attribute>
                                     <xsl:choose>
                                      <xsl:when test="($Show856uAsImage='Results' or $Show856uAsImage='Both') and (substring($SubqText,1,6)='image/' or $SubqText='img' or $SubqText='bmp' or $SubqText='cod' or $SubqText='gif' or $SubqText='ief' or $SubqText='jpe' or $SubqText='jpeg' or $SubqText='jpg' or $SubqText='jfif' or $SubqText='png' or $SubqText='svg' or $SubqText='tif' or $SubqText='tiff' or $SubqText='ras' or $SubqText='cmx' or $SubqText='ico' or $SubqText='pnm' or $SubqText='pbm' or $SubqText='pgm' or $SubqText='ppm' or $SubqText='rgb' or $SubqText='xbm' or $SubqText='xpm' or $SubqText='xwd')">
                                         <xsl:element name="img"><xsl:attribute name="src"><xsl:value-of select="marc:subfield[@code='u']"/></xsl:attribute><xsl:attribute name="alt"><xsl:value-of select="marc:subfield[@code='y']"/></xsl:attribute><xsl:attribute name="height">100</xsl:attribute></xsl:element><xsl:text></xsl:text>
