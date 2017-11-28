@@ -82,7 +82,7 @@
                     </xsl:choose>
                 </xsl:when>
                 <xsl:when test="$leader6='t'">Book</xsl:when>
-                <xsl:when test="$leader6='o'">Kit</xsl:when>				
+                <xsl:when test="$leader6='o'">Kit</xsl:when>
                 <xsl:when test="$leader6='p'">Mixed materials</xsl:when>
                 <xsl:when test="$leader6='m'">Computer file</xsl:when>
                 <xsl:when test="$leader6='e' or $leader6='f'">Map</xsl:when>
@@ -215,7 +215,7 @@
                 <xsl:with-param name="index">se</xsl:with-param>
             </xsl:call-template>
         </xsl:if>
-        
+
         <!-- Series -->
         <xsl:if test="marc:datafield[@tag=440 or @tag=490]">
         <span class="results_summary series"><span class="label">Series: </span>
@@ -398,7 +398,7 @@
                 <xsl:with-param name="label">Edition: </xsl:with-param>
             </xsl:call-template>
         </xsl:if>
-        
+
         <xsl:if test="marc:datafield[@tag=250]">
         <span class="results_summary edition"><span class="label">Edition: </span>
             <xsl:for-each select="marc:datafield[@tag=250]">
@@ -423,7 +423,7 @@
                 <xsl:with-param name="label">Description: </xsl:with-param>
             </xsl:call-template>
         </xsl:if>
-        
+
         <xsl:if test="marc:datafield[@tag=300]">
         <span class="results_summary description"><span class="label">Description: </span>
             <xsl:for-each select="marc:datafield[@tag=300]">
@@ -956,7 +956,7 @@
                 </xsl:variable>
             <xsl:choose>
                 <xsl:when test="$UseControlNumber = '1' and marc:subfield[@code='w']">
-                    <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template> and cni:<xsl:value-of select="$controlField003"/></xsl:attribute>
+                    <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template><xsl:if test="$controlField003"> and cni:<xsl:value-of select="$controlField003"/></xsl:if></xsl:attribute>
                         <xsl:value-of select="translate($f773, '()', '')"/>
                     </a>
                     <xsl:if test="marc:subfield[@code='g']"><xsl:text> </xsl:text><xsl:value-of select="marc:subfield[@code='g']"/></xsl:if>
@@ -1093,7 +1093,7 @@
                 </xsl:otherwise>
             </xsl:choose>
         </span>
- 
+
         <xsl:if test="marc:subfield[@code='n']">
             <span class="results_summary"><xsl:value-of select="marc:subfield[@code='n']"/></span>
         </xsl:if>

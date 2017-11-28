@@ -526,7 +526,8 @@ our %index_field_convert = (
     'aud'     => 'ta',
     'hi'      => 'Host-Item-Number',
     'hrcn'    => 'host-control-number',
-    'cni'     => 'control-number-identifier'
+    'cni'     => 'control-number-identifier',
+    'Control-number' => 'control-number'
 );
 
 sub _convert_index_fields {
