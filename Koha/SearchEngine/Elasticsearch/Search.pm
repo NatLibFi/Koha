@@ -326,18 +326,17 @@ the total number of results that this search could have returned.
 =cut
 
 sub simple_search_compat {
-    my ($self, $query, $offset, $max_results) = @_;
+    my ($self, $query, $offset, $max_results, $servers, %options) = @_;
 
     return ('No query entered', undef, undef) unless $query;
 
-    my %options;
     $options{offset} = $offset // 0;
     $max_results //= 100;
 
     unless (ref $query) {
         # We'll push it through the query builder to sanitise everything.
         my $qb = Koha::SearchEngine::QueryBuilder->new({index => $self->index});
-        (undef,$query) = $qb->build_query_compat(undef, [$query]);
+        (undef,$query) = $qb->build_query_compat(undef, [$query], undef, undef, undef, undef, undef, \%options);
     }
     my $results = $self->search($query, undef, $max_results, %options);
     my @records;

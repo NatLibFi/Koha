@@ -111,28 +111,30 @@ sub build_query {
 
     # See _convert_facets in Search.pm for how these get turned into
     # things that Koha can use.
-    $res->{aggregations} = {
-        author   => { terms => { field => "author__facet" } },
-        subject  => { terms => { field => "subject__facet" } },
-        itype    => { terms => { field => "itype__facet" } },
-        location => { terms => { field => "location__facet" } },
-        'su-geo' => { terms => { field => "su-geo__facet" } },
-        se       => { terms => { field => "se__facet" } },
-        ccode    => { terms => { field => "ccode__facet" } },
-    };
+    if ( $options{use_facets} // 1 ) {
+        $res->{aggregations} = {
+            author   => { terms => { field => "author__facet" } },
+            subject  => { terms => { field => "subject__facet" } },
+            itype    => { terms => { field => "itype__facet" } },
+            location => { terms => { field => "location__facet" } },
+            'su-geo' => { terms => { field => "su-geo__facet" } },
+            se       => { terms => { field => "se__facet" } },
+            ccode    => { terms => { field => "ccode__facet" } },
+        };
 
-    my $display_library_facets = C4::Context->preference('DisplayLibraryFacets');
-    if (   $display_library_facets eq 'both'
-        or $display_library_facets eq 'home' ) {
-        $res->{aggregations}{homebranch} = { terms => { field => "homebranch__facet" } };
+        my $display_library_facets = C4::Context->preference('DisplayLibraryFacets');
+        if (   $display_library_facets eq 'both'
+            or $display_library_facets eq 'home' ) {
+            $res->{aggregations}{homebranch} = { terms => { field => "homebranch__facet" } };
+        }
+        if (   $display_library_facets eq 'both'
+            or $display_library_facets eq 'holding' ) {
+            $res->{aggregations}{holdingbranch} = { terms => { field => "holdingbranch__facet" } };
+        }
+        if ( my $ef = $options{expanded_facet} ) {
+            $res->{aggregations}{$ef}{terms}{size} = C4::Context->preference('FacetMaxCount');
+        };
     }
-    if (   $display_library_facets eq 'both'
-        or $display_library_facets eq 'holding' ) {
-        $res->{aggregations}{holdingbranch} = { terms => { field => "holdingbranch__facet" } };
-    }
-    if ( my $ef = $options{expanded_facet} ) {
-        $res->{aggregations}{$ef}{terms}{size} = C4::Context->preference('FacetMaxCount');
-    };
     return $res;
 }
 
@@ -200,7 +202,7 @@ sub build_query_compat {
         $lang, $params )
       = @_;
 
-#die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang );
+#die Dumper ( $self, $operators, $operands, $indexes, $orig_limits, $sort_by, $scan, $lang, $params );
 
     my $query;
     my $limits = ();
@@ -238,6 +240,7 @@ sub build_query_compat {
         my %options;
         $options{sort} = \@sort_params;
         $options{expanded_facet} = $params->{expanded_facet};
+        $options{use_facets} = $params->{use_facets} // 1;
         $query = $self->build_query( $query_str, %options );
     }
 

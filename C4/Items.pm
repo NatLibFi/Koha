@@ -2347,7 +2347,7 @@ sub GetAnalyticsCount {
     my $query;
     $query= "hi=".$itemnumber;
     my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
-    my ($err,$res,$result) = $searcher->simple_search_compat($query,0,10);
+    my ($err,$res,$result) = $searcher->simple_search_compat($query, 0, 1, undef, use_facets => 0);
     return ($result);
 }
 
