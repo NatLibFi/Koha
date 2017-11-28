@@ -13,7 +13,7 @@ store:
                 op:
                   '=': true
                   'exact': true
-                field: '_id'
+                field: 'Local-number'
               dc.identifier:
                 op:
                   '=': true
