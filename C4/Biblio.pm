@@ -3475,11 +3475,7 @@ sub ModZebra {
 
 =head2 EmbedItemsInMarcBiblio
 
-<<<<<<< HEAD
-    EmbedItemsInMarcBiblio($marc, $biblionumber, $itemnumbers, $opac);
-=======
     EmbedItemsInMarcBiblio($marc, $biblionumber, $itemnumbers, $opac, $frameworkcode);
->>>>>>> cc605bbcfa02edcc2c9166ecdeb1d70bfd2d813a
 
 Given a MARC::Record object containing a bib record,
 modify it to include the items attached to it as 9XX
