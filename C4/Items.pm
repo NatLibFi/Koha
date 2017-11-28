@@ -1543,6 +1543,7 @@ Returns an array of MARC::Record objects of the items for the biblio.
 sub GetMarcItemFields {
 	my ( $biblionumber, $frameworkcode, $itemnumbers, $hidingrules ) = @_;
 
+    # Use state to speed up repeated calls in batch processes
     state $item_level_itype = C4::Context->preference('item-level_itypes');
     state $sth = C4::Context->dbh->prepare( 'SELECT * FROM items WHERE biblionumber = ?' );
     $sth->execute( $biblionumber );
