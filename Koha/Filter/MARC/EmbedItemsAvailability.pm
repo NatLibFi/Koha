@@ -32,6 +32,7 @@ Filter to embed items not on loan count information into MARC records.
 
 use Modern::Perl;
 
+use C4::Context;
 use C4::Biblio qw/GetMarcFromKohaField/;
 use Koha::Items;
 
@@ -76,10 +77,10 @@ sub _processrecord {
                       ? $record->field($biblionumber_field)->subfield($biblionumber_subfield)
                       : $record->field($biblionumber_field)->data();
 
-    my $not_onloan_items = Koha::Items->search({
-        biblionumber => $biblionumber,
-        onloan => undef,
-    })->count;
+    # Use state to speed up repeated calls in batch processes
+    state $sth = C4::Context->dbh->prepare( 'select count(*) as cnt from items where biblionumber = ? and onloan is null' );
+    $sth->execute($biblionumber);
+    my ($not_onloan_items) = $sth->fetchrow();
 
     # check for field 999
     my $destination_field = $record->field('999');
