@@ -101,7 +101,8 @@ elsif( $op eq 'reset' ) {
     # TODO Move this feature to the interface
     my $sure = $input->param('i_know_what_i_am_doing');
     if ( $sure ) {
-        Koha::SearchEngine::Elasticsearch->reset_elasticsearch_mappings;
+        my $reset_fields = $input->param('reset_fields');
+        Koha::SearchEngine::Elasticsearch->reset_elasticsearch_mappings( $reset_fields );
     }
 }
 

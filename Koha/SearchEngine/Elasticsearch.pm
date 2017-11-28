@@ -340,9 +340,11 @@ Deletes all search mappings and adds the default search mappings
 =cut
 
 sub reset_elasticsearch_mappings {
+    my ( $reset_fields ) = @_;
     my $mappings_yaml = C4::Context->config('intranetdir') . '/admin/searchengine/elasticsearch/mappings.yaml';
     my $indexes = LoadFile( $mappings_yaml );
 
+    Koha::SearchFields->delete if ( $reset_fields );
     Koha::SearchMarcMaps->search->delete;
     while ( my ( $index_name, $fields ) = each %$indexes ) {
         while ( my ( $field_name, $data ) = each %$fields ) {
