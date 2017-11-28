@@ -460,6 +460,7 @@ var holdForPatron = function () {
                             [% ELSE %]<option value="ss">ISSN</option>[% END %]
                         </select>
                         <input type="hidden" name="scan" value="1" />
+                        <button class="btn btn-default btn-xs" type="submit"><i class="fa fa-search"></i> Search</button>
                     </td>
                 </tr>
             </table>
