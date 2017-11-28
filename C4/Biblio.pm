@@ -4342,7 +4342,7 @@ sub getComponentRecords {
             push @componentBiblios, $componentBiblio;
         }
     }
-    return \@componentBiblios;
+    return (\@componentBiblios, $resultSetSize);
 }
 
 #Get biblionumbers the fast way.
@@ -4387,12 +4387,12 @@ sub _getComponentParts {
     if ($parentsField001 && $parentsField003) {
         require Koha::SearchEngine::Search;
         my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
-        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("($id_index='$parentsField001' AND cni='$parentsField003') OR $id_index='\\($parentsField003\\)$parentsField001'");
+        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("($id_index='$parentsField001' AND cni='$parentsField003') OR $id_index='\\($parentsField003\\)$parentsField001'", 0, 1000);
     }
     elsif ($parentsField001) {
         require Koha::SearchEngine::Search;
         my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
-        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("$id_index='$parentsField001'");
+        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("$id_index='$parentsField001'", 0, 1000);
     }
     else {
         warn "Record with no field 001 encountered!" unless $parentrecord;

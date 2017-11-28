@@ -112,11 +112,19 @@
         </xsl:if>
 
         <!--Component part records: Displaying title and author of component part records if available. These are floated to right by css. -->
+        <xsl:variable name="HostSearchString">
+            <xsl:choose>
+                <xsl:when test="marc:controlfield[@tag=003]">(hrcn:'<xsl:value-of select="marc:controlfield[@tag=001]"/>' AND cni:'<xsl:value-of select="marc:controlfield[@tag=003]"/>') OR (hrcn:'\(<xsl:value-of select="marc:controlfield[@tag=003]"/>\)<xsl:value-of select="marc:controlfield[@tag=001]"/>')</xsl:when>
+                <xsl:otherwise>hrcn:'<xsl:value-of select="marc:controlfield[@tag=001]"/>'s</xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
         <xsl:if test="marc:componentPartRecords/marc:componentPart">
                  <span class="componentPartRecordsContainer results_summary">
-                       <h5>Component part records:</h5>
+                       <h5>Component part records (<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all <xsl:value-of select="marc:componentPartRecordCount"/></a>):</h5>
                        <xsl:for-each select="marc:componentPartRecords/marc:componentPart">
-                         <span class="componentPartRecord">
+                         <xsl:choose>
+                            <xsl:when test="position() &lt; 1000">
+                              <span class="componentPartRecord">
                                  <span class="componentPartRecordTitle">
                                        <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/detail.pl?biblionumber=<xsl:value-of select="marc:biblionumber" /></xsl:attribute>
                                           <xsl:choose>
@@ -135,8 +143,15 @@
                                        <xsl:value-of select="marc:author" />
                                  </span>
                                </xsl:if>
-                         </span>
-                         <br />
+                               </span>
+                               <br />
+                            </xsl:when>
+                            <xsl:when test="position() = 1000">
+                              <span class="componentPartRecordTitle">
+                                [<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/></xsl:attribute>view all</a>]
+                              </span>
+                            </xsl:when>
+                         </xsl:choose>
                        </xsl:for-each>
                  </span>
                </xsl:if>

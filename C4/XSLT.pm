@@ -90,7 +90,7 @@ sub transformMARCXML4XSLT {
                             if $av->{ $tag }->{ $letter };
                     }
                     push( @new_subfields, $letter, $value );
-                } 
+                }
                 $field ->replace_with( MARC::Field->new(
                     $tag,
                     $field->indicator(1),
@@ -167,7 +167,7 @@ sub get_xslt_sysprefs {
                               DisplayOPACiconsXSLT URLLinkText viewISBD
                               OPACBaseURL TraceCompleteSubfields UseICU
                               UseAuthoritiesForTracings TraceSubjectSubdivisions
-                              Display856uAsImage OPACDisplay856uAsImage 
+                              Display856uAsImage OPACDisplay856uAsImage
                               UseControlNumber IntranetBiblioDefaultView BiblioDefaultView
                               OPACItemLocation DisplayIconsXSLT
                               AlternateHoldingsField AlternateHoldingsSeparator
@@ -322,10 +322,10 @@ sub buildKohaItemsNamespace {
         my $reservestatus = C4::Reserves::GetReserveStatus( $item->{itemnumber} );
 
         if ( $itemtypes->{ $item->{itype} }->{notforloan} || $item->{notforloan} || $item->{onloan} || $item->{withdrawn} || $item->{itemlost} || $item->{damaged} ||
-             (defined $transfertwhen && $transfertwhen ne '') || $item->{itemnotforloan} || (defined $reservestatus && $reservestatus eq "Waiting") ){ 
+             (defined $transfertwhen && $transfertwhen ne '') || $item->{itemnotforloan} || (defined $reservestatus && $reservestatus eq "Waiting") ){
             if ( $item->{notforloan} < 0) {
                 $status = "On order";
-            } 
+            }
             if ( $item->{itemnotforloan} > 0 || $item->{notforloan} > 0 || $itemtypes->{ $item->{itype} }->{notforloan} == 1 ) {
                 $status = "reference";
             }
@@ -339,7 +339,7 @@ sub buildKohaItemsNamespace {
                 $status = "Lost";
             }
             if ($item->{damaged}) {
-                $status = "Damaged"; 
+                $status = "Damaged";
             }
             if (defined $transfertwhen && $transfertwhen ne '') {
                 $status = 'In transit';
@@ -398,7 +398,7 @@ sub engine {
 sub _prepareComponentPartRecords {
 
     my ($f001Data, $f003Data) = @_;
-    my $componentPartBiblios = C4::Biblio::getComponentRecords( $f001Data, $f003Data );
+    my ($componentPartBiblios, $totalCount) = C4::Biblio::getComponentRecords( $f001Data, $f003Data );
 
     if (@$componentPartBiblios) {
 
@@ -419,6 +419,8 @@ sub _prepareComponentPartRecords {
             push @componentPartRecordXML, '  </componentPart>';
         }
         push @componentPartRecordXML, '</componentPartRecords>';
+        push @componentPartRecordXML, ''; #Just to make the join operation end with a newline
+        push @componentPartRecordXML, '<componentPartRecordCount>'.C4::Koha::xml_escape($totalCount).'</componentPartRecordCount>';
         push @componentPartRecordXML, ''; #Just to make the join operation end with a newline
 
         #Build the real XML string.
