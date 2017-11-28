@@ -1543,11 +1543,14 @@ Returns an array of MARC::Record objects of the items for the biblio.
 sub GetMarcItemFields {
 	my ( $biblionumber, $frameworkcode, $itemnumbers, $hidingrules ) = @_;
 
-    my @items = Koha::Items->search( { biblionumber => $biblionumber } );
+    state $item_level_itype = C4::Context->preference('item-level_itypes');
+    state $sth = C4::Context->dbh->prepare( 'SELECT * FROM items WHERE biblionumber = ?' );
+    $sth->execute( $biblionumber );
+    my $items = $sth->fetchall_arrayref({});
     my @item_fields;
     my ( $itemtag, $itemsubfield ) = GetMarcFromKohaField( 'items.itemnumber', $frameworkcode );
 
-    ITEMLOOP: foreach my $item (@items) {
+    ITEMLOOP: foreach my $item (@$items) {
 
         # Check itemnumbers
         next if ( @$itemnumbers && !any { $_ == $item->itemnumber } @$itemnumbers );
@@ -1565,14 +1568,17 @@ sub GetMarcItemFields {
             }
         }
 
-        my $data = $item->unblessed();
-        $data->{itype} = $item->effective_itemtype(); # set the correct itype
-        $item = undef;
+        # Set correct item type
+        if ( !$item_level_itype || !$item->{itype} ) {
+            warn 'item-level_itypes set but no itemtype set for item (' . $item->{itemnumber} . ')' if ( !$item->{itype} );
+            my $biblioitem = Koha::Biblioitem::find( $item->{biblioitemnumber} );
+            $item->itype = $biblioitem->itemtype();
+        }
 
         my $mungeditem = {
             map {
-                defined($data->{$_}) && $data->{$_} ne '' ? ("items.$_" => $data->{$_}) : ()
-            } keys %{ $data }
+                defined($item->{$_}) && $item->{$_} ne '' ? ("items.$_" => $item->{$_}) : ()
+            } keys %{ $item }
         };
         my $itemmarc = TransformKohaToMarc($mungeditem);
 
