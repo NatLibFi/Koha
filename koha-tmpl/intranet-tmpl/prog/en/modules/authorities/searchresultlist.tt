@@ -48,11 +48,11 @@ function searchauthority() {
 <div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/authorities/authorities-home.pl">Authorities</a> &rsaquo; Authority search results</div>
 
 <div id="doc" class="yui-t7">
-   
+
    <div id="bd">
     <div id="yui-main">
     <div class="yui-g">
-    
+
     [% INCLUDE 'authorities-toolbar.inc' %]
 <h1>Authority search results</h1>
 
@@ -78,7 +78,11 @@ function searchauthority() {
     [% FOREACH resul IN result %]
     <tr data-authid="[% resul.authid %]">
       <td>[% PROCESS authresult summary=resul.summary %]</td>
-      <td><a href="detail.pl?authid=[% resul.authid %]">Details</a></td>
+      <td>
+        <a href="detail.pl?authid=[% resul.authid %]">Details</a>
+        <br>
+        <a href="/cgi-bin/koha/authorities/showmarc.pl?id=[% resul.authid %]&viewas=html" class="previewMARC">MARC</a>
+      </td>
     [% UNLESS ( resul.isEDITORS ) %]
       <td>
       [% IF resul.used > 0 %]
@@ -116,4 +120,39 @@ function searchauthority() {
 </div>
 </div>
 </div>
+<script type="text/javascript">
+
+//<![CDATA[
+
+	 $(document).ready(function() {
+        $("body").on("click",".previewMARC", function(e){
+            e.preventDefault();
+            var page = $(this).attr("href");
+            $("#marcPreview .modal-body").load(page + " table");
+            $('#marcPreview').modal({show:true});
+        });
+        $("#marcPreview").on("hidden", function(){
+            $("#marcPreview .modal-body").html("<div id=\"loading\"><img src=\"[% interface %]/[% theme %]/img/spinner-small.gif\" alt=\"\" /> "+_("Loading")+"</div>");
+        });
+	 });
+//]]>
+</script>
+
+<div id="marcPreview" class="modal" tabindex="-1" role="dialog" aria-labelledby="marcPreviewLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="closebtn" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="marcPreviewLabel">MARC preview</h3>
+    </div>
+    <div class="modal-body">
+        <div id="loading"> <img src="[% interface %]/[% theme %]/img/spinner-small.gif" alt="" /> Loading </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Close</button>
+    </div>
+    </div>
+    </div>
+</div>
+
 [% INCLUDE 'intranet-bottom.inc' %]
