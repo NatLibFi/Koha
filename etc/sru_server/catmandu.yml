@@ -1,0 +1,193 @@
+---
+store:
+  sru:
+    package: ElasticSearch
+    options:
+      bags:
+        data:
+          cql_mapping:
+            default_index: cql.serverChoice
+            indexes:
+              rec.id:
+                op:
+                  '=': true
+                  'exact': true
+                field: '_id'
+              dc.identifier:
+                op:
+                  '=': true
+                  'exact': true
+                field: 'control-number'
+              dc.title:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'title'
+              dc.subject:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'subject'
+              dc.creator:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'author'
+              dc.author:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'author'
+              dc.itemtype:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'itype'
+              dc.branch:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: ['homebranch', 'holdingbranch']
+              dc.isbn:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'isbn'
+              dc.issn:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'issn'
+              dc.any:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: '_all'
+              dc.pname:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'Personal-name'
+              dc.publisher:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'publisher'
+              dc.date:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'copydate'
+              dc.format:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'material-type'
+              dc.resourceIdentifier:
+                op:
+                  '=': true
+                  'exact': true
+                field: 'Local-number'
+              bath.keyTitle:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'title'
+              bath.possessingInstitution:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: ['homebranch', 'holdingbranch']
+              bath.name:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'author'
+              bath.personalName:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'Personal-name'
+              bath.corporateName:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'author'
+              bath.conferenceName:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'Meeting-name'
+              bath.isbn:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'isbn'
+              bath.issn:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'issn'
+              bath.geographicName:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'su-geo'
+              bath.topicalSubject:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: 'subject'
+              cql.serverChoice:
+                op:
+                  'any': true
+                  'all': true
+                  '=': true
+                  'exact': true
+                field: '_all'
