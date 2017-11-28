@@ -731,43 +731,53 @@
         <xsl:if test="marc:datafield[substring(@tag, 1, 1) = '6' and not(@tag=655)]">
             <span class="results_summary subjects"><span class="label">Subject(s): </span>
             <xsl:for-each select="marc:datafield[substring(@tag, 1, 1) = '6'][not(@tag=655)]">
-            <a>
-            <xsl:choose>
-            <!-- #1807 Strip unwanted parenthesis from subjects for searching -->
-            <xsl:when test="marc:subfield[@code=9] and $UseAuthoritiesForTracings='1'">
-                <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=an:<xsl:value-of select="marc:subfield[@code=9]"/></xsl:attribute>
-            </xsl:when>
-            <xsl:when test="$TraceSubjectSubdivisions='1'">
-                <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:call-template name="subfieldSelectSubject">
-                        <xsl:with-param name="codes">abcdfgklmnopqrstvxyz</xsl:with-param>
-                        <xsl:with-param name="delimeter"> AND </xsl:with-param>
-                        <xsl:with-param name="prefix">(su<xsl:value-of select="$SubjectModifier"/>:<xsl:value-of select="$TracingQuotesLeft"/></xsl:with-param>
-                        <xsl:with-param name="suffix"><xsl:value-of select="$TracingQuotesRight"/>)</xsl:with-param>
-                        <xsl:with-param name="urlencode">1</xsl:with-param>
-                    </xsl:call-template>
-                </xsl:attribute>
-            </xsl:when>
-            <!-- #1807 Strip unwanted parenthesis from subjects for searching -->
-            <xsl:otherwise>
-                <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=su<xsl:value-of select="$SubjectModifier"/>:<xsl:value-of select="$TracingQuotesLeft"/><xsl:value-of select="util:urlencode(translate(marc:subfield[@code='a'],'()',''))"/><xsl:value-of select="$TracingQuotesRight"/></xsl:attribute>
-            </xsl:otherwise>
-            </xsl:choose>
-            <xsl:call-template name="chopPunctuation">
-                <xsl:with-param name="chopString">
-                    <xsl:call-template name="subfieldSelect">
-                        <xsl:with-param name="codes">abcdfgklmnopqrstvxyz</xsl:with-param>
-                        <xsl:with-param name="subdivCodes">vxyz</xsl:with-param>
-                        <xsl:with-param name="subdivDelimiter">-- </xsl:with-param>
-                        <xsl:with-param name="urlencode">1</xsl:with-param>
-                    </xsl:call-template>
-                </xsl:with-param>
-            </xsl:call-template>
-            </a>
-            <xsl:choose>
-            <xsl:when test="position()=last()"></xsl:when>
-            <xsl:otherwise> | </xsl:otherwise>
-            </xsl:choose>
-
+                <xsl:choose>
+                    <xsl:when test="marc:subfield[@code=9] and $UseAuthoritiesForTracings='1'">
+                        <a>
+                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=an:<xsl:value-of select="marc:subfield[@code=9]"/></xsl:attribute>
+                            <xsl:call-template name="chopPunctuation">
+                                <xsl:with-param name="chopString">
+                                    <xsl:call-template name="subfieldSelect">
+                                        <xsl:with-param name="codes">abcdfgklmnopqrstvxyz</xsl:with-param>
+                                        <xsl:with-param name="subdivCodes">vxyz</xsl:with-param>
+                                        <xsl:with-param name="subdivDelimiter">-- </xsl:with-param>
+                                        <xsl:with-param name="urlencode">1</xsl:with-param>
+                                    </xsl:call-template>
+                                </xsl:with-param>
+                            </xsl:call-template>
+                        </a>
+                    </xsl:when>
+                    <xsl:when test="$TraceSubjectSubdivisions='1'">
+                        <xsl:call-template name="createSubjectSearch">
+                            <xsl:with-param name="codes">abcdfgklmnopqrstvxyz</xsl:with-param>
+                            <xsl:with-param name="displayDelimiter"> -- </xsl:with-param>
+                            <xsl:with-param name="delimiter"> AND </xsl:with-param>
+                            <xsl:with-param name="prefix">(su<xsl:value-of select="$SubjectModifier"/>:<xsl:value-of select="$TracingQuotesLeft"/></xsl:with-param>
+                            <xsl:with-param name="suffix"><xsl:value-of select="$TracingQuotesRight"/>)</xsl:with-param>
+                            <xsl:with-param name="position">1</xsl:with-param>
+                        </xsl:call-template>
+                    </xsl:when>
+                    <!-- #1807 Strip unwanted parenthesis from subjects for searching -->
+                    <xsl:otherwise>
+                        <a>
+                            <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=su<xsl:value-of select="$SubjectModifier"/>:<xsl:value-of select="$TracingQuotesLeft"/><xsl:value-of select="util:urlencode(translate(marc:subfield[@code='a'],'()',''))"/><xsl:value-of select="$TracingQuotesRight"/></xsl:attribute>
+                            <xsl:call-template name="chopPunctuation">
+                                <xsl:with-param name="chopString">
+                                    <xsl:call-template name="subfieldSelect">
+                                        <xsl:with-param name="codes">abcdfgklmnopqrstvxyz</xsl:with-param>
+                                        <xsl:with-param name="subdivCodes">vxyz</xsl:with-param>
+                                        <xsl:with-param name="subdivDelimiter">-- </xsl:with-param>
+                                        <xsl:with-param name="urlencode">1</xsl:with-param>
+                                    </xsl:call-template>
+                                </xsl:with-param>
+                            </xsl:call-template>
+                        </a>
+                    </xsl:otherwise>
+                </xsl:choose>
+                <xsl:choose>
+                    <xsl:when test="position()=last()"></xsl:when>
+                    <xsl:otherwise> | </xsl:otherwise>
+                </xsl:choose>
             </xsl:for-each>
             </span>
         </xsl:if>
@@ -1556,6 +1566,82 @@
             </xsl:when>
             <xsl:otherwise>
         <xsl:value-of select="substring($str,1,string-length($str)-string-length($delimeter))"/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
+    <xsl:template name="createSubjectSearch">
+        <xsl:param name="codes"/>
+        <xsl:param name="displayDelimiter"><xsl:text> </xsl:text></xsl:param>
+        <xsl:param name="delimiter"><xsl:text> </xsl:text></xsl:param>
+        <xsl:param name="subdivCodes"/>
+        <xsl:param name="subdivDelimiter"/>
+        <xsl:param name="prefix"/>
+        <xsl:param name="suffix"/>
+        <xsl:param name="position"/>
+        <xsl:param name="prefixWithDelimiter"/>
+
+        <xsl:variable name="currentCode"><xsl:value-of select="substring($codes, $position, 1)"/></xsl:variable>
+        <xsl:variable name="currentCodes"><xsl:value-of select="substring($codes, 1, $position)"/></xsl:variable>
+
+        <!-- Check for the last code and only do the work if it exists -->
+        <xsl:variable name="lastCode"><xsl:value-of select="substring($codes, $position, 1)"/></xsl:variable>
+        <xsl:choose>
+            <xsl:when test="marc:subfield[@code=$lastCode]">
+                <xsl:variable name="str">
+                    <xsl:for-each select="marc:subfield">
+                        <xsl:if test="contains($currentCode, @code)">
+                            <xsl:if test="contains($subdivCodes, @code)">
+                                <xsl:value-of select="$subdivDelimiter"/>
+                            </xsl:if>
+                            <xsl:value-of select="text()"/><xsl:value-of select="$displayDelimiter"/>
+                        </xsl:if>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:variable name="searchstr">
+                    <xsl:for-each select="marc:subfield">
+                        <xsl:if test="contains($currentCodes, @code)">
+                            <xsl:value-of select="$prefix"/><xsl:value-of select="translate(text(),'()','')"/><xsl:value-of select="$suffix"/><xsl:value-of select="$delimiter"/>
+                        </xsl:if>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:if test="$searchstr!=''">
+                    <xsl:if test="$delimiter!='' and $prefixWithDelimiter=1">
+                        <xsl:value-of select="$displayDelimiter"/>
+                    </xsl:if>
+                    <a>
+                        <xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="util:urlencode(substring($searchstr, 1, string-length($searchstr) - string-length($delimiter)))"/></xsl:attribute>
+                        <xsl:value-of select="substring($str, 1, string-length($str) - string-length($displayDelimiter))"/>
+                    </a>
+                </xsl:if>
+                <xsl:if test="$position &lt; string-length($codes)">
+                    <xsl:call-template name="createSubjectSearch">
+                        <xsl:with-param name="codes"><xsl:value-of select="$codes"/></xsl:with-param>
+                        <xsl:with-param name="displayDelimiter"><xsl:value-of select="$displayDelimiter"/></xsl:with-param>
+                        <xsl:with-param name="delimiter"><xsl:value-of select="$delimiter"/></xsl:with-param>
+                        <xsl:with-param name="subdivCodes"><xsl:value-of select="$subdivCodes"/></xsl:with-param>
+                        <xsl:with-param name="subdivDelimiter"><xsl:value-of select="$subdivDelimiter"/></xsl:with-param>
+                        <xsl:with-param name="prefix"><xsl:value-of select="$prefix"/></xsl:with-param>
+                        <xsl:with-param name="suffix"><xsl:value-of select="$suffix"/></xsl:with-param>
+                        <xsl:with-param name="position"><xsl:value-of select="$position + 1"/></xsl:with-param>
+                        <xsl:with-param name="prefixWithDelimiter"><xsl:if test="$prefixWithDelimiter or $searchstr!=''">1</xsl:if></xsl:with-param>
+                    </xsl:call-template>
+                </xsl:if>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:if test="$position &lt; string-length($codes)">
+                    <xsl:call-template name="createSubjectSearch">
+                        <xsl:with-param name="codes"><xsl:value-of select="$codes"/></xsl:with-param>
+                        <xsl:with-param name="displayDelimiter"><xsl:value-of select="$displayDelimiter"/></xsl:with-param>
+                        <xsl:with-param name="delimiter"><xsl:value-of select="$delimiter"/></xsl:with-param>
+                        <xsl:with-param name="subdivCodes"><xsl:value-of select="$subdivCodes"/></xsl:with-param>
+                        <xsl:with-param name="subdivDelimiter"><xsl:value-of select="$subdivDelimiter"/></xsl:with-param>
+                        <xsl:with-param name="prefix"><xsl:value-of select="$prefix"/></xsl:with-param>
+                        <xsl:with-param name="suffix"><xsl:value-of select="$suffix"/></xsl:with-param>
+                        <xsl:with-param name="position"><xsl:value-of select="$position + 1"/></xsl:with-param>
+                        <xsl:with-param name="prefixWithDelimiter"><xsl:if test="$prefixWithDelimiter">1</xsl:if></xsl:with-param>
+                    </xsl:call-template>
+                </xsl:if>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
