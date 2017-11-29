@@ -211,10 +211,6 @@ sub build_query_compat {
     if ( $scan ) {
         $query = $self->build_scan_query( $operands, $indexes );
     } else {
-        my @sort_params  = $self->_convert_sort_fields(@$sort_by);
-        my @index_params = $self->_convert_index_fields(@$indexes);
-        $limits          = $self->_fix_limit_special_cases($orig_limits);
-
         # Merge the indexes in with the search terms and the operands so that
         # each search thing is a handy unit.
         unshift @$operators, undef;    # The first one can't have an op
