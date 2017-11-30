@@ -440,6 +440,7 @@ function Changefwk() {
         <input type="hidden" name="op" value="add" />
         <input type="hidden" id="frameworkcode" name="frameworkcode" value="[% frameworkcode %]" />
         <input type="hidden" name="biblionumber" value="[% biblionumber %]" />
+        <input type="hidden" name="holdingnumber" value="[% holdingnumber %]" />
         <input type="hidden" name="changed_framework" value="" />
 
 <div id="addholdingtabs" class="toptabs numbered">

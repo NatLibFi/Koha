@@ -137,9 +137,8 @@ sub AddHolding {
 
     # transform the data into koha-table style data
     SetUTF8Flag($record);
-    my $olddata = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
-    my ($holdingnumber) = _koha_add_holding( $dbh, $olddata, $frameworkcode, $biblionumber );
-    $olddata->{'holdingnumber'} = $holdingnumber;
+    my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
+    my ($holdingnumber) = _koha_add_holding( $dbh, $rowData, $frameworkcode, $biblionumber );
 
     # update biblionumber, biblioitemnumber and holdingnumber in MARC
     # FIXME - this is assuming a 1 to 1 relationship between
@@ -203,13 +202,12 @@ sub ModHolding {
     _koha_marc_update_ids( $record, $frameworkcode, $holdingnumber );
 
     # load the koha-table data object
-    my $oldholding = TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
-
+    my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
     # update the MARC record (that now contains biblio and items) with the new record data
     &ModHoldingMarc( $record, $holdingnumber, $frameworkcode );
 
     # modify the other koha tables
-    _koha_modify_holding( $dbh, $oldholding, $frameworkcode );
+    _koha_modify_holding( $dbh, $holdingnumber, $rowData, $frameworkcode );
 
     return 1;
 }
@@ -447,7 +445,7 @@ Internal function for updating the holdings table
 =cut
 
 sub _koha_modify_holding {
-    my ( $dbh, $holding, $frameworkcode ) = @_;
+    my ( $dbh, $holdingnumber, $holding, $frameworkcode ) = @_;
     my $error;
 
     my $query = "
@@ -463,14 +461,13 @@ sub _koha_modify_holding {
     my $sth = $dbh->prepare($query);
 
     $sth->execute(
-        $frameworkcode, $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}
-    ) if $holding->{'holdingnumber'};
+        $frameworkcode, $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}, $holdingnumber
+    ) if $holdingnumber;
 
-    if ( $dbh->errstr || !$holding->{'holdingnumber'} ) {
-        $error .= "ERROR in _koha_modify_holding $query" . $dbh->errstr;
-        warn $error;
+    if ( $dbh->errstr || !$holdingnumber ) {
+        die "ERROR in _koha_modify_holding for holding $holdingnumber: " . $dbh->errstr;
     }
-    return ( $holding->{'holdingnumber'}, $error );
+    return ( $holdingnumber, $error );
 }
 
 =head2 _koha_delete_holding

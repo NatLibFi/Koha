@@ -4481,7 +4481,7 @@ INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblib
 
 
 INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
-		('942', 'n', 'Suppress in OPAC', 'Suppress in OPAC', 0, 0, NULL, 9, '', '', '', 0, 0, 'HLD', '', '', NULL);
+		('942', 'n', 'Suppress in OPAC', 'Suppress in OPAC', 0, 0, 'holdings.suppress', 9, '', '', '', 0, 0, 'HLD', '', '', NULL);
 
 INSERT IGNORE INTO `marc_tag_structure` (`tagfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `authorised_value`, `frameworkcode`) VALUES
 		('000', 'LEADER', 'LEADER', 0, 1, '', 'HLD'),
@@ -4536,7 +4536,7 @@ INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblib
 		('852', 'h', 'Classification part', 'Classification part', 0, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
 		('852', 'i', 'Item part', 'Item part', 1, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
 		('852', 'j', 'Shelving control number', 'Shelving control number', 0, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
-        ('852', 'k', 'Call number prefix', 'Call number prefix', 1, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
+        ('852', 'k', 'Call number prefix', 'Call number prefix', 1, 0, 'holdings.callnumber', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
 		('852', 'l', 'Shelving form of title', 'Shelving form of title', 0, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
         ('852', 'm', 'Call number suffix', 'Call number suffix', 1, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
 		('852', 'n', 'Country code', 'Country code', 0, 0, '', 8, '', '', '', NULL, 4, 'HLD', '', '', NULL),
