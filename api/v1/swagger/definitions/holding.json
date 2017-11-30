@@ -31,7 +31,7 @@
     },
     "suppress": {
       "type": ["integer", "null"],
-      "description": "Boolean indicating whether the record is suppressed from OPAC"
+      "description": "Boolean indicating whether the record is suppressed in OPAC"
     },
     "timestamp": {
       "type": ["string", "null"],

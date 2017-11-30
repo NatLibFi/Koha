@@ -56,7 +56,7 @@ unless ($atomicUpdater->find('NLF-2')) {
         `holdingbranch` varchar(10) default NULL, -- foreign key from the branches table for the library that owns this holding (MARC21 852$a)
         `location` varchar(80) default NULL, -- authorized value for the shelving location for this item (MARC21 852$c)
         `callnumber` varchar(255) default NULL, -- call number (852$h+$i in MARC21)
-        `suppress` tinyint(1) default NULL, -- Boolean indicating whether the holding is suppressed from patrons
+        `suppress` tinyint(1) default NULL, -- Boolean indicating whether the holding is suppressed in OPAC
         `timestamp` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP, -- date and time this record was last touched
         `datecreated` DATE NOT NULL, -- the date this record was added to Koha
         PRIMARY KEY  (`holdingnumber`),
