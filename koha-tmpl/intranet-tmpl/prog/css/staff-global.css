@@ -1511,6 +1511,10 @@ li.email {
 	display : block;
 }
 
+#searchresults .holdings {
+    white-space: nowrap;
+}
+
 #searchresults ul li img {
 	float : left;
 	margin : 3px 5px 3px -5px;

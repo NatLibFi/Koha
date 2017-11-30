@@ -629,6 +629,21 @@ var holdForPatron = function () {
                                 </td>
 
                                 <td><div class="availability">
+                                    [% IF ( SEARCH_RESULT.summary_holdings ) %]
+                                        <div class="holdings">
+                                            <strong>Holdings</strong>
+                                            <ul>
+                                            [% FOREACH holding IN SEARCH_RESULT.summary_holdings %]
+                                                <li>
+                                                [% IF ( holding.holdingbranch ) %][% holding.holdingbranch %][% END %]
+                                                [% IF ( holding.location ) %][% holding.location %][% END %]
+                                                [% IF ( holding.callnumber ) %][% holding.callnumber %][% END %]
+                                                </li>
+                                            [% END %]
+                                            </ul>
+                                        </div>
+                                    [% END %]
+                                    
                                     [% IF ( SEARCH_RESULT.items_count ) %]
                                         <strong>
                                             [% IF MaxSearchResultsItemsPerRecordStatusCheck && SEARCH_RESULT.items_count > MaxSearchResultsItemsPerRecordStatusCheck %]
