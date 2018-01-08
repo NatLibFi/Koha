@@ -23,8 +23,9 @@ use warnings;
 use Data::Dumper;
 use CGI qw ( -utf8 );
 use C4::Context;
-use C4::Members::Messaging;
 use C4::Debug;
+use Koha::Patron::Message::Preferences;
+use Koha::Patrons;
 
 use constant MAX_DAYS_IN_ADVANCE => 30;
 
@@ -74,7 +75,7 @@ adds a settings_updated template variable.
 
 sub handle_form_action {
     my ($query, $target_params, $template, $insert, $categorycode) = @_;
-    my $messaging_options = C4::Members::Messaging::GetMessagingOptions();
+    my $messaging_options = Koha::Patron::Message::Preferences->get_options;
     # TODO: If a "NONE" box and another are checked somehow (javascript failed), we should pay attention to the "NONE" box
     my $prefs_set = 0;
     my $borrowernumber;
@@ -136,7 +137,18 @@ sub handle_form_action {
             }
         }
 
-        C4::Members::Messaging::SetMessagingPreference( $updater );
+        $updater->{'days_in_advance'} = undef unless exists $updater->{'days_in_advance'};
+        $updater->{'wants_digest'} = 0 unless exists $updater->{'wants_digest'};
+        my $preference = Koha::Patron::Message::Preferences->find({
+            borrowernumber => $updater->{'borrowernumber'},
+            message_attribute_id => $option->{'message_attribute_id'},
+            categorycode => $categorycode || $updater->{'categorycode'},
+        });
+        unless ($preference) {
+            Koha::Patron::Message::Preference->new($updater)->store;
+        } else {
+            $preference->set($updater)->store;
+        }
 
         _pushToActionLogBuffer($logEntries, $updater, $option);
 
@@ -146,8 +158,9 @@ sub handle_form_action {
     }
     if (! $prefs_set && $insert){
         # this is new borrower, and we have no preferences set, use the defaults
-	$target_params->{categorycode} = $categorycode;
-        C4::Members::Messaging::SetMessagingPreferencesFromDefaults( $target_params );
+        $target_params->{categorycode} = $categorycode;
+        my $patron = Koha::Patrons->find($target_params->{'borrowernumber'});
+        $patron->set_default_messaging_preferences if $patron;
     }
     # show the success message
     $template->param( settings_updated => 1 );
@@ -172,23 +185,24 @@ C<$template> is the Template::Toolkit object for the response.
 sub set_form_values {
     my ($target_params, $template) = @_;
     # walk through the options and update them with these borrower_preferences
-    my $messaging_options = C4::Members::Messaging::GetMessagingOptions();
+    my $messaging_options = Koha::Patron::Message::Preferences->get_options;
     PREF: foreach my $option ( @$messaging_options ) {
-        my $pref = C4::Members::Messaging::GetMessagingPreferences( { %{ $target_params }, message_name => $option->{'message_name'} } );
+        my $pref = Koha::Patron::Message::Preferences->find( { %{ $target_params }, message_attribute_id => $option->{'message_attribute_id'} } );
         $option->{ $option->{'message_name'} } = 1;
         # make a hashref of the days, selecting one.
         if ( $option->{'takes_days'} ) {
-            my $days_in_advance = $pref->{'days_in_advance'} ? $pref->{'days_in_advance'} : 0;
+            my $days_in_advance = $pref && $pref->days_in_advance ? $pref->days_in_advance : 0;
             $option->{days_in_advance} = $days_in_advance;
             @{$option->{'select_days'}} = map { {
                 day        => $_,
                 selected   => $_ == $days_in_advance  }
             } ( 0..MAX_DAYS_IN_ADVANCE );
         }
-        foreach my $transport ( keys %{$pref->{'transports'}} ) {
+        next unless $pref;
+        foreach my $transport ( keys %{$pref->message_transport_types} ) {
             $option->{'transports_'.$transport} = 1;
         }
-        $option->{'digest'} = 1 if $pref->{'wants_digest'};
+        $option->{'digest'} = 1 if $pref->wants_digest;
     }
     $template->param(messaging_preferences => $messaging_options);
 }
@@ -258,7 +272,7 @@ sub _writeActionLogBuffer {
 
 =head1 SEE ALSO
 
-L<C4::Members::Messaging>, F<admin/categories.pl>, F<opac/opac-messaging.pl>, F<members/messaging.pl>
+L<Koha::Patron::Message::Preference>, F<admin/categories.pl>, F<opac/opac-messaging.pl>, F<members/messaging.pl>
 
 =head1 AUTHOR
 

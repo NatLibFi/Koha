@@ -28,7 +28,6 @@ use C4::Koha;
 use C4::Circulation;
 use C4::Output;
 use C4::Members;
-use C4::Members::Messaging;
 use C4::Form::MessagingPreferences;
 use Koha::SMS::Providers;
 use Koha::Validation;
@@ -52,7 +51,6 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
 );
 
 my $borrower = C4::Members::GetMember( borrowernumber => $borrowernumber );
-my $messaging_options = C4::Members::Messaging::GetMessagingOptions();
 
 my $validate_phone = C4::Context->preference('ValidatePhoneNumber');
 

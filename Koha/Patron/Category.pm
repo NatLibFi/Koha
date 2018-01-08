@@ -19,10 +19,9 @@ use Modern::Perl;
 
 use Carp;
 
-use C4::Members::Messaging;
-
 use Koha::Database;
 use Koha::DateUtils;
+use Koha::Patron::Message::Preferences;
 
 use base qw(Koha::Object);
 
@@ -79,22 +78,20 @@ my $messaging = $category->default_messaging();
 
 sub default_messaging {
     my ( $self ) = @_;
-    my $messaging_options = C4::Members::Messaging::GetMessagingOptions();
+    my $messaging_options = Koha::Patron::Message::Preferences->get_options;
     my @messaging;
     foreach my $option (@$messaging_options) {
-        my $pref = C4::Members::Messaging::GetMessagingPreferences(
-            {
-                categorycode => $self->categorycode,
-                message_name => $option->{message_name}
-            }
-        );
-        next unless $pref->{transports};
+        my $pref = Koha::Patron::Message::Preferences->find_with_message_name({
+            categorycode   => $self->categorycode,
+            message_name   => $option->{message_name},
+        });
+        next if !$pref || $pref && !$pref->message_transport_types;
         my $brief_pref = {
             message_attribute_id      => $option->{message_attribute_id},
             message_name              => $option->{message_name},
             $option->{'message_name'} => 1,
         };
-        foreach my $transport ( keys %{ $pref->{transports} } ) {
+        foreach my $transport ( keys %{ $pref->message_transport_types } ) {
             push @{ $brief_pref->{transports} }, { transport => $transport };
         }
         push @messaging, $brief_pref;

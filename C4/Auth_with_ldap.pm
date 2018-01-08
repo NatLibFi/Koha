@@ -26,7 +26,6 @@ use C4::Context;
 use C4::Members qw(AddMember);
 use C4::Members::Attributes;
 use C4::Members::AttributeTypes;
-use C4::Members::Messaging;
 use C4::Auth qw(checkpw_internal);
 use Koha::Patrons;
 use Koha::AuthUtils qw(hash_password);
@@ -224,7 +223,7 @@ sub checkpw_ldap {
         }
     } elsif ($config{replicate}) { # A2, C2
         $borrowernumber = C4::Members::AddMember(%borrower) or die "AddMember failed";
-        C4::Members::Messaging::SetMessagingPreferencesFromDefaults( { borrowernumber => $borrowernumber, categorycode => $borrower{'categorycode'} } );
+        Koha::Patrons->find($borrowernumber)->set_default_messaging_preferences;
    } else {
         return 0;   # B2, D2
     }

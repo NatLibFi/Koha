@@ -4322,9 +4322,11 @@ sub getHostRecord {
         Koha::Exception::Search->throw(error => "C4::Biblio::getHostRecord():> Searching (\"Control-number='$cn' and cni='$cni'\"):> Returned an error:\n$error");
     }
 
+    my $marcflavour = C4::Context->preference('marcflavour');
+
     if ($resultSetSize == 1) {
-        my $marcrecord = MARC::Record->new_from_xml( $recordXMLs->[0], 'UTF-8', 'MARC21' );
-        my $record = TransformMarcToKoha( $marcrecord, '' );
+        my $marcrecord = MARC::Record->new_from_xml( $recordXMLs->[0], 'UTF-8', $marcflavour );
+        my $record = TransformMarcToKoha($marcrecord);
         return $record;
     }
     elsif ($resultSetSize > 1) {

@@ -41,6 +41,7 @@
         <xsl:variable name="biblionumber" select="marc:datafield[@tag=999]/marc:subfield[@code='c']"/>
         <xsl:variable name="isbn" select="marc:datafield[@tag=020]/marc:subfield[@code='a']"/>
         <xsl:variable name="controlField008" select="marc:controlfield[@tag=008]"/>
+        <xsl:variable name="controlField003" select="marc:controlfield[@tag=003]"/>
         <xsl:variable name="typeOf008">
             <xsl:choose>
                 <xsl:when test="$leader19='a'">ST</xsl:when>
@@ -417,31 +418,60 @@
         </xsl:attribute>
         <xsl:attribute name="class">title</xsl:attribute>
 
-        <xsl:if test="marc:datafield[@tag=245]">
-            <xsl:for-each select="marc:datafield[@tag=245]">
+        <xsl:choose>
+            <xsl:when test="marc:datafield[@tag=245]">
+                <xsl:for-each select="marc:datafield[@tag=245]">
+                    <xsl:call-template name="subfieldSelect">
+                        <xsl:with-param name="codes">a</xsl:with-param>
+                    </xsl:call-template>
+                    <xsl:text> </xsl:text>
+                    <!-- 13381 add additional subfields-->
+                    <xsl:for-each select="marc:subfield[contains('bchknps', @code)]">
+                        <xsl:choose>
+                            <xsl:when test="@code='h'">
+                                <!--  13381 Span class around subfield h so it can be suppressed via css -->
+                                <span class="title_medium"><xsl:apply-templates/> <xsl:text> </xsl:text> </span>
+                            </xsl:when>
+                            <xsl:when test="@code='c'">
+                                <!--  13381 Span class around subfield c so it can be suppressed via css -->
+                                <span class="title_resp_stmt"><xsl:apply-templates/> <xsl:text> </xsl:text> </span>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:apply-templates/>
+                                <xsl:text> </xsl:text>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:for-each>
+            </xsl:when>
+            <xsl:when test="marc:datafield[@tag=240]">
+            <xsl:for-each select="marc:datafield[@tag=240]">
                 <xsl:call-template name="subfieldSelect">
                     <xsl:with-param name="codes">a</xsl:with-param>
                 </xsl:call-template>
                 <xsl:text> </xsl:text>
-                <!-- 13381 add additional subfields-->
-                <xsl:for-each select="marc:subfield[contains('bchknps', @code)]">
-                    <xsl:choose>
-                        <xsl:when test="@code='h'">
-                            <!--  13381 Span class around subfield h so it can be suppressed via css -->
-                            <span class="title_medium"><xsl:apply-templates/> <xsl:text> </xsl:text> </span>
-                        </xsl:when>
-                        <xsl:when test="@code='c'">
-                            <!--  13381 Span class around subfield c so it can be suppressed via css -->
-                            <span class="title_resp_stmt"><xsl:apply-templates/> <xsl:text> </xsl:text> </span>
-                        </xsl:when>
-                        <xsl:otherwise>
-                            <xsl:apply-templates/>
-                            <xsl:text> </xsl:text>
-                        </xsl:otherwise>
-                    </xsl:choose>
+                <xsl:for-each select="marc:subfield[contains('mnp', @code)]">
+                    <xsl:apply-templates/>
+                    <xsl:text> </xsl:text>
                 </xsl:for-each>
             </xsl:for-each>
-        </xsl:if>
+            </xsl:when>
+            <xsl:when test="marc:datafield[@tag=130]">
+            <xsl:for-each select="marc:datafield[@tag=130]">
+                <xsl:call-template name="subfieldSelect">
+                    <xsl:with-param name="codes">a</xsl:with-param>
+                </xsl:call-template>
+                <xsl:text> </xsl:text>
+                <xsl:for-each select="marc:subfield[contains('mnp', @code)]">
+                    <xsl:apply-templates/>
+                    <xsl:text> </xsl:text>
+                </xsl:for-each>
+            </xsl:for-each>
+            </xsl:when>
+            <xsl:otherwise>
+            <xsl:text>[No title]</xsl:text>
+            </xsl:otherwise>
+        </xsl:choose>
     </a>
     <p>
 
@@ -600,7 +630,20 @@
             <xsl:if test="marc:subfield[@code='t']">
     <span class="results_summary source">
     <span class="label">Source: </span>
-            <xsl:value-of select="marc:subfield[@code='t']"/>
+        <xsl:choose>
+        <!-- Add a link to the parent record -->
+            <xsl:when test="marc:subfield[@code='w'] and $controlField003">
+                <a>
+                    <xsl:attribute name="href">/cgi-bin/koha/opac-search.pl?q=Control-number:
+                        <xsl:call-template name="extractControlNumber">
+                        <xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/>
+                        </xsl:call-template> and cni:<xsl:value-of select="$controlField003"/>
+                    </xsl:attribute>
+                    <xsl:value-of select="marc:subfield[@code='t']"/>
+                </a>
+            </xsl:when>
+        </xsl:choose>
+        <!-- Added a link to the parent record -->
     </span>
             </xsl:if>
         </xsl:for-each>

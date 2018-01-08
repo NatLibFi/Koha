@@ -31,7 +31,6 @@ use C4::Circulation;
 use C4::Accounts;
 
 # for _koha_notify_reserve
-use C4::Members::Messaging;
 use C4::Members qw();
 use C4::Letters;
 use C4::Log;
@@ -46,6 +45,7 @@ use Koha::Libraries;
 use Koha::IssuingRules;
 use Koha::Items;
 use Koha::ItemTypes;
+use Koha::Patron::Message::Preferences;
 use Koha::Patrons;
 
 use DateTime;
@@ -809,6 +809,7 @@ sub GetReserveStatus {
   ($status, $reserve, $all_reserves) = &CheckReserves($itemnumber);
   ($status, $reserve, $all_reserves) = &CheckReserves(undef, $barcode);
   ($status, $reserve, $all_reserves) = &CheckReserves($itemnumber,undef,$lookahead);
+  ($status, $reserve, $all_reserves) = &CheckReserves($itemnumber,undef, undef, $limit);
 
 Find a book in the reserves.
 
@@ -834,7 +835,7 @@ table in the Koha database.
 =cut
 
 sub CheckReserves {
-    my ( $item, $barcode, $lookahead_days, $ignore_borrowers) = @_;
+    my ( $item, $barcode, $lookahead_days, $limit, $ignore_borrowers) = @_;
     my $dbh = C4::Context->dbh;
     my $sth;
     my $select;
@@ -849,7 +850,6 @@ sub CheckReserves {
            items.homebranch,
            items.holdingbranch
            FROM   items
-           LEFT JOIN biblioitems ON items.biblioitemnumber = biblioitems.biblioitemnumber
            LEFT JOIN itemtypes   ON items.itype   = itemtypes.itemtype
         ";
     }
@@ -864,7 +864,6 @@ sub CheckReserves {
            items.homebranch,
            items.holdingbranch
            FROM   items
-           LEFT JOIN biblioitems ON items.biblioitemnumber = biblioitems.biblioitemnumber
            LEFT JOIN itemtypes   ON biblioitems.itemtype   = itemtypes.itemtype
         ";
     }
@@ -889,7 +888,7 @@ sub CheckReserves {
     return if  ( $notforloan_per_item > 0 ) or $notforloan_per_itemtype;
 
     # Find this item in the reserves
-    my @reserves = _Findgroupreserve( $bibitem, $biblio, $itemnumber, $lookahead_days, $ignore_borrowers);
+    my @reserves = _Findgroupreserve( $bibitem, $biblio, $itemnumber, $lookahead_days, $limit, $ignore_borrowers);
 
     # $priority and $highest are used to find the most important item
     # in the list returned by &_Findgroupreserve. (The lower $priority,
@@ -1775,7 +1774,7 @@ sub _FixPriority {
 
 =head2 _Findgroupreserve
 
-  @results = &_Findgroupreserve($biblioitemnumber, $biblionumber, $itemnumber, $lookahead, $ignore_borrowers);
+  @results = &_Findgroupreserve($biblioitemnumber, $biblionumber, $itemnumber, $lookahead, $limit, $ignore_borrowers);
 
 Looks for a holds-queue based item-specific match first, then for a holds-queue title-level match, returning the
 first match found.  If neither, then we look for non-holds-queue based holds.
@@ -1789,7 +1788,7 @@ C<biblioitemnumber>.
 =cut
 
 sub _Findgroupreserve {
-    my ( $bibitem, $biblio, $itemnumber, $lookahead, $ignore_borrowers) = @_;
+    my ( $bibitem, $biblio, $itemnumber, $lookahead, $limit, $ignore_borrowers) = @_;
     my $dbh   = C4::Context->dbh;
 
     my $LocalHoldsPriority = C4::Context->preference('LocalHoldsPriority');
@@ -1821,6 +1820,7 @@ sub _Findgroupreserve {
         AND suspend = 0
         ORDER BY priority
     };
+    $item_level_target_query .= "LIMIT ".$limit if $limit;
     my $sth = $dbh->prepare($item_level_target_query);
     $sth->execute($itemnumber, $lookahead||0);
     my @results;
@@ -1865,6 +1865,7 @@ sub _Findgroupreserve {
         AND suspend = 0
         ORDER BY priority
     };
+    $title_level_target_query .= "LIMIT ".$limit if $limit;
     $sth = $dbh->prepare($title_level_target_query);
     $sth->execute($itemnumber, $lookahead||0);
     @results = ();
@@ -1904,6 +1905,7 @@ sub _Findgroupreserve {
           AND suspend = 0
           ORDER BY priority
     };
+    $query .= "LIMIT ".$limit if $limit;
     $sth = $dbh->prepare($query);
     $sth->execute( $biblio, $itemnumber, $lookahead||0);
     @results = ();
@@ -1967,7 +1969,28 @@ sub _reserve_last_pickup_date {
         $reserve : Koha::Holds->find($reserve->{reserve_id});
     my $delay = $hold ? $hold->max_pickup_delay : 7;
 
-    $expiration = $calendar->days_forward( $startdate, $delay );
+    # Getting the ReservesMaxPickUpDelayBranch
+    my $branches = C4::Context->preference("ReservesMaxPickUpDelayBranch");
+
+    my $yaml = YAML::XS::Load(
+                        Encode::encode(
+                            'UTF-8',
+                            $branches,
+                            Encode::FB_CROAK
+                        )
+                    );
+
+    if ($yaml->{$branch}) {
+        $delay = $yaml->{$branch};
+
+    }
+    
+    if ( C4::Context->preference("ExcludeHolidaysFromMaxPickUpDelay") ) {
+        $expiration = $calendar->days_forward( $startdate, $delay );
+    } else {
+        $expiration = $startdate;
+        $expiration->add(days => $delay);
+    }
 
        #It is necessary to set the time portion of DateTime as well, because we are actually getting the
        #  last pickup datetime and importantly days end at 23:59:59.
@@ -2017,10 +2040,10 @@ sub _koha_notify_reserve {
     # Try to get the borrower's email address
     my $to_address = C4::Members::GetNoticeEmailAddress($borrowernumber);
 
-    my $messagingprefs = C4::Members::Messaging::GetMessagingPreferences( {
-            borrowernumber => $borrowernumber,
-            message_name => 'Hold_Filled'
-    } );
+    my $messagingpref = Koha::Patron::Message::Preferences->find_with_message_name({
+        borrowernumber => $borrowernumber,
+        message_name   => 'Hold_Filled',
+    });
 
     my $library = Koha::Libraries->find( $hold->branchcode )->unblessed;
 
@@ -2063,7 +2086,9 @@ sub _koha_notify_reserve {
         } );
     };
 
-    while ( my ( $mtt, $letter_code ) = each %{ $messagingprefs->{transports} } ) {
+    my $transports = $messagingpref->message_transport_types if $messagingpref;
+    foreach my $mtt (keys %{$transports}) {
+        my $letter_code = $transports->{$mtt};
         next if (
                ( $mtt eq 'email' and not $to_address ) # No email address
             or ( $mtt eq 'sms'   and not $borrower->{smsalertnumber} ) # No SMS number

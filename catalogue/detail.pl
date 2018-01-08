@@ -20,6 +20,7 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 use HTML::Entities;
+use JSON::XS;
 use Scalar::Util qw(blessed);
 use Try::Tiny;
 use C4::Acquisition qw( GetHistory );
@@ -86,12 +87,15 @@ if($query->cookie("holdfor")){
         holdfor_surname => $holdfor_patron->{'surname'},
         holdfor_firstname => $holdfor_patron->{'firstname'},
         holdfor_cardnumber => $holdfor_patron->{'cardnumber'},
+        holdfor_borrowernumber => $holdfor_patron->{'borrowernumber'},
     );
 }
 
 my $fw           = GetFrameworkCode($biblionumber);
 my $showallitems = $query->param('showallitems');
 my $marcflavour  = C4::Context->preference("marcflavour");
+
+my $use_serials_display_tree = C4::Context->preference("SerialsDisplayTree");
 
 # XSLT processing of some stuff
 my $xslfile = C4::Context->preference('XSLTDetailsDisplay');
@@ -136,6 +140,7 @@ $template->param(
     normalized_isbn => $isbn,
 );
 
+my $dat = &GetBiblioData($biblionumber);
 my $marcnotesarray   = GetMarcNotes( $record, $marcflavour );
 my $marcisbnsarray   = GetMarcISBN( $record, $marcflavour );
 my $marcauthorsarray = GetMarcAuthors( $record, $marcflavour );
@@ -148,8 +153,19 @@ my $subtitle         = GetRecordValue('subtitle', $record, $fw);
 my $itemtypes = { map { $_->{itemtype} => $_ } @{ Koha::ItemTypes->search->unblessed } };
 
 my $dbh = C4::Context->dbh;
+#Get the branchesloop for the BranchSelector-widget
+my $json = JSON::XS->new();
+my $branchLoopJSON = $json->encode(
+    Koha::Libraries->search({}, { order_by => ['branchname'] })->unblessed
+);
+$template->param(
+    SerialsDisplayTree => $use_serials_display_tree,
+    branchloopJSON  => $branchLoopJSON
+);
 
-my @all_items = GetItemsInfo( $biblionumber );
+#Serials have a REST-API-driven data source to facilitate pagination in the GUI.
+#So only take as many Items as it is reasonable to show.
+my @all_items = GetItemsInfo( $biblionumber ) if !$use_serials_display_tree || $use_serials_display_tree && !$dat->{serial};
 my @items;
 my $patron = Koha::Patrons->find( $borrowernumber );
 for my $itm (@all_items) {
@@ -165,14 +181,18 @@ if (@hostitems){
 	push (@items,@hostitems);
 }
 
-my $dat = &GetBiblioData($biblionumber);
-
 #coping with subscriptions
 my $subscriptionsnumber = CountSubscriptionFromBiblionumber($biblionumber);
 my @subscriptions       = SearchSubscriptions({ biblionumber => $biblionumber, orderby => 'title' });
 my @subs;
+my $serialsadditems;
 
 foreach my $subscription (@subscriptions) {
+    if ($subscription->{serialsadditems}) {
+        $serialsadditems = 1;
+        next;
+    }
+
     my %cell;
 	my $serials_to_display;
     $cell{subscriptionid}    = $subscription->{subscriptionid};
@@ -446,6 +466,7 @@ $template->param(
     subscriptionsnumber => $subscriptionsnumber,
     subscriptiontitle   => $dat->{title},
     searchid            => scalar $query->param('searchid'),
+    serialsadditems     => $serialsadditems,
 );
 
 # $debug and $template->param(debug_display => 1);

@@ -50,6 +50,7 @@ use Koha::IssuingRules;
 use Koha::Items;
 use Koha::Patrons;
 use Koha::Patron::Debarments;
+use Koha::Patron::Message::Preferences;
 use Koha::Database;
 use Koha::Libraries;
 use Koha::Holds;
@@ -2264,8 +2265,6 @@ sub MarkIssueReturned {
         $old_checkout_data->{issue_id} = $issue_id;
         my $old_checkout = Koha::Old::Checkout->new($old_checkout_data)->store;
 
-        # Update the fines
-        $dbh->do(q|UPDATE accountlines SET issue_id = ? WHERE issue_id = ?|, undef, $old_checkout->issue_id, $issue->issue_id);
 
         # anonymise patron checkout immediately if $privacy set to 2 and AnonymousPatron is set to a valid borrowernumber
         if ( $privacy == 2) {
@@ -2771,7 +2770,7 @@ sub CanBookBeRenewed {
     my $borrower = C4::Members::GetMember( borrowernumber => $borrowernumber )
       or return;
 
-    my ( $resfound, $resrec, undef ) = C4::Reserves::CheckReserves($itemnumber);
+    my ( $resfound, $resrec, undef ) = C4::Reserves::CheckReserves($itemnumber, undef, undef, 1);
 
     # This item can fill one or more unfilled reserve, can those unfilled reserves
     # all be filled by other available items?
@@ -2798,12 +2797,13 @@ sub CanBookBeRenewed {
                 { columns => 'itemnumber' }
             )->get_column('itemnumber')->all();
 
+            my $size = @itemnumbers;
             # Get all other reserves that could have been filled by this item
             my @borrowernumbers;
             while (1) {
                 my ( $reserve_found, $reserve, undef ) =
-                  C4::Reserves::CheckReserves( $itemnumber, undef, undef, \@borrowernumbers );
-
+                  C4::Reserves::CheckReserves( $itemnumber, undef, undef, $size, \@borrowernumbers );
+                  
                 if ($reserve_found) {
                     push( @borrowernumbers, $reserve->{borrowernumber} );
                 }
@@ -3524,14 +3524,15 @@ sub SendCirculationAlert {
         CHECKOUT => 'Item_Checkout',
         RENEWAL  => 'Item_Checkout',
     );
-    my $borrower_preferences = C4::Members::Messaging::GetMessagingPreferences({
+    return unless my $borrower_preferences = Koha::Patron::Message::Preferences->find_with_message_name({
         borrowernumber => $borrower->{borrowernumber},
         message_name   => $message_name{$type},
     });
+
     my $issues_table = ( $type eq 'CHECKOUT' || $type eq 'RENEWAL' ) ? 'issues' : 'old_issues';
 
     my $schema = Koha::Database->new->schema;
-    my @transports = keys %{ $borrower_preferences->{transports} };
+    my @transports = keys %{ $borrower_preferences->message_transport_types };
 
     # From the MySQL doc:
     # LOCK TABLES is not transaction-safe and implicitly commits any active transaction before attempting to lock the tables.

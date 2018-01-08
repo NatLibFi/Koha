@@ -44,7 +44,6 @@ use C4::Reserves;
 use C4::Biblio;
 use C4::Items;
 use C4::Members;
-use C4::Members::Messaging;
 use C4::Koha;   # FIXME : is it still useful ?
 use C4::RotatingCollections;
 use Koha::AuthorisedValues;
@@ -53,6 +52,7 @@ use Koha::Calendar;
 use Koha::BiblioFrameworks;
 use Koha::Checkouts;
 use Koha::Patrons;
+use Koha::Patron::Message::Preferences;
 
 my $query = new CGI;
 
@@ -442,7 +442,11 @@ if ( $messages->{'WrongTransfer'} and not $messages->{'WasTransfered'}) {
 if ( $messages->{'ResFound'}) {
     my $reserve    = $messages->{'ResFound'};
     my $borr = C4::Members::GetMember( borrowernumber => $reserve->{'borrowernumber'} );
-    my $holdmsgpreferences =  C4::Members::Messaging::GetMessagingPreferences( { borrowernumber => $reserve->{'borrowernumber'}, message_name   => 'Hold_Filled' } );
+    my $holdmsgpreferences =  Koha::Patron::Message::Preferences->find_with_message_name({
+            borrowernumber => $reserve->{'borrowernumber'},
+            message_name   => 'Hold_Filled',
+        });
+    my $mtts = $holdmsgpreferences->message_transport_types if defined $holdmsgpreferences;
     if ( $reserve->{'ResFound'} eq "Waiting" or $reserve->{'ResFound'} eq "Reserved" ) {
         if ( $reserve->{'ResFound'} eq "Waiting" ) {
             $template->param(
@@ -485,7 +489,7 @@ if ( $messages->{'ResFound'}) {
             itemnumber     => $reserve->{'itemnumber'},
             reservenotes   => $reserve->{'reservenotes'},
             reserve_id     => $reserve->{reserve_id},
-            bormessagepref => $holdmsgpreferences->{'transports'},
+            bormessagepref => $mtts,
         );
     } # else { ; }  # error?
 }

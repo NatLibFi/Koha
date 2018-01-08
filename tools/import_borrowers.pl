@@ -43,7 +43,6 @@ use C4::Context;
 use C4::Members;
 use C4::Members::Attributes qw(:all);
 use C4::Members::AttributeTypes;
-use C4::Members::Messaging;
 use C4::Reports::Guided;
 use C4::Templates;
 use Koha::Patron::Debarments;
@@ -349,8 +348,7 @@ if ( $uploadborrowers && length($uploadborrowers) > 0 ) {
                 }
 
                 if ($set_messaging_prefs) {
-                    C4::Members::Messaging::SetMessagingPreferencesFromDefaults({ borrowernumber => $borrowernumber,
-                                                                                  categorycode => $borrower{categorycode} });
+                    Koha::Patrons->find($borrowernumber)->set_default_messaging_preferences;
                 }
 
                 $imported++;

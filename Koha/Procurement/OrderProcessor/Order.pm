@@ -9,9 +9,8 @@ use Data::Dumper;
 sub createOrder {
     my $self = shift;
     my ($copyDetail, $itemDetail, $order, $biblio, $basketNumber) = @_;
-    my $price = $itemDetail->getPriceSRPExcludingTax();
-    #my $gstrate = ($itemDetail->getPriceSRPETaxPercent() /100);
-    my $gstrate = 0;
+    my $price = $itemDetail->getPriceFixedRPExcludingTax();
+    my $tax_price = $itemDetail->getPriceFixedRPIncludingTax();
     my $budgetId = $self->getBudgetId($copyDetail->getFundNumber());
 
     my %hash = (
@@ -21,25 +20,32 @@ sub createOrder {
         quantity => $copyDetail->getCopyQuantity(),
         order_vendornote => $order->getFileName(),
         order_internalnote => $order->getFileName(),
-        rrp => $price,
+        rrp => $itemDetail->getPriceSRPIncludingTax(),
+        rrp_tax_excluded => $itemDetail->getPriceSRPExcludingTax(),
+        rrp_tax_included => $itemDetail->getPriceSRPIncludingTax(),
         ecost => $price,
+        ecost_tax_excluded => $price,
+        ecost_tax_included => $tax_price,
         unitprice => $price,
+        unitprice_tax_excluded => $price,
+        unitprice_tax_included => $tax_price,
         listprice => $price,
         budget_id => $budgetId,
         currency => $itemDetail->getPriceSRPECurrency(),
-        gstrate => $gstrate,
         orderstatus => 'new'
         );
-
-    return NewOrder(\%hash);
+    $order = Koha::Acquisition::Order->new( \%hash)->insert;
+    return $order->{ordernumber};
 }
 
 sub createOrderItem
 {
    my $self = shift;
-   my @array = @_;
+   my $itemnumber = shift;
+   my $ordernumber = shift;
 
-   NewOrderItem(@array);
+   my $order = Koha::Acquisition::Order->fetch({ ordernumber => $ordernumber });
+   $order->add_item( $itemnumber );
 }
 
 sub getBudgetId {
