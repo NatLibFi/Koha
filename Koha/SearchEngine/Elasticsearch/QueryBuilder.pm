@@ -607,7 +607,8 @@ our %index_field_convert = (
     'cni'     => 'control-number-identifier',
     'Control-number' => 'control-number',
     'an'      => 'an',
-    'Provider' => 'publisher'
+    'Provider' => 'publisher',
+    'sn'      => 'identifier-standard'
 );
 
 sub _convert_index_fields {
