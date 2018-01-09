@@ -21,3 +21,4 @@ koha-tmpl/intranet-tmpl/prog/ku/*
 *th-TH*
 installer/data/mysql/atomicupdate/_updateorder
 Makefile.old
+.vstags
