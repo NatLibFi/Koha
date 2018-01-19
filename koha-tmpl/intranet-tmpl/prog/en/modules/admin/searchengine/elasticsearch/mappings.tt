@@ -90,7 +90,7 @@ a.add, a.delete {
 
     <h1>Search engine configuration</h1>
     <div class="warning">
-        Warning: Any modification in these configurations will need a total reindexation to be fully taken into account !
+        Warning: Any modification of this configuration requires a complete index rebuild to be fully taken into account!
     </div>
     [% IF errors %]
         <div class="error">

@@ -1,0 +1,56 @@
+---
+general:
+  _all: 
+    type: string
+    analyzer: analyser_standard
+  properties:
+    record:
+      store: true
+      include_in_all: false
+      type: text
+search: 
+  boolean:
+    type: boolean
+    null_value: false
+  integer:
+    type: integer
+    null_value: 0
+  stdno:
+    type: text
+    analyzer: analyser_stdno
+    search_analyzer: analyser_stdno
+    fields:
+      phrase:
+        type: text
+        analyzer: analyser_stdno
+        search_analyzer: analyser_stdno
+      raw:
+        type: keyword
+  default:
+    type: text
+    analyzer: analyser_standard
+    search_analyzer: analyser_standard
+    fields: 
+      phrase:
+        type: text
+        analyzer: analyser_phrase
+        search_analyzer: analyser_phrase
+      raw:
+        type: keyword
+facet:
+  default:
+    type: keyword
+suggestible:
+  default:
+    type: completion
+    analyzer: simple
+    search_analyzer: simple
+sort:
+  default:
+    type: text
+    analyzer: analyser_phrase
+    search_analyzer: analyser_phrase
+    include_in_all: false
+    fields:
+      phrase:
+        type: keyword
