@@ -137,7 +137,7 @@ CAN_user_serials_create_subscription ) %]
             [% END %]
 
             [% IF ( show_summary_holdings && CAN_user_editcatalogue_edit_items ) %]
-             <li><a id="newitem" href="/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=[% biblionumber %]#addholding">New holding</a></li>
+            <li><a id="newholding" href="/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=[% biblionumber %]#addholding">New holding</a></li>
             [% END %]
 
             [% IF ( CAN_user_editcatalogue_edit_items ) %]

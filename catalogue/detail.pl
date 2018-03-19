@@ -417,7 +417,7 @@ $template->param(
         hostrecords         => $hostrecords,
     analytics_flag        => $analytics_flag,
 	C4::Search::enabled_staff_search_views,
-        materials       => $materials_flag,
+    materials       => $materials_flag,
     show_summary_holdings => C4::Context->preference('SummaryHoldings') ? 1 : 0,
     summary_holdings => $summary_holdings,
 );

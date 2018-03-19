@@ -24,27 +24,67 @@ use Modern::Perl;
 use Template::Plugin;
 use base qw( Template::Plugin );
 
+use C4::Context;
+use C4::Holdings;
+
 use Koha::Holdings;
 
 sub GetLocation {
-    my ( $self, $holding_id ) = @_;
+    my ( $self, $holding ) = @_;
+    my $opac = shift || 0;
 
-    if ( !$holding_id ) {
+    if ( !$holding ) {
         return '';
     }
 
-    my $holding = Koha::Holdings->find( $holding_id );
-    if ( $holding ) {
-        my @parts;
-
-        push @parts, $holding_id;
-        push @parts, $holding->holdingbranch() if $holding->holdingbranch();
-        push @parts, $holding->location() if $holding->location();
-        push @parts, $holding->callnumber() if $holding->callnumber();
-
-        return join(' ', @parts);
+    if ( ref($holding) ne 'HASH' ) {
+        $holding = Koha::Holdings->find( $holding )->unblessed;
+        if ( !$holding ) {
+            return '';
+        }
     }
-    return '';
+
+    my @parts;
+
+    if ( $opac ) {
+        if ( $holding->{'holdingbranch'}) {
+            my $query = "SELECT branchname FROM branches WHERE branchcode = ?";
+            my $sth   = C4::Context->dbh->prepare( $query );
+            $sth->execute( $holding->{'holdingbranch'} );
+            my $b = $sth->fetchrow_hashref();
+            push @parts, $b->{'branchname'} if $b;
+            $sth->finish();
+        }
+        if ( $holding->{'location'} ) {
+            my $av = Koha::AuthorisedValues->search({ category => 'LOC', authorised_value => $holding->{'location'} });
+            push @parts, $av->next->opac_description if $av->count;
+        }
+        push @parts, $holding->{'callnumber'} if $holding->{'callnumber'};
+        return join(' - ', @parts);
+    }
+
+    push @parts, $holding->{'holding_id'};
+    push @parts, $holding->{'holdingbranch'} if $holding->{'holdingbranch'};
+    push @parts, $holding->{'location'} if $holding->{'location'};
+    push @parts, $holding->{'callnumber'} if $holding->{'callnumber'};
+    return join(' ', @parts);
+}
+
+sub GetDetails {
+    my ( $self, $holding ) = @_;
+    my $opac = shift || 0;
+
+    if ( !$holding ) {
+        return '';
+    }
+
+    if ( ref($holding) eq 'HASH' ) {
+        $holding = $holding->{'holding_id'};
+    }
+
+    my $marcHolding = C4::Holdings::GetMarcHolding( $holding, $opac );
+
+    return C4::Holdings::TransformMarcHoldingToKoha( $marcHolding );
 }
 
 1;

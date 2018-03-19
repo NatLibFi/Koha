@@ -22,14 +22,8 @@ use Modern::Perl;
 use Carp;
 
 use Koha::Database;
-use Koha::DateUtils qw( dt_from_string );
 
 use base qw(Koha::Object);
-
-use Koha::Items;
-use Koha::Libraries;
-
-use Koha::Exceptions::Library;
 
 =head1 NAME
 

@@ -134,6 +134,12 @@ __PACKAGE__->table("branches");
   is_nullable: 1
   size: 255
 
+=head2 marcorgcode
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 16
+
 =head2 pickup_location
 
   data_type: 'tinyint'
@@ -185,6 +191,8 @@ __PACKAGE__->add_columns(
   { data_type => "text", is_nullable => 1 },
   "geolocation",
   { data_type => "varchar", is_nullable => 1, size => 255 },
+  "marcorgcode",
+  { data_type => "varchar", is_nullable => 1, size => 16 },
   "pickup_location",
   { data_type => "tinyint", default_value => 1, is_nullable => 0 },
 );
@@ -649,8 +657,8 @@ Composing rels: L</branchrelations> -> categorycode
 __PACKAGE__->many_to_many("categorycodes", "branchrelations", "categorycode");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:fOC7fLN4U+JAKpn925MkMg
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:yrWRgc/+r/Jp2JcoT9K8Ww
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

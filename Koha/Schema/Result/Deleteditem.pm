@@ -198,7 +198,7 @@ __PACKAGE__->table("deleteditems");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: current_timestamp
+  default_value: 'current_timestamp()'
   is_nullable: 0
 
 =head2 location
@@ -390,7 +390,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => \"current_timestamp",
+    default_value => "current_timestamp()",
     is_nullable => 0,
   },
   "location",
@@ -446,8 +446,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-23 11:13:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:PvM8w2Y7mGdWf+Rk3iQxgg
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oEHNIfEOU4PfZNXdx6L6dw
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

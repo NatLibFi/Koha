@@ -164,7 +164,7 @@ sub CreateKey {
 sub create_input {
     my ( $tag, $subfield, $value, $index_tag, $tabloop, $rec, $authorised_values_sth,$cgi ) = @_;
 
-    my $index_subfield = CreateKey(); # create a specifique key for each subfield
+    my $index_subfield = CreateKey(); # create a specific key for each subfield
 
     $value =~ s/"/&quot;/g;
 
@@ -571,7 +571,7 @@ sub build_tabs {
 my $input = new CGI;
 my $error = $input->param('error');
 my $biblionumber  = $input->param('biblionumber');
-my $holding_id  = $input->param('holding_id'); # if holding_id exists, it's a modif, not a new holding.
+my $holding_id = $input->param('holding_id'); # if holding_id exists, it's a modif, not a new holding.
 my $op            = $input->param('op');
 my $mode          = $input->param('mode');
 my $frameworkcode = $input->param('frameworkcode');
@@ -585,7 +585,7 @@ my $changed_framework = $input->param('changed_framework');
 $frameworkcode = &C4::Holdings::GetHoldingFrameworkCode($holding_id)
   if ( $holding_id and not( defined $frameworkcode) and $op ne 'add' );
 
-$frameworkcode = C4::Context->preference('DefaultSummaryHoldingsFrameworkCode') if ( !$frameworkcode || $frameworkcode eq 'Default' );
+$frameworkcode = 'HLD' if ( !$frameworkcode || $frameworkcode eq 'Default' );
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
         template_name   => "cataloguing/addholding.tt",
@@ -596,7 +596,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
-# TODO: support in advanced editor
+# TODO: support in advanced editor?
 #if ( $op ne "delete" && C4::Context->preference('EnableAdvancedCatalogingEditor') && $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced' ) {
 #    print $input->redirect( '/cgi-bin/koha/cataloguing/editor.pl#catalog/' . $biblionumber . '/holdings/' . ( $holding_id ? $holding_id : '' ) );
 #    exit;
@@ -645,9 +645,6 @@ if ( $op eq "add" ) {
     }
     if ($redirect eq "items" || ($mode ne "popup" && !$is_a_modif && $redirect ne "view" && $redirect ne "just_save")){
         print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&searchid=$searchid");
-#        print $input->redirect(
-#                "/cgi-bin/koha/cataloguing/additem.pl?biblionumber=$biblionumber&frameworkcode=$frameworkcode&searchid=$searchid"
-#        );
         exit;
     }
     elsif(($is_a_modif || $redirect eq "view") && $redirect ne "just_save"){

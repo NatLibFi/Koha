@@ -633,12 +633,19 @@ function verify_images() {
 <ul>
     [% IF (show_summary_holdings) %]
         <li><a href="#summaryholdings">Holdings</a></li>
-    [% END %]
-    [% IF (SeparateHoldings) %]
-        <li><a href="#holdings">[% LoginBranchname %] items</a></li>
-        <li><a href="#otherholdings">Other items</a></li>
+        [% IF (SeparateHoldings) %]
+            <li><a href="#holdings">[% LoginBranchname %] items</a></li>
+            <li><a href="#otherholdings">Other items</a></li>
+        [% ELSE %]
+            <li><a href="#holdings">Items</a></li>
+        [% END %]
     [% ELSE %]
-        <li><a href="#holdings">Items</a></li>
+        [% IF (SeparateHoldings) %]
+            <li><a href="#holdings">[% LoginBranchname %] holdings</a></li>
+            <li><a href="#otherholdings">Other holdings</a></li>
+        [% ELSE %]
+            <li><a href="#holdings">Holdings</a></li>
+        [% END %]
     [% END %]
 [% IF ( MARCNOTES || notes ) %]<li><a href="#description">Descriptions</a></li>[% END %]
 [% IF ( subscriptionsnumber ) %]<li><a href="#subscriptions">Subscriptions</a></li>[% END %]
@@ -655,7 +662,7 @@ function verify_images() {
     <div id="summaryholdings">
 
     [% IF ( summary_holdings ) %]
-        <div class="[% tab %]_table_controls">
+        <div class="summaryholdings_table_controls">
         </div>
         <table class="summaryholdings_table">
             <thead>
@@ -695,7 +702,6 @@ function verify_images() {
     </div>
 [% END %]
 
-
 [% items_table_block_iter = 0 %]
 [% BLOCK items_table %]
     [% items_table_block_iter = items_table_block_iter + 1 %]
@@ -719,7 +725,7 @@ function verify_images() {
             <tr>
                 [% IF (StaffDetailItemSelection) %]<th class="NoSort"></th>[% END %]
                 [% IF ( item_level_itypes ) %]<th>Item type</th>[% END %]
-                [% IF (show_summary_holdings) %]<th>Holding</th>[% END %]
+                [% IF ( show_summary_holdings ) %]<th>Holding</th>[% END %]
                 <th>Current location</th>
                 <th>Home library</th>
                 [% IF ( itemdata_ccode ) %]<th>Collection</th>[% END %]
@@ -757,7 +763,7 @@ function verify_images() {
                             [% item.translated_description %]
                         </td>
                     [% IF (show_summary_holdings) %]
-                        <td class="holding">[% Holdings.GetLocation(item.holding_id) %]</td>
+                        <td class="holding">[% Holdings.GetLocation(item.holding_id) | html %]</td>
                     [% END %]
                     [% END %]
                     <td class="location">[% UNLESS ( singlebranchmode ) %]

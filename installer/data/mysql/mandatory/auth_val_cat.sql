@@ -19,6 +19,7 @@ INSERT IGNORE INTO authorised_value_categories( category_name )
     VALUES
     ('holdings'),
     ('branches'),
+    ('holdings'),
     ('itemtypes'),
     ('cn_source');
 

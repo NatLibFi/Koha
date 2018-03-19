@@ -45,7 +45,7 @@ __PACKAGE__->table("club_enrollments");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: current_timestamp
+  default_value: 'current_timestamp()'
   is_nullable: 0
 
 =head2 date_canceled
@@ -58,7 +58,7 @@ __PACKAGE__->table("club_enrollments");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: '2000-01-01 00:00:00'
+  default_value: '0000-00-00 00:00:00'
   is_nullable: 0
 
 =head2 date_updated
@@ -87,7 +87,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => \"current_timestamp",
+    default_value => "current_timestamp()",
     is_nullable => 0,
   },
   "date_canceled",
@@ -100,7 +100,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => "2000-01-01 00:00:00",
+    default_value => "0000-00-00 00:00:00",
     is_nullable => 0,
   },
   "date_updated",
@@ -193,8 +193,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:TYu62hsUBeJbWtWJ2cdguA
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hoI3C0EZytRx06MKFYgAzQ
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

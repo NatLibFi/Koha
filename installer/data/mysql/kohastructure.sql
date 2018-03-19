@@ -1024,6 +1024,7 @@ CREATE TABLE `holdings` ( -- table that stores summary holdings information
   `suppress` tinyint(1) default NULL, -- Boolean indicating whether the holding is suppressed in OPAC
   `timestamp` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP, -- date and time this record was last touched
   `datecreated` DATE NOT NULL, -- the date this record was added to Koha
+	`deleted_on` DATETIME DEFAULT NULL, -- the date this record was deleted
   PRIMARY KEY  (`holding_id`),
   KEY `hldnoidx` (`holding_id`),
   KEY `hldbinoidx` (`biblioitemnumber`),
@@ -1044,6 +1045,7 @@ CREATE TABLE holdings_metadata (
   `format` VARCHAR(16) NOT NULL,
   `marcflavour` VARCHAR(16) NOT NULL,
   `metadata` LONGTEXT NOT NULL,
+	`deleted_on` DATETIME DEFAULT NULL, -- the date this record was deleted
   PRIMARY KEY(id),
   UNIQUE KEY `holdings_metadata_uniq_key` (`holding_id`,`format`,`marcflavour`),
   KEY `hldnoidx` (`holding_id`),
@@ -1055,7 +1057,7 @@ CREATE TABLE holdings_metadata (
 --
 
 DROP TABLE IF EXISTS `items`;
-CREATE TABLE `items` ( -- holdings/item information
+CREATE TABLE `items` ( -- item information
   `itemnumber` int(11) NOT NULL auto_increment, -- primary key and unique identifier added by Koha
   `biblionumber` int(11) NOT NULL default 0, -- foreign key from biblio table used to link this item to the right bib record
   `biblioitemnumber` int(11) NOT NULL default 0, -- foreign key from the biblioitems table to link to item to additional information

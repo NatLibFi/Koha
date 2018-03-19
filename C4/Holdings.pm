@@ -25,11 +25,11 @@ use Carp;
 # TODO check which use's are really necessary
 
 use Encode qw( decode is_utf8 );
+use List::MoreUtils qw( uniq );
 use MARC::Record;
 use MARC::File::USMARC;
 use MARC::File::XML;
 use POSIX qw(strftime);
-use Module::Load::Conditional qw(can_load);
 
 use C4::Koha;
 use C4::Log;    # logaction
@@ -135,18 +135,13 @@ sub AddHolding {
 
     my $dbh = C4::Context->dbh;
 
+    my $biblio = Koha::Biblios->find( $biblionumber );
+    my $biblioitemnumber = $biblio->biblioitem->biblioitemnumber;
+
     # transform the data into koha-table style data
     SetUTF8Flag($record);
-    my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
-    my ($holding_id) = _koha_add_holding( $dbh, $rowData, $frameworkcode, $biblionumber );
-
-    # update biblionumber, biblioitemnumber and holding_id in MARC
-    # FIXME - this is assuming a 1 to 1 relationship between
-    # biblios and biblioitems
-    my $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
-    $sth->execute($biblionumber);
-    my ($biblioitemnumber) = $sth->fetchrow;
-    $sth->finish();
+    my $rowData = TransformMarcHoldingToKoha( $record );
+    my ($holding_id) = _koha_add_holding( $dbh, $rowData, $frameworkcode, $biblionumber, $biblioitemnumber );
 
     _koha_marc_update_ids( $record, $frameworkcode, $holding_id, $biblionumber, $biblioitemnumber );
 
@@ -196,13 +191,13 @@ sub ModHolding {
     SetUTF8Flag($record);
     my $dbh = C4::Context->dbh;
 
-    $frameworkcode = C4::Context->preference('DefaultSummaryHoldingsFrameworkCode') if !$frameworkcode || $frameworkcode eq "Default";
+    $frameworkcode = 'HLD' if !$frameworkcode || $frameworkcode eq "Default";
 
     # update holding_id in MARC
     _koha_marc_update_ids( $record, $frameworkcode, $holding_id );
 
     # load the koha-table data object
-    my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
+    my $rowData = TransformMarcHoldingToKoha( $record );
     # update the MARC record (that now contains biblio and items) with the new record data
     &ModHoldingMarc( $record, $holding_id, $frameworkcode );
 
@@ -241,8 +236,8 @@ sub DelHolding {
 
     return $error if $error;
 
-    # delete holding from Koha tables and save in deletedholdings
-    $error = _koha_delete_holding( $dbh, $holding_id );
+    # delete holding
+    _koha_delete_holding( $dbh, $holding_id );
 
     logaction( "CATALOGUING", "DELETE", $holding_id, "holding" ) if C4::Context->preference("CataloguingLog");
 
@@ -257,9 +252,9 @@ sub DelHolding {
 
 sub GetHolding {
     my ($holding_id) = @_;
-    my $dbh            = C4::Context->dbh;
-    my $sth            = $dbh->prepare("SELECT * FROM holding WHERE holding_id = ?");
-    my $count          = 0;
+    my $dbh             = C4::Context->dbh;
+    my $sth             = $dbh->prepare("SELECT * FROM holding WHERE holding_id = ? AND deleted_on IS NULL");
+    my $count           = 0;
     my @results;
     $sth->execute($holding_id);
     if ( my $data = $sth->fetchrow_hashref ) {
@@ -280,7 +275,7 @@ Called by C<C4::XISBN>
 sub GetHoldingsByBiblionumber {
     my ( $bib ) = @_;
     my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holdings.biblionumber = ?") || die $dbh->errstr;
+    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holdings.biblionumber = ? AND deleted_on IS NULL") || die $dbh->errstr;
     # Get all holdings attached to a biblioitem
     my $i = 0;
     my @results;
@@ -329,10 +324,9 @@ sub GetMarcHolding {
     $marcxml = StripNonXmlChars( $marcxml );
     my $frameworkcode = GetHoldingFrameworkCode( $holding_id );
     MARC::File::XML->default_record_format( $marcflavour );
-    my $record = MARC::Record->new();
 
     if ($marcxml) {
-        $record = eval {
+        my $record = eval {
             MARC::Record::new_from_xml( $marcxml, "utf8", $marcflavour );
         };
         if ($@) { warn " problem with holding $holding_id : $@ \n$marcxml"; }
@@ -384,7 +378,7 @@ sub GetXmlHolding {
 sub GetHoldingFrameworkCode {
     my ($holding_id) = @_;
     # Use state to speed up repeated calls in batch processes
-    state $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holding_id=?");
+    state $sth = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holding_id=?");
     $sth->execute($holding_id);
     my ($frameworkcode) = $sth->fetchrow;
     $sth->finish();
@@ -395,18 +389,16 @@ sub GetHoldingFrameworkCode {
 
 =head2 _koha_add_holding
 
-  my ($holding_id,$error) = _koha_add_hodings($dbh, $holding, $frameworkcode, $biblionumber);
+  my ($holding_id,$error) = _koha_add_hodings($dbh, $holding, $frameworkcode, $biblionumber, $biblioitemnumber);
 
 Internal function to add a holding ($holding is a hash with the values)
 
 =cut
 
 sub _koha_add_holding {
-    my ( $dbh, $holding, $frameworkcode, $biblionumber ) = @_;
+    my ( $dbh, $holding, $frameworkcode, $biblionumber, $biblioitemnumber ) = @_;
 
     my $error;
-
-    my $biblioitem = ( C4::Biblio::GetBiblioItemByBiblioNumber( $biblionumber, undef ) )[0];
 
     my $query = "INSERT INTO holdings
         SET biblionumber = ?,
@@ -416,12 +408,12 @@ sub _koha_add_holding {
             location = ?,
             callnumber = ?,
             suppress = ?,
-            datecreated=NOW()
+            datecreated = NOW()
         ";
 
     my $sth = $dbh->prepare($query);
     $sth->execute(
-        $biblionumber, $biblioitem->{'biblioitemnumber'}, $frameworkcode,
+        $biblionumber, $biblioitemnumber, $frameworkcode,
         $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}
     );
 
@@ -474,7 +466,7 @@ sub _koha_modify_holding {
 
   $error = _koha_delete_holding($dbh, $holding_id);
 
-Internal sub for deleting from holdings table -- also saves to deletedholdings
+Internal sub for deleting from holdings table
 
 C<$dbh> - the database handle
 
@@ -482,71 +474,17 @@ C<$holding_id> - the holding_id of the holding to be deleted
 
 =cut
 
-# FIXME: add error handling
-
 sub _koha_delete_holding {
     my ( $dbh, $holding_id ) = @_;
 
-    # get all the data for this holding
-    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holding_id=?");
-    $sth->execute($holding_id);
-
-    # FIXME There is a transaction in _koha_delete_holding_metadata
-    # But actually all the following should be done inside a single transaction
-    if ( my $data = $sth->fetchrow_hashref ) {
-
-        # save the record in deletedholdings
-        # find the fields to save
-        my $query = "INSERT INTO deletedholdings SET ";
-        my @bind  = ();
-        foreach my $temp ( keys %$data ) {
-            $query .= "$temp = ?,";
-            push( @bind, $data->{$temp} );
-        }
-
-        # replace the last , by ",?)"
-        $query =~ s/\,$//;
-        my $bkup_sth = $dbh->prepare($query);
-        $bkup_sth->execute(@bind);
-        $bkup_sth->finish;
-
-        _koha_delete_holding_metadata( $holding_id );
-
-        # delete the holding
-        my $sth2 = $dbh->prepare("DELETE FROM holdings WHERE holding_id=?");
-        $sth2->execute($holding_id);
-        # update the timestamp (Bugzilla 7146)
-        $sth2= $dbh->prepare("UPDATE deletedholdings SET timestamp=NOW() WHERE holding_id=?");
-        $sth2->execute($holding_id);
-        $sth2->finish;
-    }
-    $sth->finish;
-    return;
-}
-
-=head2 _koha_delete_holding_metadata
-
-  $error = _koha_delete_holding_metadata($holding_id);
-
-C<$holding_id> - the holding_id of the holding metadata to be deleted
-
-=cut
-
-sub _koha_delete_holding_metadata {
-    my ($holding_id) = @_;
-
-    my $dbh    = C4::Context->dbh;
     my $schema = Koha::Database->new->schema;
     $schema->txn_do(
         sub {
-            $dbh->do( q|
-                INSERT INTO deletedholdings_metadata (holding_id, format, marcflavour, metadata)
-                SELECT holding_id, format, marcflavour, metadata FROM holdings_metadata WHERE holding_id=?
-            |,  undef, $holding_id );
-            $dbh->do( q|DELETE FROM holdings_metadata WHERE holding_id=?|,
-                undef, $holding_id );
+            $dbh->do('UPDATE holdings_metadata SET deleted_on = NOW() WHERE holding_id=?', undef, $holding_id);
+            $dbh->do('UPDATE holdings SET deleted_on = NOW() WHERE holding_id=?', undef, $holding_id);
         }
     );
+    return;
 }
 
 =head1 INTERNAL FUNCTIONS
@@ -564,7 +502,7 @@ the MARC XML.
 sub _koha_marc_update_ids {
     my ( $record, $frameworkcode, $holding_id, $biblionumber, $biblioitemnumber ) = @_;
 
-    my ( $holding_tag, $holding_subfield ) = C4::Biblio::GetMarcFromKohaField( "holdings.holding_id", $frameworkcode );
+    my ( $holding_tag, $holding_subfield ) = GetMarcHoldingFromKohaField( "holdings.holding_id" );
     die qq{No holding_id tag for framework "$frameworkcode"} unless $holding_tag;
 
     if ( $holding_tag < 10 ) {
@@ -574,7 +512,7 @@ sub _koha_marc_update_ids {
     }
 
     if ( defined $biblionumber ) {
-        my ( $biblio_tag, $biblio_subfield ) = C4::Biblio::GetMarcFromKohaField( "biblio.biblionumber", $frameworkcode );
+        my ( $biblio_tag, $biblio_subfield ) = GetMarcHoldingFromKohaField( "biblio.biblionumber" );
         die qq{No biblionumber tag for framework "$frameworkcode"} unless $biblio_tag;
         if ( $biblio_tag < 10 ) {
             C4::Biblio::UpsertMarcControlField( $record, $biblio_tag, $biblionumber );
@@ -583,7 +521,7 @@ sub _koha_marc_update_ids {
         }
     }
     if ( defined $biblioitemnumber ) {
-        my ( $biblioitem_tag, $biblioitem_subfield ) = C4::Biblio::GetMarcFromKohaField( "biblioitems.biblioitemnumber", $frameworkcode );
+        my ( $biblioitem_tag, $biblioitem_subfield ) = GetMarcHoldingFromKohaField( "biblioitems.biblioitemnumber" );
         die qq{No biblioitemnumber tag for framework "$frameworkcode"} unless $biblioitem_tag;
         if ( $biblioitem_tag < 10 ) {
             C4::Biblio::UpsertMarcControlField( $record, $biblioitem_tag, $biblioitemnumber );
@@ -669,6 +607,124 @@ sub ModHoldingMarc {
         $m_rs->store;
     }
     return $holding_id;
+}
+
+=head2 GetMarcHoldingFromKohaField
+
+    ( $field,$subfield ) = GetMarcHoldingFromKohaField( $kohafield );
+    @fields = GetMarcHoldingFromKohaField( $kohafield );
+    $field = GetMarcHoldingFromKohaField( $kohafield );
+
+    Returns the MARC fields & subfields mapped to $kohafield.
+    Uses the HLD framework that is considered as authoritative.
+
+    In list context all mappings are returned; there can be multiple
+    mappings. Note that in the above example you could miss a second
+    mappings in the first call.
+    In scalar context only the field tag of the first mapping is returned.
+
+=cut
+
+sub GetMarcHoldingFromKohaField {
+    my ( $kohafield ) = @_;
+    return unless $kohafield;
+    # The next call uses the Default framework since it is AUTHORITATIVE
+    # for all Koha to MARC mappings.
+    my $mss = C4::Biblio::GetMarcSubfieldStructure( 'HLD' ); # Do not change framework
+    return exists $mss->{$kohafield}
+        ? ( $mss->{$kohafield}{tagfield}, $mss->{$kohafield}{tagsubfield} )
+        : undef;
+}
+
+=head2 GetMarcHoldingSubfieldStructureFromKohaField
+
+    my $str = GetMarcHoldingSubfieldStructureFromKohaField( $kohafield );
+
+    Returns marc subfield structure information for $kohafield.
+    Uses the HLD framework that is considered as authoritative.
+
+    In list context returns a list of all hashrefs, since there may be
+    multiple mappings. In scalar context the first hashref is returned.
+
+=cut
+
+sub GetMarcHoldingSubfieldStructureFromKohaField {
+    my ( $kohafield ) = @_;
+
+    return unless $kohafield;
+
+    # The next call uses the Default framework since it is AUTHORITATIVE
+    # for all Koha to MARC mappings.
+    my $mss = C4::Biblio::GetMarcSubfieldStructure( 'HLD' ); # Do not change framework
+    return exists $mss->{$kohafield}
+        ? $mss->{$kohafield}
+        : undef;
+}
+
+=head2 TransformMarcHoldingToKoha
+
+    $result = TransformMarcHoldingToKoha( $record, undef )
+
+Extract data from a MARC holdings record into a hashref representing
+Koha holdings fields.
+
+If passed an undefined record will log the error and return an empty
+hash_ref.
+
+=cut
+
+sub TransformMarcHoldingToKoha {
+    my ( $record ) = @_;
+
+    my $result = {};
+    if (!defined $record) {
+        carp('TransformMarcToKoha called with undefined record');
+        return $result;
+    }
+
+    my %tables = ( holdings => 1 );
+
+    # The next call acknowledges HLD as the authoritative framework
+    # for holdings to MARC mappings.
+    my $mss = C4::Biblio::GetMarcSubfieldStructure( 'HLD' ); # Do not change framework
+    foreach my $kohafield ( keys %{ $mss } ) {
+        my ( $table, $column ) = split /[.]/, $kohafield, 2;
+        next unless $tables{$table};
+        my $val = TransformMarcHoldingToKohaOneField( $kohafield, $record );
+        next if !defined $val;
+        $result->{$column} = $val;
+    }
+    return $result;
+}
+
+=head2 TransformMarcHoldingToKohaOneField
+
+    $val = TransformMarcHoldingToKohaOneField( 'biblio.title', $marc );
+
+    Note: The authoritative Default framework is used implicitly.
+
+=cut
+
+sub TransformMarcHoldingToKohaOneField {
+    my ( $kohafield, $marc ) = @_;
+
+    my ( @rv, $retval );
+    my @mss = GetMarcHoldingSubfieldStructureFromKohaField($kohafield);
+    foreach my $fldhash ( @mss ) {
+        my $tag = $fldhash->{tagfield};
+        my $sub = $fldhash->{tagsubfield};
+        foreach my $fld ( $marc->field($tag) ) {
+            if( $sub eq '@' || $fld->is_control_field ) {
+                push @rv, $fld->data if $fld->data;
+            } else {
+                push @rv, grep { $_ } $fld->subfield($sub);
+            }
+        }
+    }
+    return unless @rv;
+    $retval = join ' | ', uniq(@rv);
+
+    return $retval;
 }
 
 1;

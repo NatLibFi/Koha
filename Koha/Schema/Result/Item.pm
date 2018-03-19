@@ -120,6 +120,12 @@ __PACKAGE__->table("items");
   default_value: 0
   is_nullable: 0
 
+=head2 damaged_on
+
+  data_type: 'datetime'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
+
 =head2 itemlost
 
   data_type: 'tinyint'
@@ -202,7 +208,7 @@ __PACKAGE__->table("items");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: current_timestamp
+  default_value: 'current_timestamp()'
   is_nullable: 0
 
 =head2 location
@@ -313,6 +319,11 @@ __PACKAGE__->table("items");
 =head2 holding_id
 
   data_type: 'integer'
+  is_nullable: 1
+
+=head2 holdingnumber
+
+  data_type: 'integer'
   is_foreign_key: 1
   is_nullable: 1
 
@@ -365,6 +376,12 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "damaged",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "damaged_on",
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "itemlost",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "itemlost_on",
@@ -405,7 +422,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => \"current_timestamp",
+    default_value => "current_timestamp()",
     is_nullable => 0,
   },
   "location",
@@ -445,6 +462,8 @@ __PACKAGE__->add_columns(
   "reserve_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "holding_id",
+  { data_type => "integer", is_nullable => 1 },
+  "holdingnumber",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
@@ -631,7 +650,7 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 holding_id
+=head2 holdingnumber
 
 Type: belongs_to
 
@@ -640,9 +659,9 @@ Related object: L<Koha::Schema::Result::Holding>
 =cut
 
 __PACKAGE__->belongs_to(
-  "holding_id",
+  "holdingnumber",
   "Koha::Schema::Result::Holding",
-  { holding_id => "holding_id" },
+  { holding_id => "holdingnumber" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",
@@ -762,8 +781,8 @@ __PACKAGE__->might_have(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-23 11:13:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:t4ictB54SS8w/SczkjDDNw
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:b0U+AwdCEB+TvVnCWeXTmQ
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 

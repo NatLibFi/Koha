@@ -39,7 +39,7 @@ __PACKAGE__->table("batch_overlay_reports");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: current_timestamp
+  default_value: 'current_timestamp()'
   is_nullable: 0
 
 =cut
@@ -53,7 +53,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => \"current_timestamp",
+    default_value => "current_timestamp()",
     is_nullable => 0,
   },
 );
@@ -108,8 +108,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:24:30
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4koXJmAeBLHQ0aC9ZHO2Pg
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:p2BpDzcB+ZTEC1UOgzZfpQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

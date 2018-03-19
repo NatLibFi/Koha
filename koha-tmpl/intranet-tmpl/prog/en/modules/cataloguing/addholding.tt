@@ -15,16 +15,16 @@
     var browser = KOHA.browser('[% searchid %]', parseInt('[% biblionumber %]', 10));
     browser.show();
 
-    $(window).load(function(){
+    $(window).load(function() {
         $("#loading").hide();
     });
-	 $(document).ready(function() {
+    $(document).ready(function() {
         $('#addholdingtabs').tabs().bind('show.ui-tabs', function(e, ui) {
-			$("#"+ui.panel.id+" input:eq(0)").focus();
-		});
+            $("#"+ui.panel.id+" input:eq(0)").focus();
+        });
 
         [% IF tab %]
-          $('#addholdingtabs').selectTabByID("#[% tab %]");
+            $('#addholdingtabs').selectTabByID("#[% tab %]");
         [% END %]
 
         $('#toolbar').fixFloat();
@@ -46,7 +46,7 @@
 
         /* check cookie to hide/show marc tags*/
         var marctags_cookie = $.cookie("marctags_[% borrowernumber %]");
-        if( marctags_cookie == 'hide'){
+        if (marctags_cookie == 'hide'){
             toggleMARCTagLinks(false);
         } else if( marctags_cookie == 'show'){
             toggleMARCTagLinks(true)
@@ -205,29 +205,30 @@ function AreMandatoriesNotOk(){
     var flag=0;
     var tabflag= new Array();
     [% FOREACH BIG_LOO IN BIG_LOOP %]
-    	[% FOREACH innerloo IN BIG_LOO.innerloop %]
-	        [% IF ( innerloo.mandatory ) %]
-    	    	mandatoriesfields.push(new Array("[% innerloo.tag %]","[% innerloo.index %][% innerloo.random %]","[% innerloo.index %]"));
-        	[% END %]
-    		[% FOREACH subfield_loo IN innerloo.subfield_loop %]
-    			[% IF ( subfield_loo.mandatory ) %]mandatories.push("[% subfield_loo.id %]");
-                   	tab.push("[% BIG_LOO.number %]");
-                   	label.push("[% subfield_loo.marc_lib %]");
+        [% FOREACH innerloo IN BIG_LOO.innerloop %]
+            [% IF ( innerloo.mandatory ) %]
+                mandatoriesfields.push(new Array("[% innerloo.tag %]","[% innerloo.index %][% innerloo.random %]","[% innerloo.index %]"));
+            [% END %]
+            [% FOREACH subfield_loo IN innerloo.subfield_loop %]
+                [% IF ( subfield_loo.mandatory ) %]
+                    mandatories.push("[% subfield_loo.id %]");
+                    tab.push("[% BIG_LOO.number %]");
+                    label.push("[% subfield_loo.marc_lib %]");
                 [% END %]
             [% END %]
         [% END %]
     [% END %]
     var StrAlert = _("Can't save this record because the following field aren't filled:");
     StrAlert += "\n\n";
-    for(var i=0,len=mandatories.length; i<len ; i++){
+    for (var i=0,len=mandatories.length; i<len ; i++) {
         var tag=mandatories[i].substr(4,3);
         var subfield=mandatories[i].substr(17,1);
         var tagnumber=mandatories[i].substr(19,mandatories[i].lastIndexOf("_")-19);
         if (tabflag[tag+subfield+tagnumber] ==  null) {
-	    tabflag[tag+subfield+tagnumber]=new Array();
+            tabflag[tag+subfield+tagnumber]=new Array();
             tabflag[tag+subfield+tagnumber][0]=0;
-	}
-        if( tabflag[tag+subfield+tagnumber][0] != 1 && (document.getElementById(mandatories[i]) != null && ! document.getElementById(mandatories[i]).value || document.getElementById(mandatories[i]) == null)){
+        }
+        if (tabflag[tag+subfield+tagnumber][0] != 1 && (document.getElementById(mandatories[i]) != null && ! document.getElementById(mandatories[i]).value || document.getElementById(mandatories[i]) == null)) {
             tabflag[tag+subfield+tagnumber][0] = 0 + tabflag[tag+subfield+tagnumber] ;
             document.getElementById(mandatories[i]).setAttribute('class','subfield_not_filled');
             $('#' + mandatories[i]).focus();
@@ -237,70 +238,68 @@ function AreMandatoriesNotOk(){
             tabflag[tag+subfield+tagnumber][0] = 1;
         }
     }
-    for (var tagsubfieldid in tabflag){
-      if (tabflag[tagsubfieldid][0]==0){
+    for (var tagsubfieldid in tabflag) {
+      if (tabflag[tagsubfieldid][0]==0) {
         var tag=tagsubfieldid.substr(0,3);
         var subfield=tagsubfieldid.substr(3,1);
         StrAlert += "\t* "+_("tag %s subfield %s %s in tab %s").format(tag, subfield, tabflag[tagsubfieldid][1], tabflag[tagsubfieldid][2]) + "\n";
-        //StrAlert += "\t* "+label[i]+_(" in tab ")+tab[i]+"\n";
         flag=1;
       }
     }
 
     /* Check for mandatories field(not subfields) */
-    for(var i=0,len=mandatoriesfields.length; i<len; i++){
-	    isempty  = true;
-		arr      = mandatoriesfields[i];
-    	divid    = "tag_" + arr[0] + "_" + arr[1];
-    	varegexp = new RegExp("^tag_" + arr[0] + "_code_");
+    for (var i=0,len=mandatoriesfields.length; i<len; i++) {
+        isempty  = true;
+        arr      = mandatoriesfields[i];
+        divid    = "tag_" + arr[0] + "_" + arr[1];
+        varegexp = new RegExp("^tag_" + arr[0] + "_code_");
 
-		if(parseInt(arr[0]) >= 10){
-	    	elem = document.getElementById(divid);
-	    	eleminputs = elem.getElementsByTagName('input');
+        if(parseInt(arr[0]) >= 10) {
+            elem = document.getElementById(divid);
+            eleminputs = elem.getElementsByTagName('input');
 
-	    	for(var j=0,len2=eleminputs.length; j<len2; j++){
+            for(var j=0,len2=eleminputs.length; j<len2; j++){
 
-	    		if(eleminputs[j].name.match(varegexp) && eleminputs[j].value){
-					inputregexp = new RegExp("^tag_" + arr[0] + "_subfield_" + eleminputs[j].value + "_" + arr[2]);
+                if(eleminputs[j].name.match(varegexp) && eleminputs[j].value){
+                        inputregexp = new RegExp("^tag_" + arr[0] + "_subfield_" + eleminputs[j].value + "_" + arr[2]);
 
-					for( var k=0; k<len2; k++){
-						if(eleminputs[k].id.match(inputregexp) && eleminputs[k].value){
-							isempty = false
-						}
-					}
+                        for( var k=0; k<len2; k++){
+                            if(eleminputs[k].id.match(inputregexp) && eleminputs[k].value){
+                                isempty = false
+                            }
+                        }
 
-					elemselect = elem.getElementsByTagName('select');
-					for( var k=0; k<elemselect.length; k++){
-						if(elemselect[k].id.match(inputregexp) && elemselect[k].value){
-							isempty = false
-						}
-					}
-	    		}
-	    	}
+                        elemselect = elem.getElementsByTagName('select');
+                        for( var k=0; k<elemselect.length; k++){
+                            if(elemselect[k].id.match(inputregexp) && elemselect[k].value){
+                                isempty = false
+                            }
+                        }
+                }
+            }
 
-	    	elemtextareas = elem.getElementsByTagName('textarea');
-	    	for(var j=0,len2=elemtextareas.length; j<len2; j++){
+            elemtextareas = elem.getElementsByTagName('textarea');
+            for(var j=0,len2=elemtextareas.length; j<len2; j++){
                 // this bit assumes that the only textareas in this context would be for subfields
                 if (elemtextareas[j].value) {
                     isempty = false;
                 }
             }
-    	}else{
-    		isempty = false;
-    	}
+        } else {
+            isempty = false;
+        }
 
-    	if(isempty){
-    		flag = 1;
-                StrAlert += "\t* " + _("Field %s is mandatory, at least one of its subfields must be filled.").format(arr[0]) + "\n";
-    	}
-
+        if (isempty) {
+            flag = 1;
+                    StrAlert += "\t* " + _("Field %s is mandatory, at least one of its subfields must be filled.").format(arr[0]) + "\n";
+        }
     }
 
-    if(flag){
-	    return StrAlert;
-	} else {
-		return flag;
-	}
+    if (flag) {
+        return StrAlert;
+    } else {
+        return flag;
+    }
 }
 
 /**
@@ -360,7 +359,7 @@ function Changefwk() {
 
 <h1>
 [% IF ( holding_id ) %]Editing record number [% holding_id %]
-[% ELSE %]Add holding record
+[% ELSE %]Add holdings record
 [% END %]
 </h1>
 

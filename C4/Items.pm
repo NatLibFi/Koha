@@ -1877,7 +1877,8 @@ sub _koha_new_item {
             more_subfields_xml  = ?,
             copynumber          = ?,
             stocknumber         = ?,
-            new_status          = ?
+            new_status          = ?,
+            holding_id          = ?
           ";
     my $sth = $dbh->prepare($query);
     my $today = output_pref({ dt => dt_from_string, dateformat => 'iso', dateonly => 1 });
@@ -1923,6 +1924,7 @@ sub _koha_new_item {
             $item->{'copynumber'},
             $item->{'stocknumber'},
             $item->{'new_status'},
+            $item->{'holding_id'},
     );
 
     my $itemnumber;

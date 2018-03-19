@@ -78,7 +78,7 @@ __PACKAGE__->table("holdings");
 
   data_type: 'timestamp'
   datetime_undef_if_invalid: 1
-  default_value: current_timestamp
+  default_value: 'current_timestamp()'
   is_nullable: 0
 
 =head2 datecreated
@@ -86,6 +86,12 @@ __PACKAGE__->table("holdings");
   data_type: 'date'
   datetime_undef_if_invalid: 1
   is_nullable: 0
+
+=head2 deleted_on
+
+  data_type: 'datetime'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
 
 =cut
 
@@ -120,11 +126,17 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
-    default_value => \"current_timestamp",
+    default_value => "current_timestamp()",
     is_nullable => 0,
   },
   "datecreated",
   { data_type => "date", datetime_undef_if_invalid => 1, is_nullable => 0 },
+  "deleted_on",
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
 );
 
 =head1 PRIMARY KEY
@@ -217,13 +229,13 @@ Related object: L<Koha::Schema::Result::Item>
 __PACKAGE__->has_many(
   "items",
   "Koha::Schema::Result::Item",
-  { "foreign.holding_id" => "self.holding_id" },
+  { "foreign.holdingnumber" => "self.holding_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-23 11:13:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QjAejEkE+BQVeMP+4ykW0Q
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:k6GSn2n/lzrHYE6By7ZT5g
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

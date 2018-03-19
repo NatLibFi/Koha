@@ -33,7 +33,7 @@ __PACKAGE__->table("holdings_metadata");
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 0
+  is_nullable: 1
 
 =head2 format
 
@@ -52,19 +52,31 @@ __PACKAGE__->table("holdings_metadata");
   data_type: 'longtext'
   is_nullable: 0
 
+=head2 deleted_on
+
+  data_type: 'datetime'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "holding_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "format",
   { data_type => "varchar", is_nullable => 0, size => 16 },
   "marcflavour",
   { data_type => "varchar", is_nullable => 0, size => 16 },
   "metadata",
   { data_type => "longtext", is_nullable => 0 },
+  "deleted_on",
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
 );
 
 =head1 PRIMARY KEY
@@ -102,7 +114,7 @@ __PACKAGE__->add_unique_constraint(
 
 =head1 RELATIONS
 
-=head2 holding_id
+=head2 holding
 
 Type: belongs_to
 
@@ -111,15 +123,20 @@ Related object: L<Koha::Schema::Result::Holding>
 =cut
 
 __PACKAGE__->belongs_to(
-  "holding_id",
+  "holding",
   "Koha::Schema::Result::Holding",
   { holding_id => "holding_id" },
-  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8eenibAFWn2Hc9TGQYUmWw
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2018-06-18 15:11:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Y9tBSmFPQpp6DcIQdWZpMw
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

@@ -117,7 +117,7 @@ if ( $op eq 'add_form' ) {
 }
 
 if ( $op eq 'list' ) {
-    my $frameworks = Koha::BiblioFrameworks->search( {}, { order_by => ['frameworktext'], } );
+    my $frameworks = Koha::BiblioFrameworks->search( undef, { order_by => ['frameworktype', 'frameworktext'] } );
     $template->param( frameworks => $frameworks, );
 }
 

@@ -74,7 +74,7 @@
 [% END %]
 
 [% IF op == 'add_form' %]
-    <h1>[% IF framework %]Modify framework text[% ELSE %]Add framework[% END %]</h1>
+    <h1>[% IF framework %]Modify framework[% ELSE %]Add framework[% END %]</h1>
     <form action="/cgi-bin/koha/admin/biblio_framework.pl" name="Aform" method="post" class="validated">
         <input type="hidden" name="op" value="add_validate" />
         <fieldset class="rows">
@@ -134,6 +134,7 @@
 <table id="table_biblio_frameworks">
     <thead>
     <tr>
+        <th>Type</th>
         <th>Code</th>
         <th>Description</th>
         <th>&nbsp;</th>
@@ -141,6 +142,7 @@
     </thead>
     <tbody>
     <tr>
+        <td>Bibliographic</td>
         <td>&nbsp;</td>
         <td>Default framework</td>
         <td>
@@ -207,9 +209,9 @@
           </div>
         </td>
     </tr>
-
     [% FOREACH loo IN frameworks %]
         <tr>
+            <td>[% IF loo.frameworktype == 'hld' %]Holdings[% ELSE %]Bibliographic[% END %]</td>
             <td>[% loo.frameworkcode %]</td>
             <td>[% loo.frameworktext %]</td>
             <td>
@@ -219,8 +221,10 @@
                 </a>
                 <ul class="dropdown-menu pull-right" role="menu" aria-labelledby="frameworkactions[% loo.frameworkcode %]">
                   <li><a href="marctagstructure.pl?frameworkcode=[% loo.frameworkcode %]"><i class="fa fa-eye"></i> MARC structure</a></li>
-                  <li><a href="/cgi-bin/koha/admin/biblio_framework.pl?op=add_form&amp;frameworkcode=[% loo.frameworkcode |html %]"><i class="fa fa-pencil"></i> Edit</a></li>
-                  <li><a href="/cgi-bin/koha/admin/biblio_framework.pl?op=delete_confirm&amp;frameworkcode=[% loo.frameworkcode |html %]"><i class="fa fa-trash"></i> Delete</a></li>
+                  [% IF loo.frameworktype != 'hld' || loo.frameworkcode != 'HLD' %]
+                    <li><a href="/cgi-bin/koha/admin/biblio_framework.pl?op=add_form&amp;frameworkcode=[% loo.frameworkcode |html %]"><i class="fa fa-pencil"></i> Edit</a></li>
+                    <li><a href="/cgi-bin/koha/admin/biblio_framework.pl?op=delete_confirm&amp;frameworkcode=[% loo.frameworkcode |html %]"><i class="fa fa-trash"></i> Delete</a></li>
+                  [% END %]
                   <!-- Trigger modal -->
                   <li><a href="#" data-toggle="modal" data-target="#exportModal_[% loo.frameworkcode %][% loop.count %]" title="Export framework structure (fields, subfields) to a spreadsheet file (.csv, .xml, .ods)"><i class="fa fa-upload"></i> Export</a></li>
                   <!-- Trigger modal -->

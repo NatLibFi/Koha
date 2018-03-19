@@ -283,6 +283,3 @@ Cataloging:
                   yes: Use
                   no: "Don't use"
             - summary holdings records.
-        -
-            - Default MARC framework code for holdings records
-            - pref: DefaultSummaryHoldingsFrameworkCode
