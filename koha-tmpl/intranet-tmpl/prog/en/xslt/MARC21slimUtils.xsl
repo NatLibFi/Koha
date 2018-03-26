@@ -1,6 +1,7 @@
 <?xml version='1.0'?>
 <!DOCTYPE stylesheet [<!ENTITY nbsp "&#160;" >]>
 <xsl:stylesheet version="1.0" xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" exclude-result-prefixes="marc">
+  <xsl:include href="MARC21Languages.xsl"/>
 	<xsl:template name="datafield">
 		<xsl:param name="tag"/>
 		<xsl:param name="ind1"><xsl:text> </xsl:text></xsl:param>
@@ -318,6 +319,119 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
+
+    <!-- koha-suomi: cover image -->
+    <xsl:template name="cover-image-856u">
+        <xsl:if test="marc:datafield[@tag=856]/marc:subfield[@code='u']">
+          <xsl:for-each select="marc:datafield[@tag=856]">
+            <xsl:variable name="SubqText">
+              <xsl:value-of select="marc:subfield[@code='q']"/>
+            </xsl:variable>
+            <xsl:choose>
+              <xsl:when test="substring($SubqText,1,5)='IMAGE' or substring($SubqText,1,5)='image' or $SubqText='img' or $SubqText='bmp' or $SubqText='cod' or $SubqText='gif' or $SubqText='ief' or $SubqText='jpe' or $SubqText='jpeg' or $SubqText='jpg' or $SubqText='jfif' or $SubqText='png' or $SubqText='svg' or $SubqText='tif' or $SubqText='tiff' or $SubqText='ras' or $SubqText='cmx' or $SubqText='ico' or $SubqText='pnm' or $SubqText='pbm' or $SubqText='pgm' or $SubqText='ppm' or $SubqText='rgb' or $SubqText='xbm' or $SubqText='xpm' or $SubqText='xwd'">
+                <a class="cover_image_container">
+                  <xsl:attribute name="href">
+                    <xsl:value-of select="marc:subfield[@code='u']"/>
+                  </xsl:attribute>
+                    <xsl:element name="img">
+                      <xsl:attribute name="src">
+                        <xsl:value-of select="marc:subfield[@code='u']"/>
+                      </xsl:attribute>
+                      <xsl:attribute name="alt">
+			<xsl:choose>
+			  <xsl:when test="marc:subfield[@code='y']"><xsl:value-of select="marc:subfield[@code='y']"/></xsl:when>
+			  <xsl:otherwise><xsl:value-of select="marc:subfield[@code='z']"/></xsl:otherwise>
+			  </xsl:choose>
+                      </xsl:attribute>
+                    </xsl:element>
+                </a>
+              </xsl:when>
+            </xsl:choose>
+          </xsl:for-each>
+        </xsl:if>
+    </xsl:template>
+    <!-- /koha-suomi: cover image -->
+
+    <!-- koha-suomi: language -->
+    <xsl:template name="show-lang-041">
+       <xsl:if test="marc:datafield[@tag=041]">
+          <xsl:for-each select="marc:datafield[@tag=041]">
+             <span class="results_summary languages">
+               <xsl:call-template name="show-lang-node">
+		 <xsl:with-param name="langNode" select="marc:subfield[@code='a']"/>
+		 <xsl:with-param name="langLabel">Language: </xsl:with-param>
+	       </xsl:call-template>
+               <xsl:call-template name="show-lang-node">
+		 <xsl:with-param name="langNode" select="marc:subfield[@code='b']"/>
+		 <xsl:with-param name="langLabel">Summary language: </xsl:with-param>
+	       </xsl:call-template>
+               <xsl:call-template name="show-lang-node">
+		 <xsl:with-param name="langNode" select="marc:subfield[@code='d']"/>
+		 <xsl:with-param name="langLabel">Spoken language: </xsl:with-param>
+	       </xsl:call-template>
+               <xsl:call-template name="show-lang-node">
+		 <xsl:with-param name="langNode" select="marc:subfield[@code='h']"/>
+		 <xsl:with-param name="langLabel">Original language: </xsl:with-param>
+	       </xsl:call-template>
+               <xsl:call-template name="show-lang-node">
+		 <xsl:with-param name="langNode" select="marc:subfield[@code='j']"/>
+		 <xsl:with-param name="langLabel">Subtitle language: </xsl:with-param>
+	       </xsl:call-template>
+             </span>
+          </xsl:for-each>
+       </xsl:if>
+    </xsl:template>
+
+    <xsl:template name="show-lang-node">
+      <xsl:param name="langNode"/>
+      <xsl:param name="langLabel"/>
+      <xsl:if test="$langNode">
+	<span class="language">
+	  <span class="label"><xsl:value-of select="$langLabel"/></span>
+          <xsl:for-each select="$langNode">
+            <span>
+	      <xsl:attribute name="class">lang_name-<xsl:value-of select="translate(., ' .-;>&lt;|#', '_')"/></xsl:attribute>
+	      <xsl:call-template name="languageCodeText">
+		<xsl:with-param name="code" select="."/>
+	      </xsl:call-template>
+	    </span>
+	  </xsl:for-each>
+	</span>
+      </xsl:if>
+    </xsl:template>
+    <!-- /koha-suomi: language -->
+
+    <!-- koha-suomi: kielletty alle -->
+    <xsl:template name="show-age-rating">
+      <xsl:if test="marc:datafield[@tag=521]/marc:subfield[@code='a']">
+        <xsl:for-each select="marc:datafield[@tag=521]">
+          <xsl:variable name="agelimit" select="translate(marc:subfield[@code='a'], ' .-;', '')"/>
+          <xsl:choose>
+            <xsl:when test="starts-with($agelimit, 'K')">
+              <span class="results_summary age_limit">Suitable for <xsl:value-of select="substring($agelimit, 2)"/> years and older.</span>
+            </xsl:when>
+            </xsl:choose>
+        </xsl:for-each>
+      </xsl:if>
+    </xsl:template>
+    <!-- /koha-suomi: kielletty alle -->
+
+    <!-- koha-suomi: lehden numero -->
+    <!-- show 362a if it's not the same as end of 245a -->
+    <xsl:template name="maybe-show-f362a">
+      <xsl:if test="//marc:datafield[@tag=362]/marc:subfield[@code='a']">
+	<xsl:variable name="f362ao" select="//marc:datafield[@tag=362]/marc:subfield[@code='a']"/>
+	<xsl:variable name="f362a" select="translate($f362ao, ' .-;', '')"/>
+	<xsl:variable name="f245a" select="translate(//marc:datafield[@tag=245]/marc:subfield[@code='a'], ' .-;', '')"/>
+	<xsl:variable name="f362al" select="string-length($f362a)"/>
+	<xsl:variable name="f245al" select="string-length($f245a)"/>
+	<xsl:if test="not($f362a = substring($f245a, $f245al - $f362al + 1))">
+	  <xsl:value-of select="$f362ao"/>
+	  <xsl:text> </xsl:text>
+	</xsl:if>
+      </xsl:if>
+    </xsl:template>
+    <!-- /koha-suomi: lehden numero -->
 
 </xsl:stylesheet>
 

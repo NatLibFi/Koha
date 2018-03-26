@@ -124,6 +124,11 @@ __PAZPAR2_TOGGLE_XML_POST__
       <template_cache_dir>/tmp</template_cache_dir>
  -->
 
+ <!-- Trusted proxies/load balancers, separated by a space or a comma. Used for
+      accessing client's real IP via $ENV{REMOTE_ADDR}.
+ -->
+ <trusted_proxy></trusted_proxy>
+
  <!-- Secret passphrase used by Mojolicious for signed cookies -->
  <api_secret_passphrase>CHANGEME</api_secret_passphrase>
 
@@ -213,7 +218,9 @@ __PAZPAR2_TOGGLE_XML_POST__
         <mode></mode>                               <!-- Use 2 for synchronized mode -->
         <notificationAddress></notificationAddress> <!-- https://server/api/v1/payments/pos/cpu/{invoicenumber}/report -->
         <!-- Replace "server" with your server address, but keep {invoicenumber} as it is (it will be converted later into real id) -->
-  </CPU>
+        <!-- Use "borrower" for borrower information. Any other value will default to transaction id -->
+        <receiptDescription>id</receiptDescription>
+    </CPU>
  </pos>
  <online_payments>
     <CPU>
@@ -320,6 +327,9 @@ __PAZPAR2_TOGGLE_XML_POST__
             To use UTF-16 when needed: yes
             To disable and use GSM 03.38: leave blank -->
         <Unicode></Unicode>
+        <!-- The following IP addresses are allowed to send a request to your
+             report endpoint. Separate multiple by whitespace or comma. -->
+        <reportUrlAllowedIPs>81.19.118.90 83.145.230.90</reportUrlAllowedIPs>
         <sourceName></sourceName> <!-- Displays as sender name in phones. Maxlength 11 chars -->
     </labyrintti>
     <arena>

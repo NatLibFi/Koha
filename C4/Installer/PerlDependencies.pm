@@ -14,10 +14,25 @@ our $PERL_DEPS = {
         'required' => '1',
         'min_ver'  => '0.14'
     },
+    'Plack::Middleware::LogWarn' => {
+        'usage'    => 'Plack',
+        'required' => '1',
+        'min_ver'  => '0.001002'
+    },
+    'Plack::Middleware::LogErrors' => {
+        'usage'    => 'Plack',
+        'required' => '1',
+        'min_ver'  => '0.002'
+    },
     'Plack::Middleware::Debug' => {
         'usage'    => 'Plack',
         'required' => '1',
         'min_ver'  => '0.16'
+    },
+    'Plack::Middleware::RealIP' => {
+        'usage'    => 'Plack',
+        'required' => '1',
+        'min_ver'  => '0.03'
     },
     'XML::LibXSLT' => {
         'usage'    => 'Core',

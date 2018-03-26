@@ -42,7 +42,7 @@ my $t = Test::Mojo->new('Koha::REST::V1');
 my $path = '/api/v1/accountlines';
 
 subtest 'list() tests' => sub {
-    plan tests => 12;
+    plan tests => 13;
 
     $schema->storage->txn_begin;
 
@@ -65,6 +65,25 @@ subtest 'list() tests' => sub {
     Koha::Account::Line->new({
         borrowernumber => $borrowernumber2,
         amount => 80, accounttype => 'F', amountoutstanding => 80
+    })->store;
+
+    my ($bibnum, $title, $bibitemnum) = create_helper_biblio({
+        itemtype => 'BK',
+        remainder_of_title => 'Remainder'
+    });
+    $bibitemnum = Koha::Biblioitem->new({
+        biblionumber => $bibnum,
+        biblioitemnumber => $bibitemnum,
+    })->store->biblioitemnumber unless Koha::Biblioitems->find($bibitemnum);
+    my $item = Koha::Item->new({
+        biblionumber => $bibnum,
+        biblioitemnumber => $bibitemnum,
+    })->store;
+    Koha::Account::Line->new({
+        borrowernumber => $borrowernumber2,
+        amount => 20, accounttype => 'A', amountoutstanding => 20,
+        description => $item->itemnumber,
+        itemnumber => $item->itemnumber,
     })->store;
 
     $t->get_ok($path)
@@ -94,7 +113,8 @@ subtest 'list() tests' => sub {
 
     $json = $t->tx->res->json;
     ok(ref $json eq 'ARRAY', 'response is a JSON array');
-    ok(scalar @$json == 3, 'response array contains 3 elements');
+    ok(scalar @$json == 4, 'response array contains 4 elements');
+    is($json->[3]->{description} => 'Silence in the library Remainder', 'Itemnumber converted');
 
     $schema->storage->txn_rollback;
 };
@@ -304,6 +324,25 @@ sub create_user_and_session {
     my $session = t::lib::Mocks::mock_session({borrower => $user});
 
     return ($user, $session);
+}
+
+sub create_helper_biblio {
+    my $params = shift;
+    my $itemtype = $params->{itemtype};
+    my $remainder = $params->{remainder_of_title};
+    my ($bibnum, $title, $bibitemnum);
+    my $bib = MARC::Record->new();
+    $title = 'Silence in the library';
+    my @title_subfields;
+    push @title_subfields, (a => $title);
+    push @title_subfields, (b => $remainder) if $remainder;
+    $bib->append_fields(
+        MARC::Field->new('100', ' ', ' ', a => 'Moffat, Steven'),
+        MARC::Field->new('245', ' ', ' ', @title_subfields),
+        MARC::Field->new('942', ' ', ' ', c => $itemtype),
+    );
+    return ($bibnum, $title, $bibitemnum) = C4::Biblio::AddBiblio($bib, '');
+    warn "bibnum $bibnum title $title bibitemnum $bibitemnum";
 }
 
 1;

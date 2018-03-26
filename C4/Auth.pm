@@ -432,6 +432,7 @@ sub get_template_and_user {
         hide_marc       => C4::Context->preference("hide_marc"),
         item_level_itypes  => C4::Context->preference('item-level_itypes'),
         patronimages       => C4::Context->preference("patronimages"),
+        redmineSSOUrl      => C4::Context->config('redmine_sso_url'),
         singleBranchMode   => ( Koha::Libraries->search->count == 1 ),
         XSLTDetailsDisplay => C4::Context->preference("XSLTDetailsDisplay"),
         XSLTResultsDisplay => C4::Context->preference("XSLTResultsDisplay"),
@@ -1572,6 +1573,11 @@ sub check_api_auth {
                 $session->param( 'emailaddress', $emailaddress );
                 $session->param( 'ip',           $session->remote_addr() );
                 $session->param( 'lasttime',     time() );
+                if ( $userid ) {
+                    # track_login also depends on pref TrackLastPatronActivity
+                    my $patron = Koha::Patrons->find({ userid => $userid });
+                    $patron->track_login if $patron;
+                }
             } elsif ( $return == 2 ) {
 
                 #We suppose the user is the superlibrarian
@@ -1703,6 +1709,11 @@ sub check_cookie_auth {
             $session->param( 'lasttime', time() );
             my $flags = haspermission( $userid, $flagsrequired );
             if ($flags) {
+                if ( $userid ) {
+                    # track_login also depends on pref TrackLastPatronActivity
+                    my $patron = Koha::Patrons->find({ userid => $userid });
+                    $patron->track_login if $patron;
+                }
                 return ( "ok", $sessionID );
             } else {
                 $session->delete();

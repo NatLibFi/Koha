@@ -5,6 +5,13 @@ use lib qw( ./lib );
 use Plack::Middleware::Debug;
 use Plack::App::Directory;
 
+#BZ 16357, add timestamps to warnings
+use Koha::Logger;
+
+my $logger = Koha::Logger->get({ interface => 'plack-error' });
+$SIG{__WARN__} = sub { $logger->warn(shift);  };
+$SIG{__DIE__}  = sub { $logger->fatal(shift); };
+
 use CGI qw(-utf8 ); # we will lose -utf8 under plack
 {
     no warnings 'redefine';

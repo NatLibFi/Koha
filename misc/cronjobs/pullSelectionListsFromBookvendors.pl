@@ -242,7 +242,7 @@ sub stageSelectionlist {
     my ($selectionList, $encoding, $listType) = @_;
 
     my ($batch_id, $num_valid_records, $num_items, @import_errors) =
-        C4::ImportBatch::BatchStageMarcRecords('biblio', $encoding, $selectionList->getMarcRecords(), $selectionList->getIdentifier(), undef, $selectionList->getDescription(), '', 0, 0, 100, undef);
+        C4::ImportBatch::BatchStageMarcRecords('biblio', $encoding, $selectionList->getMarcRecords(), $selectionList->getIdentifier(), undef, undef, $selectionList->getDescription(), '', 0, 0, 100, undef);
     print join("\n",
     "MARC record staging report for selection list ".$selectionList->getIdentifier(),
     "------------------------------------",
@@ -430,11 +430,18 @@ sub getAllBTJSelectionlists {
                 }elsif ($file =~ /xk$/) {
                     print "BTJ: Found file: $file\n" if $verbose;
                     push @$mk_selectionlist_filenames, $file;
+                }elsif ($file =~ /U2\d\d\dbtj_enn/) {
+                    print "BTJ: Found file: $file\n" if $verbose;
+                    push @$mk_selectionlist_filenames, $file;
+                } else {
+                    print "BTJ: Unknown file: $file\n" if $verbose;
                 }
             }
             else {
                 print "BTJ: Skipping file $file due to \$stagedFileVerificationDuration_days\n" if $verbose > 1;
             }
+        } else {
+            print "BTJ: Skipping file $file\n" if $verbose > 1;
         }
     }
     $ftpcon->close();

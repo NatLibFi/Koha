@@ -3022,6 +3022,7 @@ fieldset.rows + fieldset.action {
     display: none;
 }
 
+/* NatLibFi */
 .author .relatorcode {
 	font-weight: normal;
 	font-size:85%
@@ -3039,3 +3040,20 @@ fieldset.rows + fieldset.action {
 .host-link a {
     vertical-align: middle;
 }
+
+
+/* koha-suomi */
+
+/* cover images */
+.cover_image_container { float:right; display:block; overflow:hidden; padding-right:0.25em; padding-left:0.25em; }
+#catalog_results .cover_image_container { width:100px; }
+#catalog_detail .cover_image_container { width:200px; }
+.cover_image_container img { width:100%; height:auto; }
+
+/* languages */
+.language span[class^=lang_name-] {
+    margin-right: 5px;
+}
+
+/* age limit from field 521a */
+.results_summary.age_limit { background-color:pink; padding:0.25em; }

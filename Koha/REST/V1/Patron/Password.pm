@@ -27,6 +27,7 @@ use Koha::Patron::Password::Recovery qw(
     SendPasswordRecoveryEmail
     ValidateBorrowernumber
     CompletePasswordRecovery
+    DeleteExpiredPasswordRecovery
 );
 use Koha::Patrons;
 
@@ -44,7 +45,7 @@ sub recovery {
         my $body = $c->req->json;
 
         unless (C4::Context->preference('OpacPasswordChange') and
-                C4::Context->preference('OpacPasswordReset'))
+                C4::Context->preference('OpacResetPassword'))
         {
             return $c->render(status => 403, openapi => {
                 error => 'Password recovery is disabled.'
@@ -57,12 +58,14 @@ sub recovery {
             );
         }
 
+        my $find;
+        $find->{userid} = $body->{userid} if defined $body->{userid};
+        $find->{cardnumber} = $body->{cardnumber} if
+            defined $body->{cardnumber} && length $body->{cardnumber}>0;
+
         my $patron = Koha::Patrons->search({
             email => $body->{email},
-            '-or' => {
-                userid => $body->{userid},
-                cardnumber => $body->{cardnumber},
-            }
+            '-or' => $find,
         })->next;
 
         unless ($patron) {
@@ -71,28 +74,29 @@ sub recovery {
             );
         }
 
-        my $link = $body->{'custom_link'};
-        my $skip_mail =  0;
-        if ($body->{'skip_mail'}) {
+        my $link = $body->{'complete_url'};
+        my $skip_email =  0;
+        if ($body->{'skip_email'}) {
             Koha::Exceptions::Authentication::Required->throw(
-                error => 'Authentication required while skip_mail parameter is on'
+                error => 'Authentication required while skip_email parameter is on'
             ) unless ref($c->stash('koha.user')) eq 'Koha::Patron';
             if (my $user = $c->stash('koha.user')) {
                 Koha::Exceptions::Authorization::Unauthorized->throw(
                     error => 'Permission get_password_reset_uuid required while '
-                            .'skip_mail parameter is on'
+                            .'skip_email parameter is on'
                 ) unless C4::Auth::haspermission($user->userid, {
                     borrowers => 'get_password_reset_uuid'
                 });
-                $skip_mail = 1;
+                $skip_email = 1;
             }
         }
-        
+
         my $resend = ValidateBorrowernumber($patron->borrowernumber);
+        DeleteExpiredPasswordRecovery($patron->borrowernumber) unless $resend;
 
         my $ret = SendPasswordRecoveryEmail($patron, $patron->email, $resend, {
             url => $link,
-            skip_mail => $skip_mail,
+            skip_email => $skip_email,
         });
 
         if (ref($ret) eq 'HASH') {
@@ -153,6 +157,7 @@ sub complete_recovery {
         }
         my $password = $body->{new_password};
         $patron->update_password( $patron->userid, hash_password($password) );
+        CompletePasswordRecovery($body->{uuid});
         return $c->render(status => 200, openapi => {});
     }
     catch {

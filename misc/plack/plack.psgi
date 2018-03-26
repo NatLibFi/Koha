@@ -30,6 +30,7 @@ use Mojo::Server::PSGI;
 
 # Pre-load libraries
 use C4::Boolean;
+use C4::Context;
 use C4::Koha;
 use C4::Languages;
 use C4::Letters;
@@ -39,6 +40,8 @@ use Koha::Caches;
 use Koha::Cache::Memory::Lite;
 use Koha::Database;
 use Koha::DateUtils;
+
+#BZ 16520, add timestamps to warnings
 
 use CGI qw(-utf8 ); # we will loose -utf8 under plack, otherwise
 {
@@ -91,8 +94,18 @@ my $apiv1  = builder {
     $server->to_psgi_app;
 };
 
+my $proxies = C4::Context->config('trusted_proxy');
+
 builder {
+    # Enable logging
+    enable "+Koha::Middleware::Logger";
+    enable "LogWarn";
+    enable "LogErrors";
+
     enable "ReverseProxy";
+    enable_if { $proxies } "Plack::Middleware::RealIP",
+        header => 'X-Forwarded-For',
+        trusted_proxy => defined $proxies ? [split /[ ,]+/, $proxies] : [];
     enable "Plack::Middleware::Static";
     # + is required so Plack doesn't try to prefix Plack::Middleware::
     enable "+Koha::Middleware::SetEnv";

@@ -301,6 +301,8 @@
            </xsl:call-template>
         </xsl:if>
 
+        <xsl:call-template name="cover-image-856u"/> <!-- koha-suomi: cover image -->
+
     <a>
         <xsl:attribute name="href">
             <xsl:call-template name="buildBiblioDefaultViewURL">
@@ -318,6 +320,7 @@
                         <xsl:with-param name="codes">a</xsl:with-param>
                     </xsl:call-template>
                     <xsl:text> </xsl:text>
+                    <xsl:call-template name="maybe-show-f362a"/> <!-- koha-suomi -->
                     <!-- 13381 add additional subfields-->
                     <xsl:for-each select="marc:subfield[contains('bchknps', @code)]">
                         <xsl:choose>
@@ -908,6 +911,8 @@
 <xsl:text> </xsl:text> <!-- added blank space to fix font display problem, see Bug 3671 -->
     </span>
 </xsl:if> <!-- DisplayIconsXSLT -->
+
+    <xsl:call-template name="show-lang-041"/> <!-- koha-suomi: language -->
 
     <!-- Publisher Statement: Alternate Graphic Representation (MARC 880) -->
     <xsl:if test="$display880">

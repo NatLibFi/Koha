@@ -143,8 +143,6 @@ BEGIN {
         &ToggleSuspend
         &SuspendAll
 
-        &_reserve_last_pickup_date
-
         &GetReservesControlBranch
 
         IsItemOnHoldAndFound
@@ -864,6 +862,7 @@ sub CheckReserves {
            items.homebranch,
            items.holdingbranch
            FROM   items
+           LEFT JOIN biblioitems ON items.biblioitemnumber = biblioitems.biblioitemnumber
            LEFT JOIN itemtypes   ON biblioitems.itemtype   = itemtypes.itemtype
         ";
     }
@@ -966,11 +965,7 @@ sub CancelExpiredReserves {
             $cancel_params->{charge_cancel_fee} = 1;
         }
 
-        my $expiration = _reserve_last_pickup_date( $res );
-        $cancel_params->{pickupexpired} = $expiration;
-        if ( $today > $expiration ) {
-            CancelReserve($cancel_params);
-        }
+        CancelReserve($cancel_params);
     }
 }
 
@@ -1949,59 +1944,6 @@ sub _check_local_holds_priority {
 
 }
 
-=head2 _reserve_last_pickup_date
-
- my $last_dt = _reserve_last_pickup_date($reserve);
-
-Returns the DateTime for the last pickup date for reserve.
-
-The datetime has a time component of 23:59:59, so the day expires as it should when comparing times as well.
-=cut
-
-sub _reserve_last_pickup_date {
-    my ($reserve) = @_;
-    my $branch = $reserve->{branchcode} ? $reserve->{branchcode} : $reserve->branchcode;
-    my $startdate = $reserve->{waitingdate} ? dt_from_string($reserve->{waitingdate}) : DateTime->now( time_zone => C4::Context->tz() );
-    my $calendar = Koha::Calendar->new( branchcode => $branch);
-    my $expiration;
-
-    my $hold = (ref($reserve) eq 'Koha::Hold') ?
-        $reserve : Koha::Holds->find($reserve->{reserve_id});
-    my $delay = $hold ? $hold->max_pickup_delay : 7;
-
-    # Getting the ReservesMaxPickUpDelayBranch
-    my $branches = C4::Context->preference("ReservesMaxPickUpDelayBranch");
-
-    my $yaml = YAML::XS::Load(
-                        Encode::encode(
-                            'UTF-8',
-                            $branches,
-                            Encode::FB_CROAK
-                        )
-                    );
-
-    if ($yaml->{$branch}) {
-        $delay = $yaml->{$branch};
-
-    }
-    
-    if ( C4::Context->preference("ExcludeHolidaysFromMaxPickUpDelay") ) {
-        $expiration = $calendar->days_forward( $startdate, $delay );
-    } else {
-        $expiration = $startdate;
-        $expiration->add(days => $delay);
-    }
-
-       #It is necessary to set the time portion of DateTime as well, because we are actually getting the
-       #  last pickup datetime and importantly days end at 23:59:59.
-       #  Without this set, last pickup dates expire 1 day too early and frustrates patrons and staff alike!
-    $expiration->set( hour       => 23,
-                      minute     => 59,
-                      second     => 59 );
-
-    return $expiration;
-}
-
 =head2 _koha_notify_reserve
 
   _koha_notify_reserve( $hold->reserve_id );
@@ -2061,8 +2003,7 @@ sub _koha_notify_reserve {
             'reserves'       => $hold->unblessed,
             'items'          => $hold->itemnumber,
         },
-        substitute => { today => output_pref( { dt => dt_from_string, dateonly => 1 } ),
-                        lastpickupdate => output_pref( { dt => $hold->waiting_expires_on, dateonly => 1 })
+        substitute => { today => output_pref( { dt => dt_from_string, dateonly => 1 } )
         },
     );
 
@@ -2399,7 +2340,7 @@ available within the slip:
 =cut
 
 sub ReserveSlip {
-    my ($branch, $borrowernumber, $biblionumber, $transfer) = @_;
+    my ($branch, $borrowernumber, $biblionumber, $transfer, $itemnumber) = @_;
 
 #   return unless ( C4::Context->boolean_preference('printreserveslips') );
     my $patron = Koha::Patrons->find( $borrowernumber );
@@ -2408,7 +2349,8 @@ sub ReserveSlip {
 
     my $reserve_id = GetReserveId({
         biblionumber => $biblionumber,
-        borrowernumber => $borrowernumber
+        borrowernumber => $borrowernumber,
+        itemnumber => $itemnumber
     }) or return;
     my $reserve = Koha::Holds->find($reserve_id) or return;
     my $library = Koha::Libraries->find( $reserve->branchcode )->unblessed;
@@ -2425,10 +2367,7 @@ sub ReserveSlip {
             'biblioitems'    => $reserve->biblionumber,
             'reserves'       => $reserve->unblessed,
             'items'          => $reserve->itemnumber,
-        },
-        substitute => {
-            lastpickupdate => output_pref( { dt => $reserve->waiting_expires_on })
-        },
+        } 
     );
 }
 

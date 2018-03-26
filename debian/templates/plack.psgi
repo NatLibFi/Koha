@@ -37,6 +37,13 @@ use Koha::Cache::Memory::Lite;
 use Koha::Database;
 use Koha::DateUtils;
 
+#BZ 16357, add timestamps to warnings
+use Koha::Logger;
+
+my $logger = Koha::Logger->get({ interface => 'plack-error' });
+$SIG{__WARN__} = sub { $logger->warn(shift);  };
+$SIG{__DIE__}  = sub { $logger->fatal(shift); };
+
 use CGI qw(-utf8 ); # we will loose -utf8 under plack, otherwise
 {
     no warnings 'redefine';

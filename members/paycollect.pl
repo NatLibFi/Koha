@@ -32,6 +32,7 @@ use Koha::Patron::Images;
 use Koha::Account;
 use JSON;
 
+use Koha::CurrencyFormat;
 use Koha::Patron::Categories;
 
 use Koha::Payment::POS;
@@ -64,7 +65,6 @@ my $writeoff     = $input->param('writeoff_individual');
 my $select_lines = $input->param('selected');
 my $select       = $input->param('selected_accts');
 my $payment_note = uri_unescape $input->param('payment_note');
-my $accountno;
 my $accountlines_id;
 
 my $pos;
@@ -83,7 +83,6 @@ if ( $individual || $writeoff ) {
     $accountlines_id       = $input->param('accountlines_id');
     my $amount            = $input->param('amount');
     my $amountoutstanding = $input->param('amountoutstanding');
-    $accountno = $input->param('accountno');
     my $itemnumber  = $input->param('itemnumber');
     my $description  = $input->param('description');
     my $title        = $input->param('title');
@@ -93,7 +92,6 @@ if ( $individual || $writeoff ) {
     $template->param(
         accounttype       => $accounttype,
         accountlines_id    => $accountlines_id,
-        accountno         => $accountno,
         amount            => $amount,
         amountoutstanding => $amountoutstanding,
         title             => $title,
@@ -112,6 +110,8 @@ if ( $individual || $writeoff ) {
     );
 }
 
+$total_paid = Koha::CurrencyFormat::fix_currency_str($total_paid);
+
 if ( $total_paid and $total_paid ne '0.00' ) {
     if ( $total_paid < 0 or $total_paid > $total_due ) {
         $template->param(
@@ -126,7 +126,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
             $payment->{total_paid}          = $total_paid;
             $payment->{total_due}           = $total_due;
             $payment->{payment_note}        = $payment_note || $input->param('notes') || $input->param('selected_accts_notes');
-            my @selected = (defined $select) ? split /,/, $select : $accountno;
+            my @selected = (defined $select) ? split /,/, $select : $accountlines_id;
             $payment->{selected}             = \@selected;
 
             # Initialize the transaction
@@ -178,7 +178,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
                     {
                         borrowernumber    => $borrowernumber,
                         amountoutstanding => { '<>' => 0 },
-                        accountno         => { 'IN' => \@acc },
+                        accountlines_id   => { 'IN' => \@acc },
                     },
                     { order_by => 'date' }
                 );

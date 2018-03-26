@@ -207,6 +207,13 @@ sub fix_misconfigured_preference {
 
     my $valid_mtts = [];
     foreach my $mtt (keys %{$self->message_transport_types}) {
+        my $transport = Koha::Patron::Message::Transports->find({
+            message_attribute_id => $self->message_attribute_id,
+            message_transport_type => $mtt
+        });
+        unless ($transport) {
+            next;
+        }
         if ($mtt_to_patronfield_to_validator->{$mtt}) {
             my $patron = Koha::Patrons->find($self->borrowernumber);
             my ($field) = keys %{$mtt_to_patronfield_to_validator->{$mtt}};
@@ -522,6 +529,29 @@ sub _set_message_transport_types {
                         " transport type $type.",
                     parameter => 'message_transport_types'
                 );
+            }
+            if (defined $self->borrowernumber) {
+                my $patron = Koha::Patrons->find($self->borrowernumber);
+                # Is email set and valid
+                if ($type eq 'email') {
+                    my $email = $patron->email;
+                    if ( !$email || $email && !Koha::Validation->email($email))
+                    {
+                        Koha::Exceptions::BadParameter->throw(
+                            error => 'Patron has invalid email address',
+                            parameter => 'message_transport_types'
+                        );
+                    }
+                }
+                elsif ($type eq 'sms') {
+                    my $sms = $patron->smsalertnumber;
+                    if ( !$sms || $sms && !Koha::Validation->phone($sms)){
+                        Koha::Exceptions::BadParameter->throw(
+                            error => 'Patron has invalid sms number',
+                            parameter => 'message_transport_types'
+                        );
+                    }
+                }
             }
             $self->{'_message_transport_types'}->{$type}
                 = $transport->letter_code;

@@ -33,6 +33,38 @@ Koha::Account::Lines - Koha accountline Object class
 
 =cut
 
+=head3 TO_JSON
+
+Overloads Koha::Object->TO_JSON
+
+=cut
+
+sub TO_JSON {
+    my ($self) = @_;
+
+    my $json = $self->SUPER::TO_JSON;
+
+    my $itemnumber  = $self->itemnumber;
+    my $description = $self->description;
+    $description =~ s/^\s+|\s+$//g if defined $description;
+    # If accountline description is an itemnumber, replace it with record title
+    if (defined $description && defined $itemnumber &&
+        $description == $itemnumber) {
+        my $item = Koha::Items->find($itemnumber);
+        if (defined $item) {
+            my $biblio = $item->biblio;
+            if (defined $biblio) {
+                my $title = $biblio->title;
+                my $remainder = $biblio->title_remainder;
+                $title .= ' ' . $remainder if defined $remainder;
+                $json->{description} = $title if defined $title;
+            }
+        }
+    }
+
+    return $json;
+}
+
 =head3 type
 
 =cut

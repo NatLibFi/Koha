@@ -30,6 +30,7 @@ use C4::Context;
 
 use Koha::Database;
 use Koha::Notice::Messages;
+use Koha::Notice::Templates;
 
 use Crypt::Eksblowfish::Bcrypt qw(en_base64);
 
@@ -44,9 +45,25 @@ my $remote_address = '127.0.0.1';
 my $t              = Test::Mojo->new('Koha::REST::V1');
 
 subtest 'recovery() tests' => sub {
-    plan tests => 32;
+    plan tests => 35;
 
     $schema->storage->txn_begin;
+
+    unless(Koha::Notice::Templates->search({
+        module => 'members',
+        code => 'PASSWORD_RESET'
+    })->count) {
+        Koha::Notice::Template->new({
+            module => 'members',
+            code => 'PASSWORD_RESET',
+            branchcode => '',
+            name => 'PASSWORD_RESET',
+            title => 'PASSWORD_RESET',
+            content => '<<passwordreseturl>>',
+            message_transport_type => 'email',
+            lang => 'default',
+        })->store;
+    }
 
     my $url = '/api/v1/patrons/password/recovery';
 
@@ -58,7 +75,7 @@ subtest 'recovery() tests' => sub {
     $t->request_ok($tx)
       ->status_is(400);
 
-    t::lib::Mocks::mock_preference('OpacPasswordReset', 0);
+    t::lib::Mocks::mock_preference('OpacResetPassword', 0);
     t::lib::Mocks::mock_preference('OpacPasswordChange', 0);
     $tx = $t->ua->build_tx(POST => $url => json => {
         email      => $patron->email,
@@ -79,7 +96,7 @@ subtest 'recovery() tests' => sub {
     $t->request_ok($tx)
       ->status_is(403);
 
-    t::lib::Mocks::mock_preference('OpacPasswordReset', 1);
+    t::lib::Mocks::mock_preference('OpacResetPassword', 1);
     t::lib::Mocks::mock_preference('OpacPasswordChange', 0);
     $tx = $t->ua->build_tx(POST => $url => json => {
         email      => $patron->email,
@@ -143,6 +160,18 @@ subtest 'recovery() tests' => sub {
         $rs->search({ borrowernumber => $patron->borrowernumber })->count, 1,
         'Password modification request found in database'
     );
+    $rs->next->set_columns({
+        valid_until => '1970-01-01 12:00:00' })->update_or_insert();
+
+    $tx = $t->ua->build_tx(POST => $url => json => {
+        email      => $patron->email,
+        cardnumber => $patron->cardnumber
+    });
+    $tx->req->cookies({name => 'CGISESSID', value => $session->id});
+    $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
+    $t->request_ok($tx)
+      ->status_is(201)
+      ->json_is('/status' => 1, 'Duplicate expired request regenerated');
 
     my $notice_content = Koha::Notice::Messages->search({
         borrowernumber => $patron->borrowernumber,
@@ -192,7 +221,7 @@ subtest 'recovery() tests' => sub {
         letter_code => 'PASSWORD_RESET',
         message_transport_type => 'email'
     })->count;
-    is($notice, 3, 'Found password reset letters in message queue.');
+    is($notice, 4, 'Found password reset letters in message queue.');
 
     subtest 'custom reset link' => sub {
         plan tests => 5;
@@ -204,7 +233,7 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://notallowed'
+            complete_url => 'https://notallowed'
         });
         $tx->req->cookies({name => 'CGISESSID', value => $session->id});
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
@@ -218,7 +247,7 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://allowed/reset-password.pl?uniqueKey={uuid}'
+            complete_url => 'https://allowed/reset-password.pl?uniqueKey={uuid}'
         });
         $tx->req->cookies({name => 'CGISESSID', value => $session->id});
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
@@ -259,8 +288,8 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://anotherallowed/reset-password.pl',
-            skip_mail => Mojo::JSON->true
+            complete_url => 'https://anotherallowed/reset-password.pl',
+            skip_email => Mojo::JSON->true
         });
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
         $t->request_ok($tx)
@@ -269,8 +298,8 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://anotherallowed/reset-password.pl',
-            skip_mail => Mojo::JSON->true
+            complete_url => 'https://anotherallowed/reset-password.pl',
+            skip_email => Mojo::JSON->true
         });
         $tx->req->cookies({name => 'CGISESSID', value => $session->id});
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
@@ -286,8 +315,8 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://notallowed/reset-password.pl',
-            skip_mail => Mojo::JSON->true,
+            complete_url => 'https://notallowed/reset-password.pl',
+            skip_email => Mojo::JSON->true,
         });
         $tx->req->cookies({name => 'CGISESSID', value => $service_session->id});
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
@@ -297,8 +326,8 @@ subtest 'recovery() tests' => sub {
         $tx = $t->ua->build_tx(POST => $url => json => {
             email      => $patron->email,
             userid     => $patron->userid,
-            custom_link => 'https://anotherallowed/reset-password.pl',
-            skip_mail => Mojo::JSON->true,
+            complete_url => 'https://anotherallowed/reset-password.pl',
+            skip_email => Mojo::JSON->true,
         });
         $tx->req->cookies({name => 'CGISESSID', value => $service_session->id});
         $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
@@ -322,7 +351,7 @@ subtest 'recovery() tests' => sub {
 };
 
 subtest 'complete_recovery() tests' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
@@ -375,6 +404,16 @@ subtest 'complete_recovery() tests' => sub {
       $stored_pw,
        Koha::AuthUtils::hash_password('1234', $stored_pw), 'Password changed'
     );
+
+    $tx = $t->ua->build_tx(POST => $url => json => {
+        uuid                 => $uuid_str,
+        new_password         => '1234',
+        confirm_new_password => '1234',
+    });
+    $tx->req->cookies({name => 'CGISESSID', value => $session->id});
+    $tx->req->env({REMOTE_ADDR => '127.0.0.1'});
+    $t->request_ok($tx)
+      ->status_is(404, 'Previous uuid not found');
 
     $schema->storage->txn_rollback;
 };

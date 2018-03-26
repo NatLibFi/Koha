@@ -153,7 +153,6 @@ sub _item_looper {
     $first_item_avail->common_biblio_checks($biblio);
     $first_item_avail->common_biblioitem_checks($biblioitem);
     $first_item_avail->common_patron_checks;
-    $first_item_avail->common_issuing_rule_checks;
     if (keys %{$first_item_avail->unavailabilities} > 0) {
         $self->available(0);
     }
@@ -176,7 +175,11 @@ sub _item_looper {
     my $limit = $self->limit ? $self->limit : $params->{'limit'};
     my $count = 0;
 
-    my @holds = Koha::Holds->search({ biblionumber => $biblio->biblionumber })->as_list;
+    my @holds = Koha::Holds->search({
+        biblionumber => $biblio->biblionumber,
+        borrowernumber => $patron->borrowernumber,
+    })->as_list if $patron;
+
     my @nonfound_holds = Koha::Holds->search({
         biblionumber => $biblio->biblionumber,
         found => undef,

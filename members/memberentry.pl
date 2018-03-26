@@ -271,14 +271,18 @@ if ( $guarantorid ) {
 ###############test to take the right zipcode, country and city name ##############
 # set only if parameter was passed from the form
 $newdata{'city'}    = $input->param('city')    if defined($input->param('city'));
-$newdata{'zipcode'} = $input->param('zipcode') if defined($input->param('zipcode'));
+if ( defined($input->param('zipcode')) ){
+    $newdata{'zipcode'} = $input->param('zipcode');
+    $newdata{'zipcode'} =~ s/ //g; # KD2913 Trim spaces from zipcode, they cause problems with OpusCapita
+}
+
 $newdata{'country'} = $input->param('country') if defined($input->param('country'));
 
 $newdata{'lang'}    = $input->param('lang')    if defined($input->param('lang'));
 
 # builds default userid
 # userid input text may be empty or missing because of syspref BorrowerUnwantedField
-if ( ( defined $newdata{'userid'} && $newdata{'userid'} eq '' ) || $check_BorrowerUnwantedField =~ /userid/ ) {
+if ( ( defined $newdata{'userid'} && $newdata{'userid'} eq '' ) || $check_BorrowerUnwantedField =~ /userid/ && !defined $data{'userid'} ) {
     if ( ( defined $newdata{'firstname'} ) && ( defined $newdata{'surname'} ) ) {
         # Full page edit, firstname and surname input zones are present
         $newdata{'userid'} = Generate_Userid( $borrowernumber, $newdata{'firstname'}, $newdata{'surname'} );

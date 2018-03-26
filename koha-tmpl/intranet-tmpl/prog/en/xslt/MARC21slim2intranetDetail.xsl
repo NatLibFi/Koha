@@ -227,6 +227,8 @@
             </xsl:when>
         </xsl:choose>
 
+        <xsl:call-template name="cover-image-856u"/> <!-- koha-suomi: cover image -->
+
         <!-- Author Statement: Alternate Graphic Representation (MARC 880) -->
         <xsl:if test="$display880">
             <h5 class="author">
@@ -260,6 +262,7 @@
         </span>
     </xsl:if>
 
+    <xsl:call-template name="show-lang-041"/> <!-- koha-suomi: language -->
 
         <!--Series: Alternate Graphic Representation (MARC 880) -->
         <xsl:if test="$display880">
@@ -536,6 +539,7 @@
             </span>
         </xsl:if>
 
+        <xsl:call-template name="show-age-rating"/> <!-- koha-suomi: kielletty alle -->
 
         <!-- Build ISBN -->
         <xsl:if test="marc:datafield[@tag=020]/marc:subfield[@code='a']">

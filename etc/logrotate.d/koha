@@ -1,0 +1,101 @@
+__LOG_DIR__/plack*.log 
+__LOG_DIR__/rest.log 
+__LOG_DIR__/cpu_pos.log 
+{
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 660 www-data koha
+	su
+	sharedscripts
+	postrotate
+		/etc/init.d/koha-plack-daemon stop
+		sleep 5
+		/etc/init.d/koha-plack-daemon start
+	endscript
+}
+
+__LOG_DIR__/sip2.log
+__LOG_DIR__/sip2/*
+{
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 640 koha koha
+	su
+	sharedscripts
+	postrotate
+		/etc/init.d/koha-sip-daemon restart
+	endscript
+}
+
+__LOG_DIR__/koha-zebradaemon* {
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 640 koha koha
+	su
+	sharedscripts
+	postrotate
+		/etc/init.d/koha-zebra-daemon restart
+	endscript
+}
+
+__LOG_DIR__/editx/* {
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 640 koha koha
+	su
+}
+
+__LOG_DIR__/cronjobs/* {
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 640 koha koha
+	su
+}
+
+__LOG_DIR__/intranet-error.log
+__LOG_DIR__/opac-error.log
+{
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 660 www-data koha
+	su
+}
+
+__LOG_DIR__/koha-*error_log {
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 660 www-data koha
+	su
+	sharedscripts
+	postrotate
+		/usr/sbin/apachectl reload
+	endscript
+}
