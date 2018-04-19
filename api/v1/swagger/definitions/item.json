@@ -206,7 +206,7 @@
       "type": ["string", "null"],
       "description": "reserve level authorized value"
     },
-    "holdingnumber": {
+    "holding_id": {
       "type": ["integer", "null"],
       "description": "internally assigned holding identifier"
     }

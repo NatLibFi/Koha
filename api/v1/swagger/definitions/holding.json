@@ -1,7 +1,7 @@
 {
   "type": "object",
   "properties": {
-    "holdingnumber": {
+    "holding_id": {
       "type": "integer",
       "description": "internally assigned holding identifier"
     },

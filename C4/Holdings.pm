@@ -98,13 +98,13 @@ Because the data isn't completely normalized there's a chance for information to
 
 =back
 
-The MARC record (in holdings_metadata.metadata) contains the MARC holdings record. It also contains the holdingnumber. That is the reason why it is not stored directly by AddHolding, with all other fields. To save a holding, we need to:
+The MARC record (in holdings_metadata.metadata) contains the MARC holdings record. It also contains the holding_id. That is the reason why it is not stored directly by AddHolding, with all other fields. To save a holding, we need to:
 
 =over 4
 
-=item 1. save data in holdings table, that gives us a holdingnumber
+=item 1. save data in holdings table, that gives us a holding_id
 
-=item 2. add the holdingnumber into the MARC record
+=item 2. add the holding_id into the MARC record
 
 =item 3. save the marc record
 
@@ -114,7 +114,7 @@ The MARC record (in holdings_metadata.metadata) contains the MARC holdings recor
 
 =head2 AddHolding
 
-  $holdingnumber = AddHolding($record, $frameworkcode, $biblionumber);
+  $holding_id = AddHolding($record, $frameworkcode, $biblionumber);
 
 Exported function (core API) for adding a new holding to koha.
 
@@ -138,9 +138,9 @@ sub AddHolding {
     # transform the data into koha-table style data
     SetUTF8Flag($record);
     my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
-    my ($holdingnumber) = _koha_add_holding( $dbh, $rowData, $frameworkcode, $biblionumber );
+    my ($holding_id) = _koha_add_holding( $dbh, $rowData, $frameworkcode, $biblionumber );
 
-    # update biblionumber, biblioitemnumber and holdingnumber in MARC
+    # update biblionumber, biblioitemnumber and holding_id in MARC
     # FIXME - this is assuming a 1 to 1 relationship between
     # biblios and biblioitems
     my $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
@@ -148,20 +148,20 @@ sub AddHolding {
     my ($biblioitemnumber) = $sth->fetchrow;
     $sth->finish();
 
-    _koha_marc_update_ids( $record, $frameworkcode, $holdingnumber, $biblionumber, $biblioitemnumber );
+    _koha_marc_update_ids( $record, $frameworkcode, $holding_id, $biblionumber, $biblioitemnumber );
 
     # now add the record
-    ModHoldingMarc( $record, $holdingnumber, $frameworkcode );
+    ModHoldingMarc( $record, $holding_id, $frameworkcode );
 
-    logaction( "CATALOGUING", "ADD", $holdingnumber, "holding" ) if C4::Context->preference("CataloguingLog");
-    return $holdingnumber;
+    logaction( "CATALOGUING", "ADD", $holding_id, "holding" ) if C4::Context->preference("CataloguingLog");
+    return $holding_id;
 }
 
 =head2 ModHolding
 
-  ModHolding($record, $holdingnumber, $frameworkcode);
+  ModHolding($record, $holding_id, $frameworkcode);
 
-Replace an existing holding record identified by C<$holdingnumber>
+Replace an existing holding record identified by C<$holding_id>
 with one supplied by the MARC::Record object C<$record>.
 
 C<$frameworkcode> specifies the MARC framework to use
@@ -172,15 +172,15 @@ Returns 1 on success 0 on failure
 =cut
 
 sub ModHolding {
-    my ( $record, $holdingnumber, $frameworkcode ) = @_;
+    my ( $record, $holding_id, $frameworkcode ) = @_;
     if (!$record) {
         carp 'No record passed to ModHolding';
         return 0;
     }
 
     if ( C4::Context->preference("CataloguingLog") ) {
-        my $newrecord = GetMarcHolding($holdingnumber);
-        logaction( "CATALOGUING", "MODIFY", $holdingnumber, "holding BEFORE=>" . $newrecord->as_formatted );
+        my $newrecord = GetMarcHolding($holding_id);
+        logaction( "CATALOGUING", "MODIFY", $holding_id, "holding BEFORE=>" . $newrecord->as_formatted );
     }
 
     # Cleaning up invalid fields must be done early or SetUTF8Flag is liable to
@@ -198,23 +198,23 @@ sub ModHolding {
 
     $frameworkcode = C4::Context->preference('DefaultSummaryHoldingsFrameworkCode') if !$frameworkcode || $frameworkcode eq "Default";
 
-    # update holdingnumber in MARC
-    _koha_marc_update_ids( $record, $frameworkcode, $holdingnumber );
+    # update holding_id in MARC
+    _koha_marc_update_ids( $record, $frameworkcode, $holding_id );
 
     # load the koha-table data object
     my $rowData = C4::Biblio::TransformMarcToKoha( $record, $frameworkcode, 'holdings' );
     # update the MARC record (that now contains biblio and items) with the new record data
-    &ModHoldingMarc( $record, $holdingnumber, $frameworkcode );
+    &ModHoldingMarc( $record, $holding_id, $frameworkcode );
 
     # modify the other koha tables
-    _koha_modify_holding( $dbh, $holdingnumber, $rowData, $frameworkcode );
+    _koha_modify_holding( $dbh, $holding_id, $rowData, $frameworkcode );
 
     return 1;
 }
 
 =head2 DelHolding
 
-  my $error = &DelHolding($holdingnumber);
+  my $error = &DelHolding($holding_id);
 
 Exported function (core API) for deleting a holding in koha.
 Deletes holding record from Koha tables (holdings, holdings_metadata)
@@ -226,13 +226,13 @@ C<$error> : undef unless an error occurs
 =cut
 
 sub DelHolding {
-    my ($holdingnumber) = @_;
+    my ($holding_id) = @_;
     my $dbh = C4::Context->dbh;
     my $error;    # for error handling
 
     # First make sure this holding has no items attached
-    my $sth = $dbh->prepare("SELECT itemnumber FROM items WHERE holdingnumber=?");
-    $sth->execute($holdingnumber);
+    my $sth = $dbh->prepare("SELECT itemnumber FROM items WHERE holding_id=?");
+    $sth->execute($holding_id);
     if ( my $itemnumber = $sth->fetchrow ) {
 
         # Fix this to use a status the template can understand
@@ -242,26 +242,26 @@ sub DelHolding {
     return $error if $error;
 
     # delete holding from Koha tables and save in deletedholdings
-    $error = _koha_delete_holding( $dbh, $holdingnumber );
+    $error = _koha_delete_holding( $dbh, $holding_id );
 
-    logaction( "CATALOGUING", "DELETE", $holdingnumber, "holding" ) if C4::Context->preference("CataloguingLog");
+    logaction( "CATALOGUING", "DELETE", $holding_id, "holding" ) if C4::Context->preference("CataloguingLog");
 
     return;
 }
 
 =head2 GetHolding
 
-  my $holding = &GetHolding($holdingnumber);
+  my $holding = &GetHolding($holding_id);
 
 =cut
 
 sub GetHolding {
-    my ($holdingnumber) = @_;
+    my ($holding_id) = @_;
     my $dbh            = C4::Context->dbh;
-    my $sth            = $dbh->prepare("SELECT * FROM holding WHERE holdingnumber = ?");
+    my $sth            = $dbh->prepare("SELECT * FROM holding WHERE holding_id = ?");
     my $count          = 0;
     my @results;
-    $sth->execute($holdingnumber);
+    $sth->execute($holding_id);
     if ( my $data = $sth->fetchrow_hashref ) {
         return $data;
     }
@@ -293,16 +293,16 @@ sub GetHoldingsByBiblionumber {
 
 =head2 GetMarcHolding
 
-  my $record = GetMarcHolding(holdingnumber, [$opac]);
+  my $record = GetMarcHolding(holding_id, [$opac]);
 
 Returns MARC::Record representing a holding record, or C<undef> if the
 record doesn't exist.
 
 =over 4
 
-=item C<$holdingnumber>
+=item C<$holding_id>
 
-the holdingnumber
+the holding_id
 
 =item C<$opac>
 
@@ -314,20 +314,20 @@ OpacHiddenItems to be applied.
 =cut
 
 sub GetMarcHolding {
-    my $holdingnumber = shift;
+    my $holding_id = shift;
     my $opac         = shift || 0;
 
-    if (not defined $holdingnumber) {
-        carp 'GetMarcHolding called with undefined holdingnumber';
+    if (not defined $holding_id) {
+        carp 'GetMarcHolding called with undefined holding_id';
         return;
     }
 
     # Use state to speed up repeated calls in batch processes
     state $marcflavour = C4::Context->preference('marcflavour');
 
-    my $marcxml = GetXmlHolding( $holdingnumber );
+    my $marcxml = GetXmlHolding( $holding_id );
     $marcxml = StripNonXmlChars( $marcxml );
-    my $frameworkcode = GetHoldingFrameworkCode( $holdingnumber );
+    my $frameworkcode = GetHoldingFrameworkCode( $holding_id );
     MARC::File::XML->default_record_format( $marcflavour );
     my $record = MARC::Record->new();
 
@@ -335,10 +335,10 @@ sub GetMarcHolding {
         $record = eval {
             MARC::Record::new_from_xml( $marcxml, "utf8", $marcflavour );
         };
-        if ($@) { warn " problem with holding $holdingnumber : $@ \n$marcxml"; }
+        if ($@) { warn " problem with holding $holding_id : $@ \n$marcxml"; }
         return unless $record;
 
-        _koha_marc_update_ids( $record, $frameworkcode, $holdingnumber );
+        _koha_marc_update_ids( $record, $frameworkcode, $holding_id );
 
         return $record;
     }
@@ -347,15 +347,15 @@ sub GetMarcHolding {
 
 =head2 GetXmlHolding
 
-  my $marcxml = GetXmlHolding($holdingnumber);
+  my $marcxml = GetXmlHolding($holding_id);
 
-Returns holdings_metadata.metadata/marcxml of the holdingnumber passed in parameter.
+Returns holdings_metadata.metadata/marcxml of the holding_id passed in parameter.
 
 =cut
 
 sub GetXmlHolding {
-    my ($holdingnumber) = @_;
-    return unless $holdingnumber;
+    my ($holding_id) = @_;
+    return unless $holding_id;
 
     # Use state to speed up repeated calls in batch processes
     state $marcflavour = C4::Context->preference('marcflavour');
@@ -363,13 +363,13 @@ sub GetXmlHolding {
         q|
         SELECT metadata
         FROM holdings_metadata
-        WHERE holdingnumber=?
+        WHERE holding_id=?
             AND format='marcxml'
             AND marcflavour=?
         |
     );
 
-    $sth->execute( $holdingnumber, $marcflavour );
+    $sth->execute( $holding_id, $marcflavour );
     my ($marcxml) = $sth->fetchrow();
     $sth->finish();
     return $marcxml;
@@ -377,15 +377,15 @@ sub GetXmlHolding {
 
 =head2 GetHoldingFrameworkCode
 
-  $frameworkcode = GetFrameworkCode( $holdingnumber )
+  $frameworkcode = GetFrameworkCode( $holding_id )
 
 =cut
 
 sub GetHoldingFrameworkCode {
-    my ($holdingnumber) = @_;
+    my ($holding_id) = @_;
     # Use state to speed up repeated calls in batch processes
-    state $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holdingnumber=?");
-    $sth->execute($holdingnumber);
+    state $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holding_id=?");
+    $sth->execute($holding_id);
     my ($frameworkcode) = $sth->fetchrow;
     $sth->finish();
     return $frameworkcode;
@@ -395,7 +395,7 @@ sub GetHoldingFrameworkCode {
 
 =head2 _koha_add_holding
 
-  my ($holdingnumber,$error) = _koha_add_hodings($dbh, $holding, $frameworkcode, $biblionumber);
+  my ($holding_id,$error) = _koha_add_hodings($dbh, $holding, $frameworkcode, $biblionumber);
 
 Internal function to add a holding ($holding is a hash with the values)
 
@@ -425,7 +425,7 @@ sub _koha_add_holding {
         $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}
     );
 
-    my $holdingnumber = $dbh->{'mysql_insertid'};
+    my $holding_id = $dbh->{'mysql_insertid'};
     if ( $dbh->errstr ) {
         $error .= "ERROR in _koha_add_holding $query" . $dbh->errstr;
         warn $error;
@@ -433,7 +433,7 @@ sub _koha_add_holding {
 
     $sth->finish();
 
-    return ( $holdingnumber, $error );
+    return ( $holding_id, $error );
 }
 
 =head2 _koha_modify_holding
@@ -445,7 +445,7 @@ Internal function for updating the holdings table
 =cut
 
 sub _koha_modify_holding {
-    my ( $dbh, $holdingnumber, $holding, $frameworkcode ) = @_;
+    my ( $dbh, $holding_id, $holding, $frameworkcode ) = @_;
     my $error;
 
     my $query = "
@@ -455,41 +455,41 @@ sub _koha_modify_holding {
                location = ?,
                callnumber = ?,
                suppress = ?
-        WHERE  holdingnumber = ?
+        WHERE  holding_id = ?
         "
       ;
     my $sth = $dbh->prepare($query);
 
     $sth->execute(
-        $frameworkcode, $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}, $holdingnumber
-    ) if $holdingnumber;
+        $frameworkcode, $holding->{holdingbranch}, $holding->{location}, $holding->{callnumber}, $holding->{suppress}, $holding_id
+    ) if $holding_id;
 
-    if ( $dbh->errstr || !$holdingnumber ) {
-        die "ERROR in _koha_modify_holding for holding $holdingnumber: " . $dbh->errstr;
+    if ( $dbh->errstr || !$holding_id ) {
+        die "ERROR in _koha_modify_holding for holding $holding_id: " . $dbh->errstr;
     }
-    return ( $holdingnumber, $error );
+    return ( $holding_id, $error );
 }
 
 =head2 _koha_delete_holding
 
-  $error = _koha_delete_holding($dbh, $holdingnumber);
+  $error = _koha_delete_holding($dbh, $holding_id);
 
 Internal sub for deleting from holdings table -- also saves to deletedholdings
 
 C<$dbh> - the database handle
 
-C<$holdingnumber> - the holdingnumber of the holding to be deleted
+C<$holding_id> - the holding_id of the holding to be deleted
 
 =cut
 
 # FIXME: add error handling
 
 sub _koha_delete_holding {
-    my ( $dbh, $holdingnumber ) = @_;
+    my ( $dbh, $holding_id ) = @_;
 
     # get all the data for this holding
-    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holdingnumber=?");
-    $sth->execute($holdingnumber);
+    my $sth = $dbh->prepare("SELECT * FROM holdings WHERE holding_id=?");
+    $sth->execute($holding_id);
 
     # FIXME There is a transaction in _koha_delete_holding_metadata
     # But actually all the following should be done inside a single transaction
@@ -510,14 +510,14 @@ sub _koha_delete_holding {
         $bkup_sth->execute(@bind);
         $bkup_sth->finish;
 
-        _koha_delete_holding_metadata( $holdingnumber );
+        _koha_delete_holding_metadata( $holding_id );
 
         # delete the holding
-        my $sth2 = $dbh->prepare("DELETE FROM holdings WHERE holdingnumber=?");
-        $sth2->execute($holdingnumber);
+        my $sth2 = $dbh->prepare("DELETE FROM holdings WHERE holding_id=?");
+        $sth2->execute($holding_id);
         # update the timestamp (Bugzilla 7146)
-        $sth2= $dbh->prepare("UPDATE deletedholdings SET timestamp=NOW() WHERE holdingnumber=?");
-        $sth2->execute($holdingnumber);
+        $sth2= $dbh->prepare("UPDATE deletedholdings SET timestamp=NOW() WHERE holding_id=?");
+        $sth2->execute($holding_id);
         $sth2->finish;
     }
     $sth->finish;
@@ -526,25 +526,25 @@ sub _koha_delete_holding {
 
 =head2 _koha_delete_holding_metadata
 
-  $error = _koha_delete_holding_metadata($holdingnumber);
+  $error = _koha_delete_holding_metadata($holding_id);
 
-C<$holdingnumber> - the holdingnumber of the holding metadata to be deleted
+C<$holding_id> - the holding_id of the holding metadata to be deleted
 
 =cut
 
 sub _koha_delete_holding_metadata {
-    my ($holdingnumber) = @_;
+    my ($holding_id) = @_;
 
     my $dbh    = C4::Context->dbh;
     my $schema = Koha::Database->new->schema;
     $schema->txn_do(
         sub {
             $dbh->do( q|
-                INSERT INTO deletedholdings_metadata (holdingnumber, format, marcflavour, metadata)
-                SELECT holdingnumber, format, marcflavour, metadata FROM holdings_metadata WHERE holdingnumber=?
-            |,  undef, $holdingnumber );
-            $dbh->do( q|DELETE FROM holdings_metadata WHERE holdingnumber=?|,
-                undef, $holdingnumber );
+                INSERT INTO deletedholdings_metadata (holding_id, format, marcflavour, metadata)
+                SELECT holding_id, format, marcflavour, metadata FROM holdings_metadata WHERE holding_id=?
+            |,  undef, $holding_id );
+            $dbh->do( q|DELETE FROM holdings_metadata WHERE holding_id=?|,
+                undef, $holding_id );
         }
     );
 }
@@ -554,23 +554,23 @@ sub _koha_delete_holding_metadata {
 =head2 _koha_marc_update_ids
 
 
-  _koha_marc_update_ids($record, $frameworkcode, $holdingnumber[, $biblionumber, $biblioitemnumber]);
+  _koha_marc_update_ids($record, $frameworkcode, $holding_id[, $biblionumber, $biblioitemnumber]);
 
-Internal function to add or update holdingnumber, biblionumber and biblioitemnumber to
+Internal function to add or update holding_id, biblionumber and biblioitemnumber to
 the MARC XML.
 
 =cut
 
 sub _koha_marc_update_ids {
-    my ( $record, $frameworkcode, $holdingnumber, $biblionumber, $biblioitemnumber ) = @_;
+    my ( $record, $frameworkcode, $holding_id, $biblionumber, $biblioitemnumber ) = @_;
 
-    my ( $holding_tag, $holding_subfield ) = C4::Biblio::GetMarcFromKohaField( "holdings.holdingnumber", $frameworkcode );
-    die qq{No holdingnumber tag for framework "$frameworkcode"} unless $holding_tag;
+    my ( $holding_tag, $holding_subfield ) = C4::Biblio::GetMarcFromKohaField( "holdings.holding_id", $frameworkcode );
+    die qq{No holding_id tag for framework "$frameworkcode"} unless $holding_tag;
 
     if ( $holding_tag < 10 ) {
-        C4::Biblio::UpsertMarcControlField( $record, $holding_tag, $holdingnumber );
+        C4::Biblio::UpsertMarcControlField( $record, $holding_tag, $holding_id );
     } else {
-        C4::Biblio::UpsertMarcSubfield($record, $holding_tag, $holding_subfield, $holdingnumber);
+        C4::Biblio::UpsertMarcSubfield($record, $holding_tag, $holding_subfield, $holding_id);
     }
 
     if ( defined $biblionumber ) {
@@ -597,7 +597,7 @@ sub _koha_marc_update_ids {
 
 =head2 ModHoldingMarc
 
-  &ModHoldingMarc($newrec,$holdingnumber,$frameworkcode);
+  &ModHoldingMarc($newrec,$holding_id,$frameworkcode);
 
 Add MARC XML data for a holding to koha
 
@@ -608,7 +608,7 @@ Function exported, but should NOT be used, unless you really know what you're do
 sub ModHoldingMarc {
     # pass the MARC::Record to this function, and it will create the records in
     # the marcxml field
-    my ( $record, $holdingnumber, $frameworkcode ) = @_;
+    my ( $record, $holding_id, $frameworkcode ) = @_;
     if ( !$record ) {
         carp 'ModHoldingMarc passed an undefined record';
         return;
@@ -621,8 +621,8 @@ sub ModHoldingMarc {
     if ( !$frameworkcode ) {
         $frameworkcode = "";
     }
-    my $sth = $dbh->prepare("UPDATE holdings SET frameworkcode=? WHERE holdingnumber=?");
-    $sth->execute( $frameworkcode, $holdingnumber );
+    my $sth = $dbh->prepare("UPDATE holdings SET frameworkcode=? WHERE holding_id=?");
+    $sth->execute( $frameworkcode, $holding_id );
     $sth->finish;
     my $encoding = C4::Context->preference("marcflavour");
 
@@ -655,7 +655,7 @@ sub ModHoldingMarc {
     }
 
     my $metadata = {
-        holdingnumber => $holdingnumber,
+        holding_id => $holding_id,
         format        => 'marcxml',
         marcflavour   => C4::Context->preference('marcflavour'),
     };
@@ -668,7 +668,7 @@ sub ModHoldingMarc {
         $m_rs->metadata( $record->as_xml_record($encoding) );
         $m_rs->store;
     }
-    return $holdingnumber;
+    return $holding_id;
 }
 
 1;

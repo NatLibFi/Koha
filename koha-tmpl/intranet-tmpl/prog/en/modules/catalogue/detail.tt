@@ -680,8 +680,8 @@ function verify_images() {
                         </td>
                     [% IF CAN_user_editcatalogue_edit_items %]
                         <td class="actions">
-                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&biblionumber=[% holding.biblionumber %]&holdingnumber=[% holding.holdingnumber %]#editholding"><i class="fa fa-pencil"></i> Edit</a>
-                            <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/cataloguing/addholding.pl?op=delete&biblionumber=[% holding.biblionumber %]&holdingnumber=[% holding.holdingnumber %]"><i class="fa fa-eraser"></i> Delete</a>
+                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&biblionumber=[% holding.biblionumber %]&holding_id=[% holding.holding_id %]#editholding"><i class="fa fa-pencil"></i> Edit</a>
+                            <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/cataloguing/addholding.pl?op=delete&biblionumber=[% holding.biblionumber %]&holding_id=[% holding.holding_id %]"><i class="fa fa-eraser"></i> Delete</a>
                         </td>
                     [% END %]
                     </tr>
@@ -757,7 +757,7 @@ function verify_images() {
                             [% item.translated_description %]
                         </td>
                     [% IF (show_summary_holdings) %]
-                        <td class="holding">[% Holdings.GetLocation(item.holdingnumber) %]</td>
+                        <td class="holding">[% Holdings.GetLocation(item.holding_id) %]</td>
                     [% END %]
                     [% END %]
                     <td class="location">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( item.branchcode ) %] [% END %]</td>

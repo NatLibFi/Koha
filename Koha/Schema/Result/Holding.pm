@@ -23,7 +23,7 @@ __PACKAGE__->table("holdings");
 
 =head1 ACCESSORS
 
-=head2 holdingnumber
+=head2 holding_id
 
   data_type: 'integer'
   is_auto_increment: 1
@@ -90,7 +90,7 @@ __PACKAGE__->table("holdings");
 =cut
 
 __PACKAGE__->add_columns(
-  "holdingnumber",
+  "holding_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "biblionumber",
   {
@@ -131,13 +131,13 @@ __PACKAGE__->add_columns(
 
 =over 4
 
-=item * L</holdingnumber>
+=item * L</holding_id>
 
 =back
 
 =cut
 
-__PACKAGE__->set_primary_key("holdingnumber");
+__PACKAGE__->set_primary_key("holding_id");
 
 =head1 RELATIONS
 
@@ -202,7 +202,7 @@ Related object: L<Koha::Schema::Result::HoldingsMetadata>
 __PACKAGE__->has_many(
   "holdings_metadatas",
   "Koha::Schema::Result::HoldingsMetadata",
-  { "foreign.holdingnumber" => "self.holdingnumber" },
+  { "foreign.holding_id" => "self.holding_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -217,7 +217,7 @@ Related object: L<Koha::Schema::Result::Item>
 __PACKAGE__->has_many(
   "items",
   "Koha::Schema::Result::Item",
-  { "foreign.holdingnumber" => "self.holdingnumber" },
+  { "foreign.holding_id" => "self.holding_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 

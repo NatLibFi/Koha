@@ -27,17 +27,17 @@ use base qw( Template::Plugin );
 use Koha::Holdings;
 
 sub GetLocation {
-    my ( $self, $holdingnumber ) = @_;
+    my ( $self, $holding_id ) = @_;
 
-    if ( !$holdingnumber ) {
+    if ( !$holding_id ) {
         return '';
     }
 
-    my $holding = Koha::Holdings->find( $holdingnumber );
+    my $holding = Koha::Holdings->find( $holding_id );
     if ( $holding ) {
         my @parts;
 
-        push @parts, $holdingnumber;
+        push @parts, $holding_id;
         push @parts, $holding->holdingbranch() if $holding->holdingbranch();
         push @parts, $holding->location() if $holding->location();
         push @parts, $holding->callnumber() if $holding->callnumber();

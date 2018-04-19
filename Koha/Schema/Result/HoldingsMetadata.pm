@@ -29,7 +29,7 @@ __PACKAGE__->table("holdings_metadata");
   is_auto_increment: 1
   is_nullable: 0
 
-=head2 holdingnumber
+=head2 holding_id
 
   data_type: 'integer'
   is_foreign_key: 1
@@ -57,7 +57,7 @@ __PACKAGE__->table("holdings_metadata");
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
-  "holdingnumber",
+  "holding_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "format",
   { data_type => "varchar", is_nullable => 0, size => 16 },
@@ -85,7 +85,7 @@ __PACKAGE__->set_primary_key("id");
 
 =over 4
 
-=item * L</holdingnumber>
+=item * L</holding_id>
 
 =item * L</format>
 
@@ -97,12 +97,12 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->add_unique_constraint(
   "holdings_metadata_uniq_key",
-  ["holdingnumber", "format", "marcflavour"],
+  ["holding_id", "format", "marcflavour"],
 );
 
 =head1 RELATIONS
 
-=head2 holdingnumber
+=head2 holding_id
 
 Type: belongs_to
 
@@ -111,9 +111,9 @@ Related object: L<Koha::Schema::Result::Holding>
 =cut
 
 __PACKAGE__->belongs_to(
-  "holdingnumber",
+  "holding_id",
   "Koha::Schema::Result::Holding",
-  { holdingnumber => "holdingnumber" },
+  { holding_id => "holding_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 

@@ -306,7 +306,7 @@ __PACKAGE__->table("deleteditems");
   is_nullable: 1
   size: 10
 
-=head2 holdingnumber
+=head2 holding_id
 
   data_type: 'integer'
   is_nullable: 1
@@ -429,7 +429,7 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "reserve_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
-  "holdingnumber",
+  "holding_id",
   { data_type => "integer", is_nullable => 1 },
 );
 

@@ -310,7 +310,7 @@ __PACKAGE__->table("items");
   is_nullable: 1
   size: 10
 
-=head2 holdingnumber
+=head2 holding_id
 
   data_type: 'integer'
   is_foreign_key: 1
@@ -444,7 +444,7 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "reserve_level",
   { data_type => "varchar", is_nullable => 1, size => 10 },
-  "holdingnumber",
+  "holding_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
@@ -631,7 +631,7 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 holdingnumber
+=head2 holding_id
 
 Type: belongs_to
 
@@ -640,9 +640,9 @@ Related object: L<Koha::Schema::Result::Holding>
 =cut
 
 __PACKAGE__->belongs_to(
-  "holdingnumber",
+  "holding_id",
   "Koha::Schema::Result::Holding",
-  { holdingnumber => "holdingnumber" },
+  { holding_id => "holding_id" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",

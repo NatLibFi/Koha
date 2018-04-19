@@ -698,7 +698,7 @@ CREATE TABLE `deletedborrowers` ( -- stores data related to the patrons/borrower
 
 DROP TABLE IF EXISTS `deletedholdings`;
 CREATE TABLE `deletedholdings` ( -- table that stores summary holdings information
-  `holdingnumber` int(11) NOT NULL auto_increment, -- unique identifier assigned to each holding record
+  `holding_id` int(11) NOT NULL auto_increment, -- unique identifier assigned to each holding record
   `biblionumber` int(11) NOT NULL default 0, -- foreign key from biblio table used to link this record to the right bib record
   `biblioitemnumber` int(11) NOT NULL default 0, -- foreign key from the biblioitems table to link record to additional information
   `frameworkcode` varchar(4) NOT NULL default '', -- foreign key from the biblio_framework table to identify which framework was used in cataloging this record
@@ -708,8 +708,8 @@ CREATE TABLE `deletedholdings` ( -- table that stores summary holdings informati
   `suppress` tinyint(1) default NULL, -- Boolean indicating whether the holding is suppressed in OPAC
   `timestamp` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP, -- date and time this record was last touched
   `datecreated` DATE NOT NULL, -- the date this record was added to Koha
-  PRIMARY KEY  (`holdingnumber`),
-  KEY `hldnoidx` (`holdingnumber`)
+  PRIMARY KEY  (`holding_id`),
+  KEY `hldnoidx` (`holding_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
@@ -719,7 +719,7 @@ CREATE TABLE `deletedholdings` ( -- table that stores summary holdings informati
 DROP TABLE IF EXISTS `deletedholdings_metadata`;
 CREATE TABLE deletedholdings_metadata (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
-    `holdingnumber` INT(11) NOT NULL,
+    `holding_id` INT(11) NOT NULL,
     `format` VARCHAR(16) NOT NULL,
     `marcflavour` VARCHAR(16) NOT NULL,
     `metadata` LONGTEXT NOT NULL,
@@ -781,7 +781,7 @@ CREATE TABLE `deleteditems` (
   `sub_location` varchar(10) default NULL, -- SUBLOC (MARC21 952$S)
   `circulation_level` varchar(10) default NULL, -- authorized value defining circulation level for this item
   `reserve_level` varchar(10) default NULL, -- authorized value defining reserve level for this item
-  `holdingnumber` int(11) default NULL, -- foreign key from holdings table used to link this item to the right holding record
+  `holding_id` int(11) default NULL, -- foreign key from holdings table used to link this item to the right holding record
   PRIMARY KEY  (`itemnumber`),
   KEY `delitembarcodeidx` (`barcode`),
   KEY `delitemstocknumberidx` (`stocknumber`),
@@ -1014,7 +1014,7 @@ CREATE TABLE `refund_lost_item_fee_rules` ( -- refund lost item fee rules tbale
 
 DROP TABLE IF EXISTS `holdings`;
 CREATE TABLE `holdings` ( -- table that stores summary holdings information
-  `holdingnumber` int(11) NOT NULL auto_increment, -- unique identifier assigned to each holding record
+  `holding_id` int(11) NOT NULL auto_increment, -- unique identifier assigned to each holding record
   `biblionumber` int(11) NOT NULL default 0, -- foreign key from biblio table used to link this record to the right bib record
   `biblioitemnumber` int(11) NOT NULL default 0, -- foreign key from the biblioitems table to link record to additional information
   `frameworkcode` varchar(4) NOT NULL default '', -- foreign key from the biblio_framework table to identify which framework was used in cataloging this record
@@ -1024,8 +1024,8 @@ CREATE TABLE `holdings` ( -- table that stores summary holdings information
   `suppress` tinyint(1) default NULL, -- Boolean indicating whether the holding is suppressed in OPAC
   `timestamp` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP, -- date and time this record was last touched
   `datecreated` DATE NOT NULL, -- the date this record was added to Koha
-  PRIMARY KEY  (`holdingnumber`),
-  KEY `hldnoidx` (`holdingnumber`),
+  PRIMARY KEY  (`holding_id`),
+  KEY `hldnoidx` (`holding_id`),
   KEY `hldbinoidx` (`biblioitemnumber`),
   KEY `hldbibnoidx` (`biblionumber`),
   CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -1040,14 +1040,14 @@ CREATE TABLE `holdings` ( -- table that stores summary holdings information
 DROP TABLE IF EXISTS `holdings_metadata`;
 CREATE TABLE holdings_metadata (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `holdingnumber` INT(11) NOT NULL,
+  `holding_id` INT(11) NOT NULL,
   `format` VARCHAR(16) NOT NULL,
   `marcflavour` VARCHAR(16) NOT NULL,
   `metadata` LONGTEXT NOT NULL,
   PRIMARY KEY(id),
-  UNIQUE KEY `holdings_metadata_uniq_key` (`holdingnumber`,`format`,`marcflavour`),
-  KEY `hldnoidx` (`holdingnumber`),
-  CONSTRAINT `holdings_metadata_fk_1` FOREIGN KEY (holdingnumber) REFERENCES holdings (holdingnumber) ON DELETE CASCADE ON UPDATE CASCADE
+  UNIQUE KEY `holdings_metadata_uniq_key` (`holding_id`,`format`,`marcflavour`),
+  KEY `hldnoidx` (`holding_id`),
+  CONSTRAINT `holdings_metadata_fk_1` FOREIGN KEY (holding_id) REFERENCES holdings (holding_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
@@ -1105,7 +1105,7 @@ CREATE TABLE `items` ( -- holdings/item information
   `sub_location` varchar(10) default NULL, -- SUBLOC (MARC21 952$S)
   `circulation_level` varchar(10) default NULL, -- authorized value defining circulation level for this item
   `reserve_level` varchar(10) default NULL, -- authorized value defining reserve level for this item
-  `holdingnumber` int(11) default NULL, -- foreign key from holdings table used to link this item to the right holding record
+  `holding_id` int(11) default NULL, -- foreign key from holdings table used to link this item to the right holding record
   PRIMARY KEY  (`itemnumber`),
   UNIQUE KEY `itembarcodeidx` (`barcode`),
   KEY `itemstocknumberidx` (`stocknumber`),
@@ -1118,11 +1118,12 @@ CREATE TABLE `items` ( -- holdings/item information
   KEY `items_ccode` (`ccode`),
   KEY `itype_idx` (`itype`),
   KEY `timestamp` (`timestamp`),
+  KEY `hldid_idx` (`holding_id`),
   CONSTRAINT `items_ibfk_1` FOREIGN KEY (`biblioitemnumber`) REFERENCES `biblioitems` (`biblioitemnumber`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `items_ibfk_2` FOREIGN KEY (`homebranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE,
   CONSTRAINT `items_ibfk_3` FOREIGN KEY (`holdingbranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE,
   CONSTRAINT `items_ibfk_4` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `items_ibfk_5` FOREIGN KEY (`holdingnumber`) REFERENCES `holdings` (`holdingnumber`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `items_ibfk_5` FOREIGN KEY (`holding_id`) REFERENCES `holdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --

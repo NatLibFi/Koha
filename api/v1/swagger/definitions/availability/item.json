@@ -56,7 +56,7 @@
       "type": ["string", "null"],
       "description": "ccode description as printed in the staff client"
     },
-    "holdingnumber": {
+    "holding_id": {
       "type": ["integer", "null"],
       "description": "internally assigned holding identifier"
     }

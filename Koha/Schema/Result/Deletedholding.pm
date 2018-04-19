@@ -23,7 +23,7 @@ __PACKAGE__->table("deletedholdings");
 
 =head1 ACCESSORS
 
-=head2 holdingnumber
+=head2 holding_id
 
   data_type: 'integer'
   is_auto_increment: 1
@@ -87,7 +87,7 @@ __PACKAGE__->table("deletedholdings");
 =cut
 
 __PACKAGE__->add_columns(
-  "holdingnumber",
+  "holding_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "biblionumber",
   { data_type => "integer", default_value => 0, is_nullable => 0 },
@@ -118,13 +118,13 @@ __PACKAGE__->add_columns(
 
 =over 4
 
-=item * L</holdingnumber>
+=item * L</holding_id>
 
 =back
 
 =cut
 
-__PACKAGE__->set_primary_key("holdingnumber");
+__PACKAGE__->set_primary_key("holding_id");
 
 
 # Created by DBIx::Class::Schema::Loader v0.07045 @ 2017-11-13 15:27:17

@@ -219,11 +219,11 @@ sub generate_subfield_form {
                 push @authorised_values, "" unless ( $subfieldlib->{mandatory} );
                 my $holdings = Koha::Holdings->search({biblionumber => $biblionumber}, { order_by => ['holdingbranch'] })->unblessed;# build once ahead of time, instead of multiple times later.
                 for my $holding ( @$holdings ) {
-                    push @authorised_values, $holding->{holdingnumber};
-                    $authorised_lib{$holding->{holdingnumber}} = $holding->{holdingnumber} . ' ' . $holding->{holdingbranch} . ' ' . $holding->{location} . $holding->{callnumber};
+                    push @authorised_values, $holding->{holding_id};
+                    $authorised_lib{$holding->{holding_id}} = $holding->{holding_id} . ' ' . $holding->{holdingbranch} . ' ' . $holding->{location} . $holding->{callnumber};
                 }
         	    my $input = new CGI;
-                $value = $input->param('holdingnumber') unless ($value);
+                $value = $input->param('holding_id') unless ($value);
             }
             else {
                   push @authorised_values, qq{} unless ( $subfieldlib->{mandatory} );

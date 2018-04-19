@@ -571,7 +571,7 @@ sub build_tabs {
 my $input = new CGI;
 my $error = $input->param('error');
 my $biblionumber  = $input->param('biblionumber');
-my $holdingnumber  = $input->param('holdingnumber'); # if holdingnumber exists, it's a modif, not a new holding.
+my $holding_id  = $input->param('holding_id'); # if holding_id exists, it's a modif, not a new holding.
 my $op            = $input->param('op');
 my $mode          = $input->param('mode');
 my $frameworkcode = $input->param('frameworkcode');
@@ -582,8 +582,8 @@ my $dbh           = C4::Context->dbh;
 my $userflags = 'edit_items';
 
 my $changed_framework = $input->param('changed_framework');
-$frameworkcode = &C4::Holdings::GetHoldingFrameworkCode($holdingnumber)
-  if ( $holdingnumber and not( defined $frameworkcode) and $op ne 'add' );
+$frameworkcode = &C4::Holdings::GetHoldingFrameworkCode($holding_id)
+  if ( $holding_id and not( defined $frameworkcode) and $op ne 'add' );
 
 $frameworkcode = C4::Context->preference('DefaultSummaryHoldingsFrameworkCode') if ( !$frameworkcode || $frameworkcode eq 'Default' );
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
@@ -598,7 +598,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 
 # TODO: support in advanced editor
 #if ( $op ne "delete" && C4::Context->preference('EnableAdvancedCatalogingEditor') && $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced' ) {
-#    print $input->redirect( '/cgi-bin/koha/cataloguing/editor.pl#catalog/' . $biblionumber . '/holdings/' . ( $holdingnumber ? $holdingnumber : '' ) );
+#    print $input->redirect( '/cgi-bin/koha/cataloguing/editor.pl#catalog/' . $biblionumber . '/holdings/' . ( $holding_id ? $holding_id : '' ) );
 #    exit;
 #}
 
@@ -615,13 +615,13 @@ $usedTagsLib     = &GetUsedMarcStructure( $frameworkcode );
 my $record   = -1;
 my $encoding = "";
 
-if ($holdingnumber){
-    $record = C4::Holdings::GetMarcHolding($holdingnumber);
+if ($holding_id){
+    $record = C4::Holdings::GetMarcHolding($holding_id);
 }
 
 $is_a_modif = 0;
 
-if ($holdingnumber) {
+if ($holding_id) {
     $is_a_modif = 1;
 
 }
@@ -638,10 +638,10 @@ if ( $op eq "add" ) {
     my @params = $input->multi_param();
     $record = TransformHtmlToMarc( $input, 1 );
     if ( $is_a_modif ) {
-        ModHolding( $record, $holdingnumber, $frameworkcode );
+        ModHolding( $record, $holding_id, $frameworkcode );
     }
     else {
-        $holdingnumber = AddHolding( $record, $frameworkcode, $biblionumber );
+        $holding_id = AddHolding( $record, $frameworkcode, $biblionumber );
     }
     if ($redirect eq "items" || ($mode ne "popup" && !$is_a_modif && $redirect ne "view" && $redirect ne "just_save")){
         print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&searchid=$searchid");
@@ -656,12 +656,12 @@ if ( $op eq "add" ) {
     }
     elsif ($redirect eq "just_save"){
         my $tab = $input->param('current_tab');
-        print $input->redirect("/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=$biblionumber&holdingnumber=$holdingnumber&framework=$frameworkcode&tab=$tab&searchid=$searchid");
+        print $input->redirect("/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=$biblionumber&holding_id=$holding_id&framework=$frameworkcode&tab=$tab&searchid=$searchid");
     }
     else {
           $template->param(
             biblionumber => $biblionumber,
-            holdingnumber => $holdingnumber,
+            holding_id => $holding_id,
             done         =>1,
             popup        =>1
           );
@@ -675,10 +675,10 @@ if ( $op eq "add" ) {
 }
 elsif ( $op eq "delete" ) {
 
-    my $error = &DelHolding($holdingnumber);
+    my $error = &DelHolding($holding_id);
     if ($error) {
-        warn "ERROR when DELETING HOLDING $holdingnumber : $error";
-        print "Content-Type: text/html\n\n<html><body><h1>ERROR when DELETING HOLDING $holdingnumber : $error</h1></body></html>";
+        warn "ERROR when DELETING HOLDING $holding_id : $error";
+        print "Content-Type: text/html\n\n<html><body><h1>ERROR when DELETING HOLDING $holding_id : $error</h1></body></html>";
         exit;
     }
 
@@ -687,14 +687,14 @@ elsif ( $op eq "delete" ) {
 
 } else {
    #----------------------------------------------------------------------------
-   # If we're in a duplication case, we have to set to "" the holdingnumber
+   # If we're in a duplication case, we have to set to "" the holding_id
    # as we'll save the holding as a new one.
     $template->param(
-        holdingnumberdata => $holdingnumber,
+        holding_iddata => $holding_id,
         op                => $op,
     );
     if ( $op eq "duplicate" ) {
-        $holdingnumber = "";
+        $holding_id = "";
     }
 
     if($changed_framework eq "changed"){
@@ -712,7 +712,7 @@ elsif ( $op eq "delete" ) {
     }
     build_tabs( $template, $record, $dbh, $encoding,$input );
     $template->param(
-        holdingnumber            => $holdingnumber,
+        holding_id            => $holding_id,
         biblionumber             => $biblionumber,
         biblionumbertagfield     => $biblionumbertagfield,
         biblionumbertagsubfield  => $biblionumbertagsubfield,

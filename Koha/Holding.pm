@@ -54,7 +54,7 @@ or list of Koha::Item objects in list context.
 sub items {
     my ($self) = @_;
 
-    $self->{_items} ||= Koha::Items->search( { holdingnumber => $self->holdingnumber() } );
+    $self->{_items} ||= Koha::Items->search( { holding_id => $self->holding_id() } );
 
     return wantarray ? $self->{_items}->as_list : $self->{_items};
 }
