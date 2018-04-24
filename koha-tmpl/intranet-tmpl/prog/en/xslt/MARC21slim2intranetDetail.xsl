@@ -129,33 +129,56 @@
                 <xsl:otherwise>hrcn:'<xsl:value-of select="marc:controlfield[@tag=001]"/>'s</xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
-        <xsl:if test="marc:componentPartRecords/marc:componentPart">
+        <xsl:if test="marc:componentPartRecords/marc:record">
                  <span class="componentPartRecordsContainer results_summary">
                        <h5>Component part records (<a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=<xsl:value-of select="$HostSearchString"/>&amp;sort_by=id_asc</xsl:attribute>view all <xsl:value-of select="marc:componentPartRecordCount"/></a>):</h5>
-                       <xsl:for-each select="marc:componentPartRecords/marc:componentPart">
+                       <xsl:for-each select="marc:componentPartRecords/marc:record">
                          <xsl:choose>
                             <xsl:when test="position() &lt; 1000">
                               <span class="componentPartRecord">
-                                 <span class="componentPartRecordTitle">
-                                       <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/detail.pl?biblionumber=<xsl:value-of select="marc:biblionumber" /></xsl:attribute>
-                                          <xsl:choose>
-                                            <xsl:when test="marc:title">
-                                              <xsl:value-of select="substring-before( concat(marc:title, '/'), '/')" />
-                                            </xsl:when>
-                                            <xsl:otherwise>
-                                              <xsl:value-of select="substring-before( concat(marc:unititle, '/'), '/')" />
-                                            </xsl:otherwise>
-                                          </xsl:choose>
-                                       </a>
-                                 </span>
-                               <xsl:if test="marc:author">
-                                 -
-                                 <span class="componentPartRecordAuthor">
-                                       <xsl:value-of select="marc:author" />
-                                 </span>
-                               </xsl:if>
-                               </span>
-                               <br />
+                                <span class="componentPartRecordTitle">
+                                    <a>
+                                    <xsl:attribute name="href">/cgi-bin/koha/catalogue/detail.pl?biblionumber=<xsl:value-of select="marc:datafield[@tag=999]/marc:subfield[@code='c']" /></xsl:attribute>
+                                    <xsl:choose>
+                                        <xsl:when test="marc:datafield[@tag=245]/marc:subfield[@code='a']">
+                                            <xsl:value-of select="substring-before( concat(marc:datafield[@tag=245]/marc:subfield[@code='a'], '/'), '/')" />
+                                        </xsl:when>
+                                        <xsl:when test="marc:datafield[@tag=240]/marc:subfield[@code='a']">
+					  <xsl:for-each select="marc:datafield[@tag=240]">
+					    <xsl:call-template name="chopPunctuation">
+					      <xsl:with-param name="chopString">
+						<xsl:call-template name="subfieldSelect">
+						  <xsl:with-param name="codes">amnp</xsl:with-param>
+						</xsl:call-template>
+					      </xsl:with-param>
+					    </xsl:call-template>
+					  </xsl:for-each>
+                                        </xsl:when>
+                                        <xsl:when test="marc:datafield[@tag=130]/marc:subfield[@code='a']">
+					  <xsl:for-each select="marc:datafield[@tag=130]">
+					    <xsl:call-template name="chopPunctuation">
+					      <xsl:with-param name="chopString">
+						<xsl:call-template name="subfieldSelect">
+						  <xsl:with-param name="codes">amnp</xsl:with-param>
+						</xsl:call-template>
+					      </xsl:with-param>
+					    </xsl:call-template>
+					  </xsl:for-each>
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:text>[Record with no title statement]</xsl:text>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
+                                    </a>
+                                </span>
+                                <xsl:if test="marc:datafield[@tag=100]/marc:subfield[@code='a']">
+                                    -
+                                    <span class="componentPartRecordAuthor">
+                                        <xsl:value-of select="marc:datafield[@tag=100]/marc:subfield[@code='a']" />
+                                    </span>
+                                </xsl:if>
+                              </span>
+                              <br/>
                             </xsl:when>
                             <xsl:when test="position() = 1000">
                               <span class="componentPartRecordTitle">
