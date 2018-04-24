@@ -914,6 +914,20 @@
 
     <xsl:call-template name="show-lang-041"/> <!-- koha-suomi: language -->
 
+    <!-- koha-suomi: classification -->
+    <xsl:if test="marc:datafield[@tag=084]/marc:subfield[@code='a']">
+      <span class="results_summary classification"><span class="label">Classification: </span>
+      <xsl:for-each select="marc:datafield[@tag=084]">
+        <xsl:call-template name="subfieldSelect">
+          <xsl:with-param name="codes">a</xsl:with-param>
+          <xsl:with-param name="delimeter"><xsl:text> | </xsl:text></xsl:with-param>
+        </xsl:call-template>
+        <xsl:choose><xsl:when test="position()=last()"><xsl:text></xsl:text></xsl:when><xsl:otherwise><xsl:text> | </xsl:text></xsl:otherwise></xsl:choose>
+      </xsl:for-each>
+      </span>
+    </xsl:if>
+    <!-- /koha-suomi: classification -->
+
     <!-- Publisher Statement: Alternate Graphic Representation (MARC 880) -->
     <xsl:if test="$display880">
       <xsl:call-template name="m880Select">
@@ -985,9 +999,9 @@
     </span>
    </xsl:if>
 
-    <xsl:if test="marc:datafield[@tag=020]">
+    <xsl:if test="marc:datafield[@tag=020]/marc:subfield[@code='a']">
     <span class="results_summary isbn"><span class="label">ISBN: </span>
-    <xsl:for-each select="marc:datafield[@tag=020]">
+    <xsl:for-each select="marc:datafield[@tag=020]/marc:subfield[@code='a']">
     <xsl:variable name="isbn" select="marc:subfield[@code='a']"/>
             <xsl:value-of select="marc:subfield[@code='a']"/>
             <xsl:choose><xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><xsl:text>; </xsl:text></xsl:otherwise></xsl:choose>
@@ -995,9 +1009,9 @@
     </span>
     </xsl:if>
 
-    <xsl:if test="marc:datafield[@tag=022]">
+    <xsl:if test="marc:datafield[@tag=022]/marc:subfield[@code='a']">
     <span class="results_summary issn"><span class="label">ISSN: </span>
-    <xsl:for-each select="marc:datafield[@tag=022]">
+    <xsl:for-each select="marc:datafield[@tag=022]/marc:subfield[@code='a']">
             <xsl:value-of select="marc:subfield[@code='a']"/>
             <xsl:choose><xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><xsl:text>; </xsl:text></xsl:otherwise></xsl:choose>
     </xsl:for-each>

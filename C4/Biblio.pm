@@ -22,7 +22,7 @@ package C4::Biblio;
 use Modern::Perl;
 use Carp;
 
-use Encode qw( decode is_utf8 );
+use Encode qw( decode is_utf8 encode );
 use MARC::Record;
 use MARC::File::USMARC;
 use MARC::File::XML;
@@ -378,18 +378,20 @@ sub _strip_item_fields {
 =head2 DelBiblio
 
   my $error = &DelBiblio($biblionumber);
+  my $error = &DelBiblio($biblionumber, 1);
 
 Exported function (core API) for deleting a biblio in koha.
 Deletes biblio record from Zebra and Koha tables (biblio & biblioitems)
 Also backs it up to deleted* tables.
 Checks to make sure that the biblio has no items attached.
+If second parameter is defined and true, also deletes component records.
 return:
 C<$error> : undef unless an error occurs
 
 =cut
 
 sub DelBiblio {
-    my ($biblionumber) = @_;
+    my ($biblionumber, $deleteComponents) = @_;
     my $dbh = C4::Context->dbh;
     my $error;    # for error handling
 
@@ -413,10 +415,12 @@ sub DelBiblio {
 
     # We delete any existing holds
     my $biblio = Koha::Biblios->find( $biblionumber );
-    my $holds = $biblio->holds;
-    require C4::Reserves;
-    while ( my $hold = $holds->next ) {
-        C4::Reserves::CancelReserve({ reserve_id => $hold->reserve_id }); # TODO Replace with $hold->cancel
+    if (defined($biblio)) {
+	my $holds = $biblio->holds;
+	require C4::Reserves;
+	while ( my $hold = $holds->next ) {
+	    C4::Reserves::CancelReserve({ reserve_id => $hold->reserve_id }); # TODO Replace with $hold->cancel
+	}
     }
 
     # Delete in Zebra. Be careful NOT to move this line after _koha_delete_biblio
@@ -435,6 +439,11 @@ sub DelBiblio {
         return $error if $error;
     }
 
+    # delete component records?
+    if (defined($deleteComponents) && $deleteComponents) {
+	$error = delComponentBiblios($biblionumber);
+	return $error if $error;
+    }
 
     # delete biblio from Koha tables and save in deletedbiblio
     # must do this *after* _koha_delete_biblioitems, otherwise
@@ -447,6 +456,34 @@ sub DelBiblio {
     return;
 }
 
+=head2 delComponentBiblios
+
+  my $error = &delComponentBiblios($biblionumber);
+
+Deletes component records of a biblio, by calling DelBiblio for each
+component record.
+return:
+C<$error> : undef unless an error occurs
+
+=cut
+
+sub delComponentBiblios {
+    my ($biblionumber) = @_;
+    my $record = GetMarcBiblio($biblionumber);
+    my @removalErrors;
+
+    foreach my $componentPartBiblionumber (  @{ getComponentBiblionumbers( $record )}  ) {
+	my $error = DelBiblio($componentPartBiblionumber);
+	if ($error) {
+	    my $html = "<a href='/cgi-bin/koha/catalogue/detail.pl?biblionumber=$componentPartBiblionumber'>$componentPartBiblionumber</a>";
+	    push(@removalErrors, $html.' : '.$error);
+	}
+    }
+    if (@removalErrors) {
+	return join("\n", @removalErrors);
+    }
+    return undef;
+}
 
 =head2 BiblioAutoLink
 
@@ -4009,6 +4046,8 @@ sub ModBiblioMarc {
         format       => 'marcxml',
         marcflavour  => C4::Context->preference('marcflavour'),
     };
+    $record->as_usmarc; # Bug 20126/10455 This triggers field length calculation
+
     # FIXME To replace with ->find_or_create?
     if ( my $m_rs = Koha::Biblio::Metadatas->find($metadata) ) {
         $m_rs->metadata( $record->as_xml_record($encoding) );
@@ -4342,6 +4381,8 @@ sub getHostRecord {
 sub getComponentRecords {
     my ($parentsField001, $parentsField003, $parentrecord, $error, $componentPartRecordXMLs, $resultSetSize) = _getComponentParts(@_);
 
+    return (\@$componentPartRecordXMLs, $resultSetSize);
+
     my $marcflavour = C4::Context->preference('marcflavour');
 
     my @componentBiblios;
@@ -4352,7 +4393,8 @@ sub getComponentRecords {
             push @componentBiblios, $componentBiblio;
         }
     }
-    return (\@componentBiblios, $resultSetSize);
+#    return (\@componentBiblios, $resultSetSize);
+
 }
 
 #Get biblionumbers the fast way.
@@ -4392,23 +4434,32 @@ sub _getComponentParts {
         $parentsField001 = $parentsField001->data() if $parentsField001;
     }
 
-    my ($error, $componentPartRecordXMLs, $resultSetSize);
+    my ($error, $componentPartRecords, $resultSetSize);
     my $id_index = C4::Context->preference('SearchEngine') eq 'Elasticsearch' ? 'hrcn' : 'rcn';
     if ($parentsField001 && $parentsField003) {
         require Koha::SearchEngine::Search;
         my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
-        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("($id_index='$parentsField001' AND cni='$parentsField003') OR $id_index='\\($parentsField003\\)$parentsField001'", 0, 1000, undef, use_facets => 0, sort_by => ['id_asc']);
+        ($error, $componentPartRecords, $resultSetSize) = $searcher->simple_search_compat("($id_index='$parentsField001' AND cni='$parentsField003') OR $id_index='\\($parentsField003\\)$parentsField001'", 0, 1000, undef, use_facets => 0, sort_by => ['id_asc']);
     }
     elsif ($parentsField001) {
         require Koha::SearchEngine::Search;
         my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
-        ($error, $componentPartRecordXMLs, $resultSetSize) = $searcher->simple_search_compat("$id_index='$parentsField001'", 0, 1000, undef, use_facets => 0, sort_by => ['id_asc']);
+        ($error, $componentPartRecords, $resultSetSize) = $searcher->simple_search_compat("$id_index='$parentsField001'", 0, 1000, undef, use_facets => 0, sort_by => ['id_asc']);
     }
     else {
         warn "Record with no field 001 encountered!" unless $parentrecord;
     }
 
-    return ($parentsField001, $parentsField003, $parentrecord, $error, $componentPartRecordXMLs, $resultSetSize);
+    my @componentXMLs;
+    state $marcflavour = C4::Context->preference('marcflavour');
+    if ($resultSetSize && !$error) {
+        foreach my $component (@$componentPartRecords) {
+            my $xml = encode('utf-8', ref($component) eq 'MARC::Record' ? $component->as_xml_record($marcflavour) : $component);
+            push @componentXMLs, $xml;
+        }
+    }
+    
+    return ($parentsField001, $parentsField003, $parentrecord, $error, \@componentXMLs, $resultSetSize);
 }
 
 1;
