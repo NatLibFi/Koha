@@ -1,4 +1,4 @@
-package Koha::MessageQueue::PrintProviderEnfo;
+package Koha::MessageQueue::PrintProviderRopoCapital;
 
 # Copyright 2015 Vaara-kirjastot
 #
@@ -29,15 +29,15 @@ use base "Koha::MessageQueue::PrintProviderInterface";
 sub sendAll {
     my ($self, $messageQueues, $params) = @_;
     my ($ok, $error);
-    return (undef, "PrintProviderEnfo->sendAll(): the given MessageQueues-array is empty!") unless $messageQueues && @$messageQueues;
+    return (undef, "PrintProviderRopoCapital->sendAll(): the given MessageQueues-array is empty!") unless $messageQueues && @$messageQueues;
 
-    my $providerConfig = C4::Context->config('printProviders')->{enfo};
+    my $providerConfig = C4::Context->config('printmailProviders')->{ropocapital};
     my $letterStagingDirectory = $providerConfig->{letterStagingDirectory}.'/';
     $error = `mkdir -p $letterStagingDirectory`;
-    return (undef, "PrintProviderEnfo->sendAll(): Couldn't create the letterStagingDirectory '$letterStagingDirectory': $error") if $error;
+    return (undef, "PrintProviderRopoCapital->sendAll(): Couldn't create the letterStagingDirectory '$letterStagingDirectory': $error") if $error;
     my $clientId = $providerConfig->{clientId};
 
-    print "\nPrintProviderEnfo():: Happily sending all '".scalar(@$messageQueues)."' print overdue notifications\n";
+    print "\nPrintProviderRopoCapital():: Happily sending all '".scalar(@$messageQueues)."' print overdue notifications\n";
 
     my $validMessageQueues; ($validMessageQueues, $error) = _validateAllMessageQueues($messageQueues);
     ##STOP if we haven't got no valid messages.
@@ -52,20 +52,20 @@ sub sendAll {
     ##Write the file.
     my $ymd = DateTime->now(time_zone => C4::Context->tz())->ymd('');
     my $file = $letterStagingDirectory.$clientId.'_'.$ymd.'.epl';
-    open(my $eKirje, ">:encoding(UTF-8)", $file) or return (undef, "Couldn't write to the temp file $file for sending to Enfo Zender");
+    open(my $eKirje, ">:encoding(UTF-8)", $file) or return (undef, "Couldn't write to the temp file $file for sending to RopoCapital Zender");
     print $eKirje $letter;
     close $eKirje;
 
     #Validate the complete finished file.
     unless(open($eKirje, "<:encoding(UTF-8)", $file)) {
-        print "Couldn't read the temp file '$file' for validating to Enfo Zender";
-        return (undef, "Couldn't read the temp file '$file' for validating to Enfo Zender");
+        print "Couldn't read the temp file '$file' for validating to RopoCapital Zender";
+        return (undef, "Couldn't read the temp file '$file' for validating to RopoCapital Zender");
     }
     my @writedLetter = <$eKirje>;
 
     close $eKirje;
     if (my $badRow = _validateEpl(join("",@writedLetter))) {
-        print join('','PrintProviderEnfo->sendAll(): Validating built file "',$file,'" failed',"\n",
+        print join('','PrintProviderRopoCapital->sendAll(): Validating built file "',$file,'" failed',"\n",
                       $badRow,"\n");
         return (undef, "FILE_IS_INVALID");
     }
@@ -73,7 +73,7 @@ sub sendAll {
     unless(exists($providerConfig->{dontReallySendAnything})) { #Have we disabled the sending part for testing purposes?
         ($ok, $error) = _sendTheLetterViaFtp($file, $providerConfig);
         unless ($ok) {
-            return (undef, "PrintProviderEnfo->sendAll(): $error");
+            return (undef, "PrintProviderRopoCapital->sendAll(): $error");
         }
     }
     _markAllMessageQueuesSent($validMessageQueues);
@@ -91,11 +91,17 @@ sub _sendTheLetterViaFtp {
 
     #Get the ftp-connection.
     my ($ftpcon, $error);
+    my @extra_put_params;
     my $error_fn = 'error';
     if ($providerConfig->{sftp}) {
-        ($ftpcon, $error) = _getSftpToEnfo( $providerConfig );
+        ($ftpcon, $error) = _getSftpToRopoCapital( $providerConfig );
+        my %opts = (
+            copy_perm => 0,
+            copy_time => 0
+        );
+        @extra_put_params = (undef, %opts);
     } else {
-        ($ftpcon, $error) = _getFtpToEnfo( $providerConfig );
+        ($ftpcon, $error) = _getFtpToRopoCapital( $providerConfig );
         $error_fn = 'message';
     }
     if ($error) {
@@ -113,18 +119,22 @@ sub _sendTheLetterViaFtp {
             }
         }
 
-        unless($ftpcon->put( $file )) {
-            return (undef, "FTP->put():ing the eLetter '$file' to Enfo Zender failed: ". $ftpcon->$error_fn);
+        unless($ftpcon->put( $file, @extra_put_params )) {
+            return (undef, "FTP->put():ing the eLetter '$file' to RopoCapital Zender failed: ". $ftpcon->$error_fn);
         }
 
-        $ftpcon->close();
+        if ($providerConfig->{sftp}) {
+            undef $ftpcon;
+        } else {
+            $ftpcon->quit();
+        }
 
         return (1, undef); #Sending succeeded!
     }
     return (undef, "Something happened and the sending failed");
 }
 
-sub _getFtpToEnfo {
+sub _getFtpToRopoCapital {
     my ($providerConfig) = @_;
 
     my $ftpcon = Net::FTP->new( Host => $providerConfig->{host},
@@ -141,7 +151,7 @@ sub _getFtpToEnfo {
     }
 }
 
-sub _getSftpToEnfo {
+sub _getSftpToRopoCapital {
     my ($providerConfig) = @_;
 
     $Net::SFTP::Foreign::debug = 1;
@@ -166,14 +176,14 @@ sub _validateAllMessageQueues {
     foreach my $messageQueue (@$messageQueues) {
         if (my $badRow = _validateEpl($messageQueue->content)) {
             $messageQueue->setStatus('failed');
-            print join('','PrintProviderEnfo->sendAll(): Validating messageQueue id "',$messageQueue->id,'" failed for borrowernumber "',$messageQueue->borrowernumber,'".',"\n",
+            print join('','PrintProviderRopoCapital->sendAll(): Validating messageQueue id "',$messageQueue->id,'" failed for borrowernumber "',$messageQueue->borrowernumber,'".',"\n",
                           $badRow,"\n");
         }
         else {
             push @$validMessageQueues, $messageQueue;
         }
     }
-    return (undef, "PrintProviderEnfo->sendAll(): No valid messageQueues for sending\n") unless @$validMessageQueues;
+    return (undef, "PrintProviderRopoCapital->sendAll(): No valid messageQueues for sending\n") unless @$validMessageQueues;
     return ($validMessageQueues, undef);
 }
 

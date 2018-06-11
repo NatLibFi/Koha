@@ -441,7 +441,7 @@ sub ModMember {
             # Try to do the live sync
             Koha::NorwegianPatronDB::NLSync({ 'borrowernumber' => $data{'borrowernumber'} });
         }
-        logaction("MEMBERS", "MODIFY", $data{'borrowernumber'}, "UPDATED FIELD(S): $logdata") if C4::Context->preference("BorrowersLog");
+        logaction("MEMBERS", "MODIFY", $data{'borrowernumber'}, "UPDATED FIELD(S): $logdata") if C4::Context->preference("BorrowersLog") && $logdata;
     }
     return $execute_success;
 }
@@ -1637,13 +1637,15 @@ Returns string of fields that will be changed
 =cut
 
 sub getModifiedPatronFieldsForLogs {
-    my ($data) = @_;
+    my ($data, $olddata) = @_;
 
     my $logdata;
-    my $olddata = Koha::Patrons->find( $data->{borrowernumber} )->unblessed;
+    $olddata //= Koha::Patrons->find( $data->{borrowernumber} )->unblessed;
 
     foreach my $key ( keys %$data ) {
-        $logdata .= $key." => ".$data->{$key}.", " if ( $olddata->{$key} ne $data->{$key});
+        my $od = defined $olddata->{$key} ? $olddata->{$key} : 'undef';
+        my $nd = defined $data->{$key} ? $data->{$key} : 'undef';
+        $logdata .= $key.": $od => $nd, " if ( $olddata->{$key} ne $data->{$key});
     }
 
     $logdata =~ s/,\s+$//;

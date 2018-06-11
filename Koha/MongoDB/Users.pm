@@ -3,6 +3,9 @@ package Koha::MongoDB::Users;
 use Moose;
 use MongoDB;
 use utf8;
+use Koha::Patron::Categories;
+use Koha::Database;
+use Koha::Libraries;
 use Koha::Patrons;
 use Koha::MongoDB::Config;
 
@@ -15,21 +18,59 @@ has 'config' => (
 
 sub BUILD {
     my $self = shift;
+    my $args = shift;
     $self->setConfig(new Koha::MongoDB::Config);
+    my $dbh;
+    if ($args->{dbh}) {
+        $dbh = $args->{dbh};
+    } else {
+        $dbh = $self->getConfig->mongoClient();
+    }
+    $self->{dbh} = $dbh;
 }
 
 
 sub getUser{
     my $self = shift;
     my ($borrowernumber) = @_;
-    return Koha::Patrons->find( $borrowernumber )->unblessed;
+
+    my $patron = Koha::Patrons->find( $borrowernumber );
+    if ($patron) {
+        $patron = $patron->unblessed;
+    } else {
+        my $schema  = Koha::Database->new->schema;
+        my $del = $schema->resultset('Deletedborrower')->find({
+            borrowernumber => $borrowernumber
+        });
+        if ($del) {
+            $patron = { $del->get_columns } if $del;
+        } else {
+            # Borrowernumber does not exist either in borrowers nor
+            # deletedborrowers table. Return a dummy result.
+
+            # Select first branchcode and categorycode
+            my $lib = Koha::Libraries->search->next;
+            my $cat = Koha::Patron::Categories->search->next;
+            $patron = {
+                borrowernumber => 0,
+                surname => 'Not found',
+                address => 'Nowhere',
+                city    => 'Nowhere',
+                cardnumber => '__NOT_FOUND__',
+                branchcode => $lib->branchcode,
+                categorycode => $cat->categorycode,
+            };
+        }
+    }
+
+    return $patron;
 }
 
 sub setUser{
 	my $self = shift;
 	my ($user) = @_;
 
-	my $client = $self->getConfig->mongoClient();
+	my $client = $self->{dbh};
     my $settings = $self->getConfig->getSettings();
 
     my $users = $client->ns($settings->{database}.'.users');
@@ -58,7 +99,7 @@ sub setUser{
 sub checkUser {
 	my $self = shift;
     my ($borrowernumber) = @_;
-    my $client = $self->getConfig->mongoClient();
+    my $client = $self->{dbh};
     my $settings = $self->getConfig->getSettings();
 
     my $users = $client->ns($settings->{database}.'.users');

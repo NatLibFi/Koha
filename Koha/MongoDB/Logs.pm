@@ -20,9 +20,17 @@ has 'config' => (
 
 sub BUILD {
     my $self = shift;
+    my $args = shift;
     my $schema = Koha::Database->new()->schema();
     $self->setSchema($schema);
     $self->setConfig(new Koha::MongoDB::Config);
+    my $dbh;
+    if ($args->{dbh}) {
+        $dbh = $args->{dbh};
+    } else {
+        $dbh = $self->getConfig->mongoClient();
+    }
+    $self->{dbh} = $dbh;
 }
 
 sub getActionLogs{
@@ -45,15 +53,34 @@ sub getActionLogs{
     return \@logs;
 }
 
+#get all data from action_cache_logs;
+sub getActionCacheLogs{
+    my $self = shift;
+    my ($params) = @_;
+    my $dbh = C4::Context->dbh;
+    my $query = "
+    SELECT action_id,action, object, timestamp, user, info from action_logs_cache";
+    if ($params->{order_by}) {
+        $query .= " order by ".$params->{order_by};
+    }
+    if ($params->{limit}) {
+        $query .= " limit ".$params->{limit};
+    }
+    my $stmnt = $dbh->prepare($query);
+    $stmnt->execute();
+
+    my @logs;
+    while ( my $row = $stmnt->fetchrow_hashref ) {
+        push @logs, $row;
+    }
+    return \@logs;
+}
+
 sub setUserLogs{
 	my $self = shift;
 	my ($actionlog, $sourceuserId, $objectuserId, $cardnumber, $borrowernumber) = @_;
 
-	my $client = $self->getConfig->mongoClient();
-    my $settings = $self->getConfig->getSettings();
-
-    my $logs = $client->ns($settings->{database}.'.user_logs');
-    my $result = $logs->insert_one({
+    my $result = {
         sourceuser       => $sourceuserId,
         objectuser       => $objectuserId,
         objectcardnumber => $cardnumber,
@@ -62,16 +89,16 @@ sub setUserLogs{
         info             => $actionlog->{info},
         timestamp        => $actionlog->{timestamp}
 
-        });   
+        };   
 
-    return $actionlog;
+    return $result;
 }
 
 sub checkLog {
 	my $self = shift;
 	my ($actionlog, $sourceuserId, $objectuserId) = @_;
 
-	my $client = $self->getConfig->mongoClient();
+	my $client = $self->{dbh};
     my $settings = $self->getConfig->getSettings();
 
     my $logs = $client->ns($settings->{database}.'.user_logs');

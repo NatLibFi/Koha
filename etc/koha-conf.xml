@@ -72,6 +72,7 @@ __PAZPAR2_TOGGLE_XML_POST__
 <!-- the DBD drivers supported by Koha are mysql and Pg -->
 <!-- port info: mysql:3306 Pg:5432 (5433 on Debian) -->
 <config>
+ <finnaprefix>outi.</finnaprefix>
  <db_scheme>__DB_TYPE__</db_scheme>
  <database>__DB_NAME__</database>
  <hostname>__DB_HOST__</hostname>
@@ -298,6 +299,16 @@ __PAZPAR2_TOGGLE_XML_POST__
       <customerId></customerId> <!-- Opus Capita customer id -->
       <customerPass></customerPass> <!-- Opus Capita customer password -->
     </opusFTP>
+    <ropocapital>
+      <!-- <dontReallySendAnything>comment this to actually send the letters, now we are just fakin'</dontReallySendAnything> -->
+      <letterStagingDirectory>/tmp/ropocapital/</letterStagingDirectory>
+      <clientId>JNS190</clientId>
+      <!-- <remoteDirectory>Enfo doesnt want us to specify a root-directory</remoteDirectory>-->
+      <host>zmartgate.enfo.fi</host>
+      <user>USERNAME</user>
+      <passwd>PASSWORD</passwd>
+      <sftp>1</sftp>
+    </ropocapital>
  </printmailProviders>
  <smsProviders>
     <labyrintti>

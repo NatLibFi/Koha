@@ -322,7 +322,7 @@
                     <xsl:text> </xsl:text>
                     <xsl:call-template name="maybe-show-f362a"/> <!-- koha-suomi -->
                     <!-- 13381 add additional subfields-->
-                    <xsl:for-each select="marc:subfield[contains('bchknps', @code)]">
+                    <xsl:for-each select="marc:subfield[contains('bnp', @code)]">
                         <xsl:choose>
                             <xsl:when test="@code='h'">
                                 <!--  13381 Span class around subfield h so it can be suppressed via css -->
@@ -339,6 +339,14 @@
                         </xsl:choose>
                     </xsl:for-each>
                 </xsl:for-each>
+		<xsl:if test="marc:datafield[@tag=100 or @tag=110]/marc:subfield[@code='a']">
+		  <xsl:for-each select="marc:datafield[@tag=100 or @tag=110]">
+                    <xsl:call-template name="subfieldSelect">
+                      <xsl:with-param name="codes">a</xsl:with-param>
+                    </xsl:call-template>
+                    <xsl:text> </xsl:text>
+		  </xsl:for-each>
+		</xsl:if>
             </xsl:when>
             <xsl:when test="marc:datafield[@tag=240]">
             <xsl:for-each select="marc:datafield[@tag=240]">
@@ -984,8 +992,18 @@
         </span>
     </xsl:if>
 
-    <xsl:if test="marc:datafield[@tag=300]">
+    <xsl:if test="marc:datafield[@tag=300] or marc:datafield[@tag=942]/marc:subfield[@code='c']">
     <span class="results_summary description"><span class="label">Description: </span>
+        <xsl:for-each select="marc:datafield[@tag=942]">
+          <xsl:call-template name="subfieldSelect">
+            <xsl:with-param name="codes">c</xsl:with-param>
+            <xsl:with-param name="delimeter"><xsl:text>, </xsl:text></xsl:with-param>
+          </xsl:call-template>
+          <xsl:choose><xsl:when test="position()=last()"><xsl:text></xsl:text></xsl:when><xsl:otherwise><xsl:text> | </xsl:text></xsl:otherwise></xsl:choose>
+	</xsl:for-each>
+	<xsl:if test="marc:datafield[@tag=300] and marc:datafield[@tag=942]/marc:subfield[@code='c']">
+	  <xsl:text>, </xsl:text>
+	</xsl:if>
         <xsl:for-each select="marc:datafield[@tag=300]">
             <xsl:call-template name="chopPunctuation">
               <xsl:with-param name="chopString">
@@ -1002,8 +1020,7 @@
     <xsl:if test="marc:datafield[@tag=020]/marc:subfield[@code='a']">
     <span class="results_summary isbn"><span class="label">ISBN: </span>
     <xsl:for-each select="marc:datafield[@tag=020]/marc:subfield[@code='a']">
-    <xsl:variable name="isbn" select="marc:subfield[@code='a']"/>
-            <xsl:value-of select="marc:subfield[@code='a']"/>
+            <xsl:value-of select="."/>
             <xsl:choose><xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><xsl:text>; </xsl:text></xsl:otherwise></xsl:choose>
     </xsl:for-each>
     </span>
@@ -1012,7 +1029,7 @@
     <xsl:if test="marc:datafield[@tag=022]/marc:subfield[@code='a']">
     <span class="results_summary issn"><span class="label">ISSN: </span>
     <xsl:for-each select="marc:datafield[@tag=022]/marc:subfield[@code='a']">
-            <xsl:value-of select="marc:subfield[@code='a']"/>
+            <xsl:value-of select="."/>
             <xsl:choose><xsl:when test="position()=last()"><xsl:text>.</xsl:text></xsl:when><xsl:otherwise><xsl:text>; </xsl:text></xsl:otherwise></xsl:choose>
     </xsl:for-each>
     </span>

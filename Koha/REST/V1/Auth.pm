@@ -157,6 +157,49 @@ sub logout {
     return $c->render( status => 200, openapi => {});
 }
 
+=head3 get_api_session
+
+Checks whether the given sessionid is valid at the time. If a valid session is
+found, a minimal subset of borrower's info is returned for the SSO-scheme.
+
+=cut
+
+sub get_api_session {
+    my $c = shift->openapi->valid_input or return;
+
+    my $sessionId = $c->req->json->{sessionid};
+    my $session = C4::Auth::get_session($sessionId);
+
+    # If the returned session equals the given session, accept it as a valid
+    # session and return it.
+    # Otherwise, destroy the created session.
+    if ($sessionId eq $session->id()) {
+
+        # See if the given session is timed out
+        if (Koha::Auth::Challenge::Cookie::isSessionExpired($session)) {
+            return $c->render( status => 401, openapi => {
+                error => "Koha's session expired."} );
+        }
+
+        my $patron = Koha::Patrons->find($session->param('number'));
+        unless ($patron) {
+            return $c->render( status => 404, openapi => {
+                error => "Patron not found"} );
+        }
+
+        return $c->render(
+            status => 200,
+            openapi => _swaggerize_session($sessionId, $patron)
+        );
+    }
+    else {
+        $session->delete();
+        $session->flush();
+        return $c->render( status => 404, openapi => {
+            error => "Bad session id"} );
+    }
+}
+
 sub _swaggerize_session {
     my ($sessionid, $patron) = @_;
 
@@ -176,7 +219,7 @@ sub _swaggerize_session {
         surname  => $patron->surname,
         email     => $patron->email,
         sessionid => $sessionid,
-	permissions => \@permissions,
+        permissions => \@permissions,
     };
 }
 
@@ -195,6 +238,7 @@ sub authenticate_api_request {
     my $user;
     if ($c->req->headers->header('Authorization')) {
         ($user, undef) = _header_auth($c, $authorization);
+        $c->stash('koha.user', $user);
     } else {
         ($user, undef) = _cookie_auth($c, $authorization);
     }
@@ -209,10 +253,10 @@ sub authenticate_api_request {
     my $permissions = $authorization->{'permissions'};
     # Check if the user is authorized
     my ($owner_access, $guarantor_access, $guarantee_access);
-    if ( haspermission($user->userid, $permissions)
+    if ( $user && ( haspermission($user->userid, $permissions)
         or $owner_access = allow_owner($c, $authorization, $user)
         or $guarantor_access = allow_guarantor($c, $authorization, $user)
-        or $guarantee_access = allow_guarantee($c, $authorization, $user) ) {
+        or $guarantee_access = allow_guarantee($c, $authorization, $user) ) ) {
 
         Koha::Exceptions::Authorization::Unauthorized->throw(
             error => "Patron's card has been marked as 'lost'. Access forbidden."
@@ -227,6 +271,13 @@ sub authenticate_api_request {
 
         # Everything is ok
         return 1;
+    }
+
+    unless ($user) {
+        Koha::Exceptions::Authentication::Required->throw(
+            error => 'Unknown authenticated user. Perhaps you have an anonymous'
+                    .' session?'
+        );
     }
 
     Koha::Exceptions::Authorization::Unauthorized->throw(
@@ -266,6 +317,12 @@ sub _cookie_auth {
     if ($status eq "ok") {
         $session = get_session($sessionID);
         $user = Koha::Patrons->find($session->param('number'));
+        if ($session->param('number') eq '0') {
+            Koha::Exceptions::Authentication::Required->throw(
+                error => 'Please do not use the API as the database '
+                        .'administrative user. This could cause problems!'
+            );
+        }
         $c->stash('koha.user' => $user);
     }
     elsif ($status eq "maintenance") {
@@ -446,6 +503,8 @@ sub check_object_ownership {
         checkout_id     => \&_object_ownership_by_checkout_id,
         reserve_id      => \&_object_ownership_by_reserve_id,
         message_id      => \&_object_ownership_by_message_id,
+        suggestionid    => \&_object_ownership_by_suggestionid,
+        suggestedby     => \&_object_ownership_by_suggestedby,
     };
     foreach my $check (keys %$additional_checks) {
         $parameters->{$check} = $additional_checks->{$check};
@@ -552,6 +611,32 @@ sub _object_ownership_by_reserve_id {
 
     my $reserve = Koha::Holds->find($reserve_id);
     return $reserve && $user->borrowernumber == $reserve->borrowernumber;
+}
+
+=head3 _object_ownership_by_suggestedby
+
+Compares C<$suggetedby> to currently logged in C<$user>'s borrowernumber.
+
+=cut
+
+sub _object_ownership_by_suggestedby {
+    my ($c, $user, $suggestedby) = @_;
+
+    return $user->borrowernumber == $suggestedby;
+}
+
+=head3 _object_ownership_by_suggestionid
+
+Finds a Koha::Suggestion-object by C<$suggestionid> and checks if it
+belongs to C<$user>.
+
+=cut
+
+sub _object_ownership_by_suggestionid {
+    my ($c, $user, $suggestionid) = @_;
+
+    my $suggestion = Koha::Suggestions->find($suggestionid);
+    return $suggestion && $user->borrowernumber == $suggestion->suggestedby;
 }
 
 1;
