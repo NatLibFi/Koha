@@ -353,7 +353,7 @@ sub GetXmlHolding {
 
     # Use state to speed up repeated calls in batch processes
     state $marcflavour = C4::Context->preference('marcflavour');
-    state $sth = C4::Context->dbh->prepare(
+    my $sth = C4::Context->dbh->prepare(
         q|
         SELECT metadata
         FROM holdings_metadata
@@ -377,8 +377,7 @@ sub GetXmlHolding {
 
 sub GetHoldingFrameworkCode {
     my ($holding_id) = @_;
-    # Use state to speed up repeated calls in batch processes
-    state $sth = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holding_id=?");
+    my $sth = C4::Context->dbh->prepare("SELECT frameworkcode FROM holdings WHERE holding_id=?");
     $sth->execute($holding_id);
     my ($frameworkcode) = $sth->fetchrow;
     $sth->finish();

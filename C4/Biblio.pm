@@ -324,8 +324,7 @@ sub ModBiblio {
     # update biblionumber and biblioitemnumber in MARC
     # FIXME - this is assuming a 1 to 1 relationship between
     # biblios and biblioitems
-    # Use state to speed up repeated calls in batch processes
-    state $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
+    my $sth = $dbh->prepare("select biblioitemnumber from biblioitems where biblionumber=?");
 
     $sth->execute($biblionumber);
     my ($biblioitemnumber) = $sth->fetchrow;
@@ -1332,7 +1331,7 @@ sub GetMarcBiblio {
 
     # Use state to speed up repeated calls in batch processes
     state $marcflavour = C4::Context->preference('marcflavour');
-    state $sth = C4::Context->dbh->prepare("SELECT biblioitemnumber FROM biblioitems WHERE biblionumber=? ");
+    my $sth = C4::Context->dbh->prepare("SELECT biblioitemnumber FROM biblioitems WHERE biblionumber=? ");
     $sth->execute($biblionumber);
     my ($biblioitemnumber) = $sth->fetchrow;
     my $marcxml = GetXmlBiblio( $biblionumber );
@@ -1375,7 +1374,7 @@ sub GetXmlBiblio {
 
     # Use state to speed up repeated calls in batch processes
     state $marcflavour = C4::Context->preference('marcflavour');
-    state $sth = C4::Context->dbh->prepare(
+    my $sth = C4::Context->dbh->prepare(
         q|
         SELECT metadata
         FROM biblio_metadata
@@ -2611,8 +2610,7 @@ sub UpsertBiblio {
 
 sub GetFrameworkCode {
     my ($biblionumber) = @_;
-    # Use state to speed up repeated calls in batch processes
-    state $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM biblio WHERE biblionumber=?");
+    my $sth         = C4::Context->dbh->prepare("SELECT frameworkcode FROM biblio WHERE biblionumber=?");
     $sth->execute($biblionumber);
     my ($frameworkcode) = $sth->fetchrow;
     $sth->finish();
@@ -4025,7 +4023,7 @@ sub ModBiblioMarc {
         $frameworkcode = "";
     }
     # Use state to speed up repeated calls in batch processes
-    state $sth = $dbh->prepare("UPDATE biblio SET frameworkcode=? WHERE biblionumber=?");
+    my $sth = $dbh->prepare("UPDATE biblio SET frameworkcode=? WHERE biblionumber=?");
     $sth->execute( $frameworkcode, $biblionumber );
     $sth->finish;
     my $encoding = C4::Context->preference("marcflavour");

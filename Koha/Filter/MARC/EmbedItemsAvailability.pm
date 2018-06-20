@@ -77,8 +77,7 @@ sub _processrecord {
                       ? $record->field($biblionumber_field)->subfield($biblionumber_subfield)
                       : $record->field($biblionumber_field)->data();
 
-    # Use state to speed up repeated calls in batch processes
-    state $sth = C4::Context->dbh->prepare( 'select count(*) as cnt from items where biblionumber = ? and onloan is null' );
+    my $sth = C4::Context->dbh->prepare( 'select count(*) as cnt from items where biblionumber = ? and onloan is null' );
     $sth->execute($biblionumber);
     my ($not_onloan_items) = $sth->fetchrow();
 

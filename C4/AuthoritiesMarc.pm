@@ -670,7 +670,7 @@ sub AddAuthority {
     # Save record into auth_header, update 001
     if ($authid) {
         # Make sure the record actually exists
-        state $sth = $dbh->prepare('SELECT authid FROM auth_header WHERE authid=?');
+        my $sth = $dbh->prepare('SELECT authid FROM auth_header WHERE authid=?');
         $sth->execute($authid);
         my $exists = $sth->fetchrow;
         $sth->finish;
