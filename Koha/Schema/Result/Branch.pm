@@ -631,6 +631,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 holdings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->has_many(
+  "holdings",
+  "Koha::Schema::Result::Holding",
+  { "foreign.holdingbranch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 illrequests
 
 Type: has_many
@@ -887,8 +902,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-01-21 13:39:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Uu8m3hyDhM50oTSeNTJbdg
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2021-01-24 12:34:57
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:BpKZR7xoWZ4dMocH6lKC3w
 
 __PACKAGE__->add_columns(
     '+pickup_location' => { is_boolean => 1 }
