@@ -370,6 +370,13 @@ inventory number (MARC21 952$i)
 
 Exclude this item from local holds priority
 
+=head2 holding_id
+
+  data_type: 'integer'
+  is_nullable: 1
+
+foreign key from holdings table used to link this item to the right holdings record
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -480,6 +487,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "exclude_from_local_holds_priority",
   { data_type => "tinyint", is_nullable => 1 },
+  "holding_id",
+  { data_type => "integer", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -495,8 +504,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-01-21 13:39:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ytND0t16cwo9dseU+JZSGQ
+# Created by DBIx::Class::Schema::Loader v0.07048 @ 2021-01-24 12:34:57
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HDZPRz/I5vlIgkw/c44QcA
 
 __PACKAGE__->add_columns(
     '+exclude_from_local_holds_priority' => { is_boolean => 1 },
