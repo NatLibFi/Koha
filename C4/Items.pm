@@ -68,6 +68,7 @@ use Koha::Database;
 
 use Koha::Biblios;
 use Koha::Biblioitems;
+use Koha::Holdings;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::SearchEngine;
@@ -814,7 +815,7 @@ Item's itemcallnumber
 Item's call number normalized for sorting
 
 =back
-  
+
 =cut
 
 sub GetItemsLocationInfo {

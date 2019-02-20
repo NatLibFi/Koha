@@ -31,6 +31,7 @@ use C4::Circulation;
 use C4::Koha;
 use C4::ClassSource;
 use Koha::DateUtils;
+use Koha::Holdings;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
@@ -229,6 +230,16 @@ sub generate_subfield_form {
         		  $value = $default_source unless ($value);
         
                   #---- "true" authorised value
+            }
+            elsif ( $subfieldlib->{authorised_value} eq "holdings" ) {
+                push @authorised_values, "" unless ( $subfieldlib->{mandatory} );
+                my $holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef }, { order_by => ['holdingbranch'] })->unblessed;
+                for my $holding ( @$holdings ) {
+                    push @authorised_values, $holding->{holding_id};
+                    $authorised_lib{$holding->{holding_id}} = $holding->{holding_id} . ' ' . $holding->{holdingbranch} . ' ' . $holding->{location} . ' ' . $holding->{ccode} . ' ' . $holding->{callnumber};
+                }
+                my $input = new CGI;
+                $value = $input->param('holding_id') unless ($value);
             }
             else {
                   push @authorised_values, qq{};

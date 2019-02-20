@@ -24,6 +24,7 @@ use Test::More tests => 7;
 use C4::Biblio;
 use C4::Circulation;
 
+use Koha::Holdings;
 use Koha::Items;
 use Koha::Database;
 use Koha::Old::Items;
@@ -503,9 +504,8 @@ subtest 'renewal_branchcode' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'move_to_biblio() tests' => sub {
-
-    plan tests => 12;
+subtest 'adopt_holdings_from_biblio() tests' => sub {
+    plan tests => 19;
 
     $schema->storage->txn_begin;
 
@@ -516,13 +516,25 @@ subtest 'move_to_biblio() tests' => sub {
 
     my $source_biblionumber = $source_biblio->biblionumber;
 
+    my $library = $builder->build_object({ class => 'Koha::Libraries' });
+
+    my $holding_marc = MARC::Record->new();
+    $holding_marc->append_fields(MARC::Field->new('852','','','b' => $library->branchcode));
+    my $source_holding = Koha::Holding->new({ biblionumber => $source_biblionumber, frameworkcode => '' });
+    $source_holding->set_marc({record => $holding_marc});
+    $source_holding->store();
+
+    my $standalone_holding = Koha::Holding->new({ biblionumber => $source_biblionumber, frameworkcode => '' });
+    $standalone_holding->set_marc({record => $holding_marc});
+    $standalone_holding->store();
+
     my $item1 = $builder->build_sample_item({ biblionumber => $source_biblionumber });
+    $item1->set({ holding_id => $source_holding->holding_id() })->store();
     my $item2 = $builder->build_sample_item({ biblionumber => $source_biblionumber });
+    $item2->set({ holding_id => $source_holding->holding_id() })->store();
 
     my $itemnumber1 = $item1->itemnumber;
     my $itemnumber2 = $item2->itemnumber;
-
-    my $library = $builder->build_object({ class => 'Koha::Libraries' });
 
     my $patron = $builder->build_object({
         class => 'Koha::Patrons',
@@ -574,6 +586,15 @@ subtest 'move_to_biblio() tests' => sub {
     @result = $dbh->selectrow_array('SELECT biblionumber FROM items WHERE itemnumber = ?', undef, $itemnumber2);
     is($result[0], $source_biblionumber, 'Correct biblionumber in the unmoved item');
 
+    my $target_holdings = $target_biblio->holdings();
+    is($target_holdings->count, 1, 'Holdings record created in target biblio');
+
+    @result = $dbh->selectrow_array('SELECT holding_id FROM items WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_holdings->next()->holding_id(), 'Correct holding_id in the moved item');
+
+    @result = $dbh->selectrow_array('SELECT holding_id FROM items WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_holding->holding_id(), 'Correct holding_id in the unmoved item');
+
     @result = $dbh->selectrow_array('SELECT biblionumber FROM aqorders WHERE ordernumber = ?', undef, $ordernumber1);
     is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in aqorders for order with the moved item');
 
@@ -603,6 +624,21 @@ subtest 'move_to_biblio() tests' => sub {
 
     @result = $dbh->selectrow_array('SELECT biblionumber FROM linktracker WHERE itemnumber = ?', undef, $itemnumber2);
     is($result[0], $source_biblionumber, 'Correct biblionumber in linktracker for unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM linktracker WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in linktracker for moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM linktracker WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in linktracker for unmoved item');
+
+    # Move everything
+    $target_biblio->adopt_holdings_from_biblio($source_biblio);
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM holdings WHERE holding_id = ?', undef, $standalone_holding->holding_id);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in the standalone holdings record');
+
+    @result = $dbh->selectrow_array('SELECT holding_id FROM items WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_holding->holding_id(), 'Correct holding_id in the second moved item');
 
     $schema->storage->txn_rollback;
 };

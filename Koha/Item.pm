@@ -36,6 +36,7 @@ use C4::Log qw( logaction );
 
 use Koha::Checkouts;
 use Koha::CirculationRules;
+use Koha::Holdings;
 use Koha::Item::Transfer::Limits;
 use Koha::Item::Transfers;
 use Koha::Patrons;
@@ -346,6 +347,20 @@ sub biblioitem {
     my ( $self ) = @_;
     my $biblioitem_rs = $self->_result->biblioitem;
     return Koha::Biblioitem->_new_from_dbic( $biblioitem_rs );
+}
+
+=head3 holding
+
+my $holding = $item->holding;
+
+Return the holdings record of this item
+
+=cut
+
+sub holding {
+    my ( $self ) = @_;
+    my $holding_rs = $self->_result->holding;
+    return Koha::Holding->_new_from_dbic( $holding_rs );
 }
 
 =head3 checkout
@@ -880,6 +895,39 @@ sub move_to_biblio {
     my $schema = Koha::Database->new()->schema();
     my $linktrackers = $schema->resultset('Linktracker')->search({ itemnumber => $self->itemnumber });
     $linktrackers->update_all({ biblionumber => $biblionumber });
+
+    # holdings
+    my $holding = $self->holding;
+    if ($holding) {
+        # Check if there's a suitable holdings record in the new biblio.
+        # This is not perfect, but at least we try.
+        my $candidates = Koha::Holdings->search(
+            {
+                biblionumber     => $biblionumber,
+                frameworkcode    => $holding->frameworkcode(),
+                holdingbranch    => $holding->holdingbranch(),
+                location         => $holding->location(),
+                callnumber       => $holding->callnumber(),
+                suppress         => $holding->suppress(),
+                deleted_on       => undef
+            }
+        );
+        my $newHolding = $candidates->next();
+        if (!$newHolding) {
+            # No existing holdings record, make a copy of the old one.
+            $newHolding = Koha::Holding->new({
+                biblionumber => $biblionumber,
+                frameworkcode => $holding->frameworkcode()
+            });
+            $newHolding->set_marc({ record => $holding->metadata()->record() });
+            $newHolding->store();
+        }
+        $self->set({
+            holding_id => $newHolding->holding_id()
+        });
+    }
+
+    $self->store();
 }
 
 =head2 Internal methods

@@ -30,6 +30,7 @@ use C4::Reserves;    # GetReserveStatus
 use C4::Debug;
 use C4::Charset;
 use Koha::AuthorisedValues;
+use Koha::Holdings;
 use Koha::ItemTypes;
 use Koha::Libraries;
 use Koha::Patrons;
@@ -1896,6 +1897,7 @@ sub searchResults {
         my $maxitems_pref = C4::Context->preference('maxItemsinSearchResults');
         my $maxitems = $maxitems_pref ? $maxitems_pref - 1 : 1;
         my @hiddenitems; # hidden itemnumbers based on OpacHiddenItems syspref
+        my $summary_holdings;
 
         # loop through every item
         foreach my $field (@fields) {
@@ -2083,6 +2085,13 @@ sub searchResults {
             push @available_items_loop, $available_items->{$key}
         }
 
+        # Fetch summary holdings
+        if (C4::Context->preference('SummaryHoldings')) {
+            # Fetch Koha::Holdings directly to avoid having to fetch the Koha::Biblio object just for this.
+            # TODO: Make this use Koha::Biblio->holdings if the Biblio object gets used here also for other purposes
+            $summary_holdings = Koha::Holdings->search({ biblionumber => $oldbiblio->{biblionumber}, deleted_on => undef });
+        }
+
         # XSLT processing of some stuff
         # we fetched the sysprefs already before the loop through all retrieved record!
         if (!$scan && $xslfile) {
@@ -2119,6 +2128,7 @@ sub searchResults {
         $oldbiblio->{onholdcount}          = $item_onhold_count;
         $oldbiblio->{orderedcount}         = $ordered_count;
         $oldbiblio->{notforloancount}      = $notforloan_count;
+        $oldbiblio->{summary_holdings}     = $summary_holdings;
 
         if (C4::Context->preference("AlternateHoldingsField") && $items_count == 0) {
             my $fieldspec = C4::Context->preference("AlternateHoldingsField");

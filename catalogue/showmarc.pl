@@ -35,6 +35,8 @@ use C4::Biblio;
 use C4::ImportBatch;
 use C4::XSLT ();
 
+use Koha::Holdings;
+
 my $input= new CGI;
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
   {
@@ -50,9 +52,12 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $biblionumber= $input->param('id');
 my $importid= $input->param('importid');
 my $view= $input->param('viewas')||'';
+my $holding_id= $input->param('holding_id')||'';
 
 my $record;
-if ($importid) {
+if ($holding_id) {
+    $record = Koha::Holdings->find($holding_id)->metadata()->record();
+} elsif ($importid) {
     $record = C4::ImportBatch::GetRecordFromImportBiblio( $importid, 'embed_items' );
 }
 else {
@@ -64,7 +69,7 @@ if(!ref $record) {
 }
 
 if($view eq 'card' || $view eq 'html') {
-    my $xml = $importid ? $record->as_xml(): GetXmlBiblio($biblionumber);
+    my $xml = $record->as_xml();
     my $xsl;
     if ( $view eq 'card' ){
         $xsl = C4::Context->preference('marcflavour') eq 'UNIMARC'

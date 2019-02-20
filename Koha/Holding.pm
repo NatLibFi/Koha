@@ -1,0 +1,384 @@
+package Koha::Holding;
+
+# Copyright ByWater Solutions 2014
+# Copyright 2017-2020 University of Helsinki (The National Library Of Finland)
+#
+# This file is part of Koha.
+#
+# Koha is free software; you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 3 of the License, or (at your option) any later
+# version.
+#
+# Koha is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with Koha; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+use Modern::Perl;
+
+use Carp;
+
+use C4::Charset; # SetUTF8Flag
+use C4::Log; # logaction
+
+use Koha::Database;
+use Koha::DateUtils qw(dt_from_string);
+use Koha::Holdings::Metadatas;
+use Koha::Items;
+
+use base qw(Koha::Object);
+
+=head1 NAME
+
+Koha::Holding - Koha Holding Object class
+
+=head1 API
+
+=head2 Class Methods
+
+=cut
+
+=head3 holding_branch
+
+my $branch = $hold->holding_branch();
+
+Returns the holding branch for this record.
+
+=cut
+
+sub holding_branch {
+    my ($self) = @_;
+
+    my $branch = $self->_result->holdingbranch();
+    return Koha::Library->_new_from_dbic($branch);
+}
+
+=head3 metadata
+
+my $metadata = $holding->metadata();
+
+Returns a Koha::Holding::Metadata object
+
+=cut
+
+sub metadata {
+    my ($self) = @_;
+
+    my $metadata = $self->_result()->metadata();
+    return unless $metadata;
+    return Koha::Holdings::Metadata->_new_from_dbic($metadata);
+}
+
+=head3 set_marc
+
+$holding->set_marc({ record => $record });
+
+Updates the MARC format metadata from a Marc::Record.
+Does not store the results in the database.
+
+If passed an undefined record will log the error.
+
+Returns $self
+
+=cut
+
+sub set_marc {
+    my ($self, $params) = @_;
+
+    if (!defined $params->{record}) {
+        carp('set_marc called with undefined record');
+        return $self;
+    }
+
+    # Clone record as it gets modified
+    my $record = $params->{record}->clone();
+    SetUTF8Flag($record);
+    my $encoding = C4::Context->preference('marcflavour');
+    if ($encoding eq 'MARC21' || $encoding eq 'UNIMARC') {
+      # YY MM DD HH MM SS (update year and month)
+      my @a = (localtime) [5,4,3,2,1,0]; $a[0] += 1900; $a[1]++;
+      my $f005 = $record->field('005');
+      $f005->update(sprintf('%4d%02d%02d%02d%02d%04.1f', @a)) if $f005;
+    }
+
+    $self->{_marcxml} = $record->as_xml_record($encoding);
+    my $fields = $self->marc_to_koha_fields({ record => $record });
+    delete $fields->{holding_id};
+    # Filter the columns since we have e.g. public_note that's not stored in the database
+    my $columns = [$self->_result()->result_source()->columns()];
+    my $db_fields = {};
+    foreach my $key (keys %{$fields}) {
+        if (grep {/^$key$/} @{$columns}) {
+            $db_fields->{$key} = $fields->{$key};
+        }
+    }
+    $self->set($db_fields);
+
+    return $self;
+}
+
+=head3 items
+
+my $items = $holding->items();
+
+Returns the related Koha::Items object for this record.
+
+=cut
+
+sub items {
+    my ($self) = @_;
+
+    my $items_rs = $self->_result->items;
+    return Koha::Items->_new_from_dbic($items_rs);
+}
+
+=head3 store
+
+    $holding->store();
+
+Saves the holdings record.
+
+Returns:
+    $self  if the store was a success
+    undef  if the store failed
+
+=cut
+
+sub store {
+    my ($self) = @_;
+
+    my $action = $self->holding_id() ? 'UPDATE' : 'ADD';
+
+    $self->datecreated(dt_from_string('', 'sql')) unless $self->datecreated();
+
+    my $schema = Koha::Database->new()->schema();
+    # Use a transaction only if AutoCommit is enabled - otherwise handled outside of this sub
+    my $guard = C4::Context->dbh->{AutoCommit} ? $schema->txn_scope_guard() : undef;
+
+    my $result = $self->SUPER::store();
+
+    return unless $result;
+
+    # Create or update the metadata record
+    my $marcflavour = C4::Context->preference('marcflavour');
+    my $marc_record = $self->{_marcxml}
+        ? MARC::Record::new_from_xml($self->{_marcxml}, 'utf-8', $marcflavour)
+        : $self->metadata()->record();
+
+    $self->_update_marc_ids($marc_record);
+
+    my $metadata = {
+        holding_id => $self->holding_id(),
+        format     => 'marcxml',
+        schema     => $marcflavour,
+    };
+    my $metadata_record = Koha::Holdings::Metadatas->find_or_create($metadata);
+    $metadata_record->metadata($marc_record->as_xml_record($marcflavour));
+
+    $result = $metadata_record->store() ? $self : undef;
+
+    if ($result) {
+        $guard->commit() if defined $guard;
+
+        # request that bib be reindexed so that any holdings-derived fields are updated
+        C4::Biblio::ModZebra( $self->biblionumber(), 'specialUpdate', 'biblioserver' );
+
+        logaction('CATALOGUING', $action, $self->holding_id(), 'holding') if C4::Context->preference('CataloguingLog');
+    }
+
+    return $result;
+}
+
+=head3 delete
+
+    $holding->delete();
+
+Marks the holdings record deleted.
+
+Returns:
+    1  if the deletion was a success
+    0  if the deletion failed
+    -1 if the object was never in storage
+
+=cut
+
+sub delete {
+    my ($self) = @_;
+
+    return -1 unless $self->_result()->in_storage();
+
+    if ($self->items()->count()) {
+        return 0;
+    }
+
+    my $schema = Koha::Database->new()->schema();
+    # Use a transaction only if AutoCommit is enabled - otherwise handled outside of this sub
+    my $guard = C4::Context->dbh->{AutoCommit} ? $schema->txn_scope_guard() : undef;
+
+    my $now = dt_from_string('', 'sql');
+    $self->deleted_on($now)->store();
+    Koha::Holdings::Metadatas->find({ holding_id => $self->holding_id() })->update({ deleted_on => $now });
+
+    $guard->commit() if defined $guard;
+
+    logaction('CATALOGUING', 'DELETE', $self->holding_id(), 'holding') if C4::Context->preference('CataloguingLog');
+
+    return 1;
+}
+
+=head3 move_to_biblio
+
+  $holding->move_to_biblio($to_biblio);
+
+Move the holdings record and any of its related records to another biblio.
+
+=cut
+
+sub move_to_biblio {
+    my ( $self, $to_biblio ) = @_;
+
+    my $biblionumber = $to_biblio->biblionumber;
+
+    # Own biblionumber
+    $self->set({
+        biblionumber => $biblionumber,
+    })->store();
+
+    # Items
+    my $items => $self->items;
+    if ($items) {
+        while (my $item = $items->next()) {
+            $item->move_to_biblio($to_biblio);
+        }
+    }
+}
+
+=head3 type
+
+=cut
+
+sub _type {
+    return 'Holding';
+}
+
+=head2 marc_to_koha_fields
+
+    $result = Koha::Holding->marc_to_koha_fields({ record => $record })
+
+Extract data from a MARC::Record holdings record into a hashref representing
+Koha holdings fields.
+
+If passed an undefined record will log the error and return an empty
+hash_ref.
+
+=cut
+
+sub marc_to_koha_fields {
+    my ($class, $params) = @_;
+
+    my $result = {};
+    if (!defined $params->{record}) {
+        carp('marc_to_koha_fields called with undefined record');
+        return $result;
+    }
+    my $record = $params->{record};
+
+    # The next call uses the HLD framework since it is AUTHORITATIVE
+    # for all Koha to MARC mappings for holdings.
+    my $mss = C4::Biblio::GetMarcSubfieldStructure('HLD', { unsafe => 1 }); # Do not change framework
+    foreach my $kohafield (keys %{ $mss }) {
+        my ($table, $column) = split /[.]/, $kohafield, 2;
+        next unless $table eq 'holdings' && $mss->{$kohafield};
+
+        my @values;
+        foreach my $field (@{$mss->{$kohafield}}) {
+            my $tag = $field->{tagfield};
+            my $sub = $field->{tagsubfield};
+            foreach my $fld ($record->field($tag)) {
+                if( $sub eq '@' || $fld->is_control_field ) {
+                    push @values, $fld->data if $fld->data;
+                } else {
+                    push @values, grep { $_ } $fld->subfield($sub);
+                }
+            }
+        }
+        $result->{$column} = join(' | ', @values) if (@values);
+    }
+    return $result;
+}
+
+=head3 get_marc_field_mapping
+
+    ($field, $subfield) = Koha::Holding->get_marc_field_mapping({ field => $kohafield });
+    @fields = Koha::Holding->get_marc_field_mapping({ field => $kohafield });
+    $field = Koha::Holding->get_marc_field_mapping({ field => $kohafield });
+
+    Returns the MARC fields & subfields mapped to $kohafield.
+    Uses the HLD framework that is considered as authoritative.
+
+    In list context all mappings are returned; there can be multiple
+    mappings. Note that in the above example you could miss a second
+    mapping in the first call.
+    In scalar context only the field tag of the first mapping is returned.
+
+=cut
+
+sub get_marc_field_mapping {
+    my ($class, $params) = @_;
+
+    return unless $params->{field};
+
+    # The next call uses the HLD framework since it is AUTHORITATIVE
+    # for all Koha to MARC mappings for holdings.
+    my $mss = C4::Biblio::GetMarcSubfieldStructure('HLD', { unsafe => 1 }); # Do not change framework
+    my @retval;
+    foreach (@{ $mss->{$params->{field}} }) {
+        push @retval, $_->{tagfield}, $_->{tagsubfield};
+    }
+    return wantarray ? @retval : ( @retval ? $retval[0] : undef );
+}
+
+=head2 Internal methods
+
+=head3 _update_marc_ids
+
+  $self->_update_marc_ids($record);
+
+Internal function to add or update holding_id, biblionumber and biblioitemnumber to
+the MARC record.
+
+=cut
+
+sub _update_marc_ids {
+    my ($self, $record) = @_;
+
+    my ($holding_tag, $holding_subfield) = $self->get_marc_field_mapping({ field => 'holdings.holding_id' });
+    die qq{No holding_id tag for framework "HLD"} unless $holding_tag;
+    if ($holding_tag < 10) {
+        C4::Biblio::UpsertMarcControlField($record, $holding_tag, $self->holding_id);
+    } else {
+        C4::Biblio::UpsertMarcSubfield($record, $holding_tag, $holding_subfield, $self->holding_id);
+    }
+
+    my ($biblio_tag, $biblio_subfield) = $self->get_marc_field_mapping({ field => 'biblio.biblionumber' });
+    die qq{No biblionumber tag for framework "HLD"} unless $biblio_tag;
+    if ($biblio_tag < 10) {
+        C4::Biblio::UpsertMarcControlField($record, $biblio_tag, $self->biblionumber);
+    } else {
+        C4::Biblio::UpsertMarcSubfield($record, $biblio_tag, $biblio_subfield, $self->biblionumber);
+    }
+}
+
+
+=head1 AUTHOR
+
+Kyle M Hall <kyle@bywatersolutions.com>
+Ere Maijala <ere.maijala@helsinki.fi>
+
+=cut
+
+1;

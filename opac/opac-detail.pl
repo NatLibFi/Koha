@@ -771,6 +771,13 @@ if (scalar(@itemloop) == 0 || scalar(@otheritemloop) == 0) {
     }
 }
 
+# Fetch summary holdings
+if (C4::Context->preference('SummaryHoldings')) {
+    my $summary_holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef });
+    $template->param( summary_holdings => $summary_holdings );
+}
+
+
 ## get notes and subjects from MARC record
 if (!C4::Context->preference("OPACXSLTDetailsDisplay") ) {
     my $marcisbnsarray   = GetMarcISBN    ($record,$marcflavour);
