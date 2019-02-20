@@ -37,6 +37,7 @@ use C4::Circulation qw( barcodedecode LostItem );
 use C4::Barcodes;
 use C4::Barcodes::ValueBuilder;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Holdings;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
