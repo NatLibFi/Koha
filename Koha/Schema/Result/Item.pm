@@ -286,6 +286,12 @@ __PACKAGE__->table("items");
   is_nullable: 1
   size: 32
 
+=head2 holding_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -406,6 +412,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "new_status",
   { data_type => "varchar", is_nullable => 1, size => 32 },
+  "holding_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -569,6 +577,26 @@ __PACKAGE__->might_have(
   "Koha::Schema::Result::HoldFillTarget",
   { "foreign.itemnumber" => "self.itemnumber" },
   { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 holding
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "holding",
+  "Koha::Schema::Result::Holding",
+  { holding_id => "holding_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
 );
 
 =head2 holdingbranch
@@ -747,8 +775,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07046 @ 2020-04-27 10:38:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IpI7wRweeZCbCeU1LhZbRQ
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2020-05-15 12:37:06
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:X8RMSCA6gWrL1aIMokCQYg
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 

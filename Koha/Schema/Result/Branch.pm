@@ -473,7 +473,7 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 course_items
+=head2 course_items_holdingbranches
 
 Type: has_many
 
@@ -482,7 +482,7 @@ Related object: L<Koha::Schema::Result::CourseItem>
 =cut
 
 __PACKAGE__->has_many(
-  "course_items",
+  "course_items_holdingbranches",
   "Koha::Schema::Result::CourseItem",
   { "foreign.holdingbranch" => "self.branchcode" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -575,6 +575,21 @@ __PACKAGE__->has_many(
   "hold_fill_targets",
   "Koha::Schema::Result::HoldFillTarget",
   { "foreign.source_branchcode" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 holdings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->has_many(
+  "holdings",
+  "Koha::Schema::Result::Holding",
+  { "foreign.holdingbranch" => "self.branchcode" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -819,8 +834,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07048 @ 2020-06-12 14:01:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hU6Ldf0uN2iV1h7llLH+4g
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2020-05-15 12:37:06
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:XW4f9ufmdr8hT91C2hZI8g
 
 __PACKAGE__->add_columns(
     '+pickup_location' => { is_boolean => 1 }
