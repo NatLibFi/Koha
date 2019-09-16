@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use C4::Biblio;
 use C4::Circulation;
@@ -163,8 +163,8 @@ subtest 'pickup_locations' => sub {
     my $dbh = C4::Context->dbh;
 
     # Cleanup database
-    Koha::Holds->search->delete;
     $dbh->do('DELETE FROM issues');
+    Koha::Holds->search->delete;
     Koha::Patrons->search->delete;
     Koha::Items->search->delete;
     Koha::Libraries->search->delete;
@@ -500,4 +500,109 @@ subtest 'renewal_branchcode' => sub {
     is( $item->renewal_branchcode, $item->homebranch, "If interface opac and OpacRenewalBranch set to itemhomebranch, we get homebranch of item");
     is( $item->renewal_branchcode({branch=>'MANATEE'}), $item->homebranch, "If interface opac and OpacRenewalBranch set to itemhomebranch, we get homebranch of item even if branch passed");
 
+    $schema->storage->txn_rollback;
+};
+
+subtest 'move_to_biblio() tests' => sub {
+
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    my $dbh = C4::Context->dbh;
+
+    my $source_biblio = $builder->build_sample_biblio();
+    my $target_biblio = $builder->build_sample_biblio();
+
+    my $source_biblionumber = $source_biblio->biblionumber;
+
+    my $item1 = $builder->build_sample_item({ biblionumber => $source_biblionumber });
+    my $item2 = $builder->build_sample_item({ biblionumber => $source_biblionumber });
+
+    my $itemnumber1 = $item1->itemnumber;
+    my $itemnumber2 = $item2->itemnumber;
+
+    my $library = $builder->build_object({ class => 'Koha::Libraries' });
+
+    my $patron = $builder->build_object({
+        class => 'Koha::Patrons',
+        value => { branchcode => $library->branchcode, }
+    });
+    my $borrowernumber = $patron->borrowernumber;
+
+    $dbh->do("INSERT INTO aqbudgets (budget_notes) VALUES ('test')");
+    my $budget_id = $dbh->last_insert_id(undef, undef, 'aqbudgets', 'budget_id');
+
+    $dbh->do('INSERT INTO aqorders (biblionumber, budget_id) VALUES (?, ?)', undef, $source_biblionumber, $budget_id);
+    my $ordernumber1 = $dbh->last_insert_id(undef, undef, 'aqorders', 'ordernumber');
+    $dbh->do('INSERT INTO aqorders_items (ordernumber, itemnumber) VALUES (?, ?)', undef, $ordernumber1, $itemnumber1);
+
+    $dbh->do('INSERT INTO aqorders (biblionumber, budget_id) VALUES (?, ?)', undef, $source_biblionumber, $budget_id);
+    my $ordernumber2 = $dbh->last_insert_id(undef, undef, 'aqorders', 'ordernumber');
+    $dbh->do('INSERT INTO aqorders_items (ordernumber, itemnumber) VALUES (?, ?)', undef, $ordernumber2, $source_biblionumber);
+
+    my $reserve_id1 = C4::Reserves::AddReserve({
+        branch => $library->branchcode,
+        borrowernumber => $borrowernumber,
+        biblionumber => $source_biblionumber,
+        itemnumber => $itemnumber1,
+        title => 'title'
+    });
+
+    my $reserve_id2 = C4::Reserves::AddReserve({
+        branch => $library->branchcode,
+        borrowernumber => $patron->borrowernumber,
+        biblionumber => $source_biblionumber,
+        itemnumber => $itemnumber2,
+        title => 'title'
+    });
+
+    $dbh->do("INSERT INTO tmp_holdsqueue (surname,borrowernumber,itemnumber,biblionumber) VALUES ('Clamp',?,?,?)", undef, $borrowernumber, $itemnumber1, $source_biblionumber);
+    $dbh->do("INSERT INTO tmp_holdsqueue (surname,borrowernumber,itemnumber,biblionumber) VALUES ('Clamp',?,?,?)", undef, $borrowernumber, $itemnumber2, $source_biblionumber);
+
+    $dbh->do('INSERT INTO hold_fill_targets (borrowernumber,itemnumber,biblionumber) VALUES (?,?,?)', undef, $borrowernumber, $itemnumber1, $source_biblionumber);
+    $dbh->do('INSERT INTO hold_fill_targets (borrowernumber,itemnumber,biblionumber) VALUES (?,?,?)', undef, $borrowernumber, $itemnumber2, $source_biblionumber);
+
+    $dbh->do('INSERT INTO linktracker (borrowernumber,itemnumber,biblionumber) VALUES (?,?,?)', undef, $borrowernumber, $itemnumber1, $source_biblionumber);
+    $dbh->do('INSERT INTO linktracker (borrowernumber,itemnumber,biblionumber) VALUES (?,?,?)', undef, $borrowernumber, $itemnumber2, $source_biblionumber);
+
+    $item1->move_to_biblio($target_biblio);
+
+    my @result = $dbh->selectrow_array('SELECT biblionumber FROM items WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in the moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM items WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in the unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM aqorders WHERE ordernumber = ?', undef, $ordernumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in aqorders for order with the moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM aqorders WHERE ordernumber = ?', undef, $ordernumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in aqorders for order with the unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM reserves WHERE reserve_id = ?', undef, $reserve_id1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in reserves for moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM reserves WHERE reserve_id = ?', undef, $reserve_id2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in reserves for unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM tmp_holdsqueue WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in tmp_holdsqueue for moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM tmp_holdsqueue WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in tmp_holdsqueue for unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM hold_fill_targets WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in hold_fill_targets for moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM hold_fill_targets WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in hold_fill_targets for unmoved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM linktracker WHERE itemnumber = ?', undef, $itemnumber1);
+    is($result[0], $target_biblio->biblionumber, 'Correct biblionumber in linktracker for moved item');
+
+    @result = $dbh->selectrow_array('SELECT biblionumber FROM linktracker WHERE itemnumber = ?', undef, $itemnumber2);
+    is($result[0], $source_biblionumber, 'Correct biblionumber in linktracker for unmoved item');
+
+    $schema->storage->txn_rollback;
 };

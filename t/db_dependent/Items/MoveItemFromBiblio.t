@@ -25,11 +25,14 @@ use Koha::Holds;
 use Koha::Items;
 
 use t::lib::TestBuilder;
+use t::lib::Mocks;
 use Data::Dumper qw|Dumper|;
 
 my $schema  = Koha::Database->new->schema;
 $schema->storage->txn_begin;
 my $builder = t::lib::TestBuilder->new;
+
+t::lib::Mocks::mock_preference( 'SearchEngine', 'Zebra' );
 
 # NOTE This is a trick, if we want to populate the biblioitems table, we should not create a Biblio but a Biblioitem
 my $param = { source => 'Biblioitem' };
