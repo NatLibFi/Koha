@@ -408,7 +408,8 @@ sub CanItemBeReserved {
     }
 
     # we retrieve rights
-    if ( my $rights = GetHoldRule( $borrower->{'categorycode'}, $item->effective_itemtype, $branchcode ) ) {
+    if ( my $rights = GetHoldRule( $borrower->{'categorycode'}, $item->effective_itemtype, $branchcode,
+            $item->ccode, $item->location ) ) {
         $ruleitemtype     = $rights->{itemtype};
         $allowedreserves  = $rights->{reservesallowed} // $allowedreserves;
         $holds_per_record = $rights->{holds_per_record} // $holds_per_record;
@@ -2205,7 +2206,8 @@ sub GetMaxPatronHoldsForRecord {
 
         $branchcode = $item->homebranch if ( $controlbranch eq "ItemHomeLibrary" );
 
-        my $rule = GetHoldRule( $categorycode, $itemtype, $branchcode );
+        my $rule = GetHoldRule( $categorycode, $itemtype, $branchcode,
+            $item->ccode, $item->location );
         my $holds_per_record = $rule ? $rule->{holds_per_record} : 0;
         $max = $holds_per_record if $holds_per_record > $max;
     }
@@ -2215,24 +2217,26 @@ sub GetMaxPatronHoldsForRecord {
 
 =head2 GetHoldRule
 
-my $rule = GetHoldRule( $categorycode, $itemtype, $branchcode );
+my $rule = GetHoldRule( $categorycode, $itemtype, $branchcode, $ccode, $shelving_location );
 
 Returns the matching hold related issuingrule fields for a given
-patron category, itemtype, and library.
+patron category, itemtype, library, ccode and shelving_location.
 
 =cut
 
 sub GetHoldRule {
-    my ( $categorycode, $itemtype, $branchcode ) = @_;
+    my ( $categorycode, $itemtype, $branchcode, $ccode, $shelving_location ) = @_;
 
     my $reservesallowed = Koha::CirculationRules->get_effective_rule(
         {
             itemtype     => $itemtype,
             categorycode => $categorycode,
             branchcode   => $branchcode,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
             rule_name    => 'reservesallowed',
             order_by     => {
-                -desc => [ 'categorycode', 'itemtype', 'branchcode' ]
+                -desc => [ 'categorycode', 'itemtype', 'branchcode', 'ccode', 'shelving_location' ]
             }
         }
     );
@@ -2250,9 +2254,11 @@ sub GetHoldRule {
             itemtype     => $itemtype,
             categorycode => $categorycode,
             branchcode   => $branchcode,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
             rules        => ['holds_per_record', 'holds_per_day'],
             order_by     => {
-                -desc => [ 'categorycode', 'itemtype', 'branchcode' ]
+                -desc => [ 'categorycode', 'itemtype', 'branchcode', 'ccode', 'shelving_location' ]
             }
         }
     );

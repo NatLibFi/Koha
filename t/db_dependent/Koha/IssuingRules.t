@@ -486,6 +486,8 @@ subtest 'set_rule' => sub {
                 branchcode => $branchcode,
                 categorycode => $categorycode,
                 itemtype => $itemtype,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name => 'fine',
                 rule_value => '',
             } );
@@ -582,6 +584,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'fine',
             rule_value   => 5,
         })->store;
@@ -590,6 +594,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'lengthunit',
             rule_value   => 'days',
         })->store;
@@ -645,6 +651,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'fine',
             rule_value   => 5,
         })->store;

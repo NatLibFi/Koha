@@ -55,6 +55,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -65,6 +67,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => $default_rule_value,
         }
@@ -75,6 +79,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -84,6 +90,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
         }
     );
@@ -95,6 +103,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => $itemtype,
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 2,
         }
@@ -105,6 +115,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -116,6 +128,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode_2,
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
         }
     );
@@ -127,6 +141,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => $categorycode,
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 3,
         }
@@ -138,6 +154,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -149,6 +167,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 4,
         }
@@ -158,6 +178,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -169,6 +191,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 5,
         }
@@ -178,6 +202,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -189,6 +215,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => '*',
             itemtype     => $itemtype,
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 6,
         }
@@ -198,6 +226,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -209,6 +239,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => 7,
         }
@@ -218,6 +250,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -230,6 +264,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
             rule_value   => 8,
         }
@@ -239,6 +275,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -271,6 +309,8 @@ subtest 'get_onshelfholds_policy() tests' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => 'onshelfholds',
             rule_value   => 1,
         }

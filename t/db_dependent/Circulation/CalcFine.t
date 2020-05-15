@@ -83,6 +83,8 @@ subtest 'Test basic functionality' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rules        => {
                 fine                          => '1.00',
                 lengthunit                    => 'days',
@@ -123,6 +125,8 @@ subtest 'Test cap_fine_to_replacement_price' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rules        => {
                 fine                          => '1.00',
                 lengthunit                    => 'days',
@@ -170,6 +174,8 @@ subtest 'Test cap_fine_to_replacement_pricew with overduefinescap' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rules        => {
                 fine                          => '1.00',
                 lengthunit                    => 'days',
@@ -197,7 +203,7 @@ subtest 'Test cap_fine_to_replacement_pricew with overduefinescap' => sub {
     my ($amount) = CalcFine( $item, $patron->{categorycode}, $branch->{branchcode}, $start_dt, $end_dt );
     is( int($amount), 3, 'Got the lesser of overduefinescap and replacement price where overduefinescap < replacement price' );
 
-    Koha::CirculationRules->set_rule({ rule_name => 'overduefinescap', rule_value => 6, branchcode => undef, categorycode => undef, itemtype => undef });
+    Koha::CirculationRules->set_rule({ rule_name => 'overduefinescap', rule_value => 6, branchcode => undef, categorycode => undef, itemtype => undef, ccode => undef, shelving_location => undef });
     ($amount) = CalcFine( $item, $patron->{categorycode}, $branch->{branchcode}, $start_dt, $end_dt );
     is( int($amount), 5, 'Get the lesser of overduefinescap and replacement price where overduefinescap > replacement price' );
 
