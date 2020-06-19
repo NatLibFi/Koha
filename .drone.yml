@@ -1,0 +1,136 @@
+kind: pipeline
+type: docker
+name: default
+
+clone:
+  depth: 50
+
+steps:
+  - name: package
+    image: debian:10
+    commands:
+      - apt-get -qq update
+      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+
+      - echo $GPG | base64 -d > ../gpg.key
+      - echo $SSH | base64 -d > ../id_rsa
+      - chmod 600 ../id_rsa ../gpg.key
+      - unset GPG
+      - unset SSH
+
+      - gpg --batch --import ../gpg.key
+      - gpg --list-secret-keys
+
+      - echo "deb http://debian.koha-community.org/koha stable main" > /etc/apt/sources.list.d/koha.list
+      - wget -O- https://debian.koha-community.org/koha/gpg.asc | apt-key add -
+      - apt-get -qq update
+      - yes|mk-build-deps -i
+      - git clean -f
+      - git config --global user.name "Builder"
+      - git config --global user.email "nobody@example.com"
+      - EPOCH=`date +%s`
+      - git fetch --depth=1 origin +refs/heads/master
+      - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
+      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+
+      # for now we have solution to set up ours "max"-ed version to always come
+      # in "concat(1, KCver)" style over that which comes from community:
+      - >
+          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
+          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
+          OUR_VERSION="1$COMMUNITY_VERSION"
+
+      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+
+
+      - >
+          (
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER";
+            echo "";
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
+            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
+            echo "  community master  $COMMIT_COMMUNITYMASTER";
+            echo "  our preproduction $DRONE_COMMIT";
+            echo "";
+          ) > debian/kk-build/kk-build.txt
+
+      - >
+          (
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo " special (kk-* and bug-*) branches merged:";
+          ) 1>> debian/kk-build/kk-build.txt
+
+      - >
+          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
+          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)preproduction~\\\\7~p"
+          1>> debian/kk-build/kk-build.txt
+
+      - >
+          (
+            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
+            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER/g debian/kk-build/about.html;
+          )
+
+      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
+      #     1>> debian/koha-common.install
+      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+
+      # - echo "debian/kk-build/favicon.ico"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg"
+      #     1>> debian/source/include-binaries
+
+
+
+      - git add debian/changelog
+      - git add debian/kk-build/kk-build.txt
+      - git add debian/kk-build/about.html
+      - git add debian/koha-common.install
+
+      - git commit -m "Modified changelog for build"
+      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
+
+      - mkdir -p ../repos/conf
+      - cp .reprepro ../repos/conf/distributions
+      - cd ../repos
+      - reprepro includedeb stable ../*.deb
+      - cd ../repos
+      - echo "cd koha" >> ../sftp-cmds
+#      - echo 'mkdir conf' >> ../sftp-cmds
+#      - echo 'mkdir db' >> ../sftp-cmds
+#      - echo 'mkdir dists' >> ../sftp-cmds
+#      - echo 'mkdir pool' >> ../sftp-cmds
+      - echo 'put -r *' >> ../sftp-cmds
+
+      - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
+    environment:
+      GPG:
+        from_secret: GPGKEY
+      SSH:
+        from_secret: SSHKEY
+      SFTPUSER:
+        from_secret: username
+    when:
+      branch:
+        - preproduction
+
+---
+kind: secret
+name: GPGKEY
+data: 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
+---
+kind: secret
+name: SSHKEY
+data: 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
+---
+kind: secret
+name: username
+data: G83SgQUz+ksSIlxStpOplyiHI6DH9qsCxZw+jpj4uh5C7rIZJQ==
