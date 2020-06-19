@@ -3,14 +3,14 @@ type: docker
 name: default
 
 clone:
-  depth: 1
+  depth: 50
 
 steps:
   - name: package
     image: debian:9
     commands:
-      - apt update
-      - apt install -y devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get -qq update
+      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
@@ -23,7 +23,7 @@ steps:
 
       - echo "deb http://debian.koha-community.org/koha stable main" > /etc/apt/sources.list.d/koha.list
       - wget -O- https://debian.koha-community.org/koha/gpg.asc | apt-key add -
-      - apt update
+      - apt-get -qq update
       - yes|mk-build-deps -i
       - git clean -f
       - git config --global user.name "Builder"
@@ -31,7 +31,28 @@ steps:
       - EPOCH=`date +%s`
       - GITCOMMIT=`git rev-parse --short HEAD`
       - dch --force-distribution -D "stretch" "Git build" -v "20.05~$EPOCH-git$GITCOMMIT-1"
+
+      - >
+          ( 
+            echo "$DRONE_REPO $DRONE_BRANCH, build $DRONE_BUILD_NUMBER";
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
+            echo "by $DRONE_COMMIT_AUTHOR ($DRONE_COMMIT_AUTHOR_NAME <$DRONE_COMMIT_AUTHOR_EMAIL>)";
+            echo "";
+            echo "$DRONE_REPO special (kk-* and bug-*) branches merged:";
+          ) > debian/kk-build.txt
+
+      - >
+          git log --merges --after="2020-06-22T00:00:00" --pretty=format:"  %h %s" |
+          sed -n -E -e "s~Merge remote-tracking branch '(remotes/)?(origin/)?(.+)' into preproduction~\\\\3~p"
+          1>> debian/kk-build.txt
+
+      - echo "debian/kk-build.txt                     usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+
       - git add debian/changelog
+      - git add debian/kk-build.txt
+      - git add debian/koha-common.install
+
       - git commit -m "Modified changelog for build"
       - git archive --format=tar HEAD | gzip > "../koha_20.05~$EPOCH-git$GITCOMMIT.orig.tar.gz"
       - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
