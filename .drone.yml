@@ -29,7 +29,10 @@ steps:
       - git config --global user.name "Builder"
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
-      - GITCOMMIT=`git rev-parse --short HEAD`
+      - git fetch --depth=1 origin +refs/heads/master
+      - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
+      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
 
       # for now we have solution to set up ours "max"-ed version to always come
       # in "concat(1, KCver)" style over that which comes from community:
@@ -38,32 +41,61 @@ steps:
           [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
           OUR_VERSION="1$COMMUNITY_VERSION"
 
-      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$GITCOMMIT-1"
+      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+
 
       - >
           (
-            echo -n "$DRONE_REPO $DRONE_BRANCH, ";
-            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
-            echo "Build $DRONE_BUILD_NUMBER version $OUR_VERSION based on community version $COMMUNITY_VERSION";
-            echo "last commit by $DRONE_COMMIT_AUTHOR ($DRONE_COMMIT_AUTHOR_NAME <$DRONE_COMMIT_AUTHOR_EMAIL>)";
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER";
             echo "";
-            echo "$DRONE_REPO special (kk-* and bug-*) branches merged:";
-          ) > debian/kk-build.txt
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
+            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
+            echo "  community master  $COMMIT_COMMUNITYMASTER";
+            echo "  our preproduction $DRONE_COMMIT";
+            echo "";
+          ) > debian/kk-build/kk-build.txt
 
       - >
-          git log --merges --after="2020-06-22T00:00:00" --pretty=format:"  %h %s" |
-          sed -n -E -e "s~Merge remote-tracking branch '(remotes/)?(origin/)?(.+)' into preproduction~\\\\3~p"
-          1>> debian/kk-build.txt
+          (
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo " special (kk-* and bug-*) branches merged:";
+          ) 1>> debian/kk-build/kk-build.txt
 
-      - echo "debian/kk-build.txt                     usr/share/koha/intranet/htdocs"
+      - >
+          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
+          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)preproduction~\\\\7~p"
+          1>> debian/kk-build/kk-build.txt
+
+      - >
+          (
+            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
+            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER/g debian/kk-build/about.html;
+          )
+
+      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
+      #     1>> debian/koha-common.install
+      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
           1>> debian/koha-common.install
 
+      # - echo "debian/kk-build/favicon.ico"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg"
+      #     1>> debian/source/include-binaries
+
+
+
       - git add debian/changelog
-      - git add debian/kk-build.txt
+      - git add debian/kk-build/kk-build.txt
+      - git add debian/kk-build/about.html
       - git add debian/koha-common.install
 
       - git commit -m "Modified changelog for build"
-      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$GITCOMMIT.orig.tar.gz"
+      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
       - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
 
       - mkdir -p ../repos/conf
