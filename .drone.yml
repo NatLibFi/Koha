@@ -30,13 +30,22 @@ steps:
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
       - GITCOMMIT=`git rev-parse --short HEAD`
-      - dch --force-distribution -D "stretch" "Git build" -v "20.05~$EPOCH-git$GITCOMMIT-1"
+
+      # for now we have solution to set up ours "max"-ed version to always come
+      # in "concat(1, KCver)" style over that which comes from community:
+      - >
+          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
+          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
+          OUR_VERSION="1$COMMUNITY_VERSION"
+
+      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$GITCOMMIT-1"
 
       - >
-          ( 
-            echo "$DRONE_REPO $DRONE_BRANCH, build $DRONE_BUILD_NUMBER";
+          (
+            echo -n "$DRONE_REPO $DRONE_BRANCH, ";
             TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
-            echo "by $DRONE_COMMIT_AUTHOR ($DRONE_COMMIT_AUTHOR_NAME <$DRONE_COMMIT_AUTHOR_EMAIL>)";
+            echo "Build $DRONE_BUILD_NUMBER version $OUR_VERSION based on community version $COMMUNITY_VERSION";
+            echo "last commit by $DRONE_COMMIT_AUTHOR ($DRONE_COMMIT_AUTHOR_NAME <$DRONE_COMMIT_AUTHOR_EMAIL>)";
             echo "";
             echo "$DRONE_REPO special (kk-* and bug-*) branches merged:";
           ) > debian/kk-build.txt
@@ -54,7 +63,7 @@ steps:
       - git add debian/koha-common.install
 
       - git commit -m "Modified changelog for build"
-      - git archive --format=tar HEAD | gzip > "../koha_20.05~$EPOCH-git$GITCOMMIT.orig.tar.gz"
+      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$GITCOMMIT.orig.tar.gz"
       - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
 
       - mkdir -p ../repos/conf
