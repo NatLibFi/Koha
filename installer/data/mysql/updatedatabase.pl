@@ -20696,6 +20696,7 @@ if( CheckVersion( $DBversion ) ) {
         auto_renew
         no_auto_renewal_after
         no_auto_renewal_after_hard_limit
+        expire_reserves_charge
         reservesallowed
         holds_per_record
         holds_per_day

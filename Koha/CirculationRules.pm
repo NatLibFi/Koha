@@ -79,6 +79,9 @@ our $RULE_KINDS = {
     cap_fine_to_replacement_price => {
         scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
+    expire_reserves_charge => {
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
+    },
     chargeperiod => {
         scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
