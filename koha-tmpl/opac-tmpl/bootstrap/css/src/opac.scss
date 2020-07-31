@@ -355,6 +355,14 @@ th {
     }
 }
 
+.componentPartRecordsContainer {
+    float: right;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: 50%;
+    max-height: 25em;
+}
+
 #members {
     display: block;
 
