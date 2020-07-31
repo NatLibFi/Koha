@@ -388,6 +388,8 @@ subtest 'Holds test' => sub {
             categorycode => $patron->{categorycode},
             itemtype     => $item2->{itype},
             branchcode   => $patron->{branchcode},
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'reservesallowed',
             rule_value   => 0,
         }
@@ -436,6 +438,8 @@ subtest 'Holds test' => sub {
             categorycode => $patron->{categorycode},
             itemtype     => $item3->{itype},
             branchcode   => $patron->{branchcode},
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'reservesallowed',
             rule_value   => 10,
         }
@@ -509,6 +513,8 @@ subtest 'Holds test for branch transfer limits' => sub {
             categorycode => undef,
             itemtype     => undef,
             branchcode   => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'reservesallowed',
             rule_value   => 99,
         }
@@ -575,6 +581,8 @@ subtest 'Holds test with start_date and end_date' => sub {
             categorycode => undef,
             itemtype     => undef,
             branchcode   => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'reservesallowed',
             rule_value   => 99,
         }

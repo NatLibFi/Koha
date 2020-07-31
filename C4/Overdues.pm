@@ -235,6 +235,8 @@ sub CalcFine {
             categorycode => $bortype,
             itemtype     => $itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->{ccode},
+            shelving_location => $item->{location},
             rules => [
                 'lengthunit',
                 'firstremind',

@@ -123,6 +123,8 @@ Koha::CirculationRules->set_rules(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 1,
             holds_per_record => 1,
@@ -150,6 +152,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $category->{categorycode},
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 2,
             holds_per_record => 2,
@@ -175,6 +179,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $category->{categorycode},
         itemtype     => $itemtype1->{itemtype},
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 3,
             holds_per_record => 3,
@@ -200,6 +206,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $category->{categorycode},
         itemtype     => $itemtype2->{itemtype},
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 4,
             holds_per_record => 4,
@@ -225,6 +233,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $category->{categorycode},
         itemtype     => $itemtype2->{itemtype},
         branchcode   => $library->{branchcode},
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 5,
             holds_per_record => 5,
@@ -276,6 +286,8 @@ Koha::CirculationRules->set_rules(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed  => 3,
             holds_per_record => 2,

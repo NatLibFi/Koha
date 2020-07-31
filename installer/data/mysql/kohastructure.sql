@@ -4462,6 +4462,8 @@ CREATE TABLE `circulation_rules` (
   `branchcode` varchar(10) NULL default NULL,
   `categorycode` varchar(10) NULL default NULL,
   `itemtype` varchar(10) NULL default NULL,
+  `ccode` varchar(10) DEFAULT NULL,             -- this one is KohaSuomi specific feature
+  `shelving_location` varchar(80) DEFAULT NULL, -- this one is KohaSuomi specific feature
   `rule_name` varchar(32) NOT NULL,
   `rule_value` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
@@ -4469,7 +4471,7 @@ CREATE TABLE `circulation_rules` (
   CONSTRAINT `circ_rules_ibfk_2` FOREIGN KEY (`categorycode`) REFERENCES `categories` (`categorycode`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `circ_rules_ibfk_3` FOREIGN KEY (`itemtype`) REFERENCES `itemtypes` (`itemtype`) ON DELETE CASCADE ON UPDATE CASCADE,
   KEY `rule_name` (`rule_name`),
-  UNIQUE (`branchcode`,`categorycode`,`itemtype`,`rule_name`)
+  UNIQUE (`branchcode`,`categorycode`,`itemtype`,`ccode`,`shelving_location`,`rule_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
