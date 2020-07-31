@@ -282,6 +282,11 @@ __PACKAGE__->table("deleteditems");
   is_nullable: 1
   size: 32
 
+=head2 holding_id
+
+  data_type: 'integer'
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -392,6 +397,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "new_status",
   { data_type => "varchar", is_nullable => 1, size => 32 },
+  "holding_id",
+  { data_type => "integer", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -407,8 +414,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07046 @ 2020-04-27 10:38:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:MsPWE8Trd034UYFcZVbCtw
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2020-05-15 12:37:06
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:q8yLJ1R8WTQbpK4EMzrOdw
 
 sub koha_objects_class {
     'Koha::Old::Items';

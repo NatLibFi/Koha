@@ -270,6 +270,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 holdings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->has_many(
+  "holdings",
+  "Koha::Schema::Result::Holding",
+  { "foreign.biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 items
 
 Type: has_many
@@ -451,9 +466,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07046 @ 2020-04-17 09:15:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:p2SIq565zPyE3ZUkSuXyBA
-
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2020-05-15 12:52:12
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:pMd7Zf97YHGqAAKpz/MmFg
 
 __PACKAGE__->has_one(
   "metadata",

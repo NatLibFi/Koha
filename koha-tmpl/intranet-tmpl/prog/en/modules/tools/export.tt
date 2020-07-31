@@ -117,7 +117,14 @@
     </fieldset>
     <fieldset class="rows">
     <legend> Options</legend>
-<ol>        <li>
+<ol>
+        [% IF ( Koha.Preference('SummaryHoldings') ) %]
+        <li>
+        <label for="export_holdings">Export holdings records (MARC 21 biblios only):</label>
+        <input id="export_holdings" type="checkbox" name="export_holdings" />
+        </li>
+        [% END %]
+        <li>
         <label for="dont_export_item">Don't export items:</label>
         <input id="dont_export_item" type="checkbox" name="dont_export_item" />
         </li>

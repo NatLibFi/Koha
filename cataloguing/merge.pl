@@ -90,7 +90,7 @@ if ($merge) {
     my $biblio = Koha::Biblios->find($ref_biblionumber);
     foreach my $biblionumber (@biblionumbers) {
         my $from_biblio = Koha::Biblios->find($biblionumber);
-        $biblio->adopt_items_from_biblio($from_biblio);
+        $biblio->adopt_holdings_from_biblio($from_biblio);
         $from_biblio->article_requests->update({ biblionumber => $ref_biblionumber }, { no_triggers => 1 });
     }
 
@@ -155,7 +155,7 @@ if ($merge) {
     # Moving suggestions
     $sth_suggestions->execute($ref_biblionumber, $biblionumber);
 
-    # Moving orders (orders linked to items of frombiblio have already been moved by adopt_items_from_biblio)
+    # Moving orders (orders linked to items of frombiblio have already been moved by adopt_holdings_from_biblio)
     my @allorders = GetOrdersByBiblionumber($biblionumber);
     foreach my $myorder (@allorders) {
         $myorder->{'biblionumber'} = $ref_biblionumber;

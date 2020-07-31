@@ -295,3 +295,10 @@ Cataloging:
             - "All values of repeating tags and subfields will be printed with the given RIS tag."
             - "<br/>"
             - "Use of TY ( record type ) as a key will <i>replace</i> the default TY with the field value of your choosing."
+    Holdings:
+        -
+            - pref: SummaryHoldings
+              choices:
+                  yes: Use
+                  no: "Don't use"
+            - summary holdings records.

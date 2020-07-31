@@ -38,6 +38,7 @@ use Koha::ArticleRequests;
 use Koha::Biblio::Metadatas;
 use Koha::Biblioitems;
 use Koha::CirculationRules;
+use Koha::Holdings;
 use Koha::Item::Transfer::Limits;
 use Koha::Items;
 use Koha::Libraries;
@@ -553,6 +554,21 @@ sub subscriptions {
     return $self->{_subscriptions};
 }
 
+=head3 holdings
+
+my $holdings = $self->holdings
+
+Returns the related Koha::Holdings objects.
+
+=cut
+
+sub holdings {
+    my ($self) = @_;
+
+    my $holdings_rs = $self->_result->holdings;
+    return Koha::Holdings->_new_from_dbic( $holdings_rs );
+}
+
 =head3 has_items_waiting_or_intransit
 
 my $itemsWaitingOrInTransit = $biblio->has_items_waiting_or_intransit
@@ -859,25 +875,39 @@ sub to_api_mapping {
     };
 }
 
-=head3 adopt_items_from_biblio
+=head3 adopt_holdings_from_biblio
 
-$biblio->adopt_items_from_biblio($from_biblio);
+$biblio->adopt_holdings_from_biblio($from_biblio);
 
-Move items from the given biblio to this one.
+Move holdings and item records from the given biblio to this one.
 
 =cut
 
-sub adopt_items_from_biblio {
+sub adopt_holdings_from_biblio {
     my ( $self, $from_biblio ) = @_;
 
+    my $schema = Koha::Database->new()->schema();
+
+    $schema->storage->txn_begin;
+
+    # Move holdings records. This will also move any items attached to the holdings.
+    my $holdings = $from_biblio->holdings;
+    while (my $holding = $holdings->next()) {
+        $holding->move_to_biblio($self);
+    }
+    # Move any items not already moved.
     my $items = $from_biblio->items;
     if ($items) {
         while (my $item = $items->next()) {
             $item->move_to_biblio($self);
         }
+    }
+    if ($items || $holdings) {
         C4::Biblio::ModZebra( $self->biblionumber, "specialUpdate", "biblioserver" );
         C4::Biblio::ModZebra( $from_biblio->biblionumber, "specialUpdate", "biblioserver" );
     }
+
+    $schema->storage->txn_commit;
 }
 
 
