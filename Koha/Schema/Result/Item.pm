@@ -759,6 +759,19 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
+# Relationship with orders via the aqorders_item table that not have foreign keys
+__PACKAGE__->has_many(
+  "aqorders_item",
+  "Koha::Schema::Result::AqordersItem",
+  { "foreign.itemnumber" => "self.itemnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+__PACKAGE__->many_to_many(
+  "item_orders",
+  "aqorders_item",
+  "ordernumber",
+);
+
 use C4::Context;
 sub effective_itemtype {
     my ( $self ) = @_;

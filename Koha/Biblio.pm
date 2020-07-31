@@ -859,6 +859,28 @@ sub to_api_mapping {
     };
 }
 
+=head3 adopt_items_from_biblio
+
+$biblio->adopt_items_from_biblio($from_biblio);
+
+Move items from the given biblio to this one.
+
+=cut
+
+sub adopt_items_from_biblio {
+    my ( $self, $from_biblio ) = @_;
+
+    my $items = $from_biblio->items;
+    if ($items) {
+        while (my $item = $items->next()) {
+            $item->move_to_biblio($self);
+        }
+        C4::Biblio::ModZebra( $self->biblionumber, "specialUpdate", "biblioserver" );
+        C4::Biblio::ModZebra( $from_biblio->biblionumber, "specialUpdate", "biblioserver" );
+    }
+}
+
+
 =head2 Internal methods
 
 =head3 type

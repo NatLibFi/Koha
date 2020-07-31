@@ -66,6 +66,7 @@ use Koha::AuthorisedValues;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Database;
 
+use Koha::Biblios;
 use Koha::Biblioitems;
 use Koha::Items;
 use Koha::ItemTypes;
@@ -1070,7 +1071,7 @@ the inner workings of C<C4::Items>.
 
 =head2 MoveItemFromBiblio
 
-  MoveItemFromBiblio($itenumber, $frombiblio, $tobiblio);
+  MoveItemFromBiblio($itemnumber, $frombiblio, $tobiblio);
 
 Moves an item from a biblio to another
 
@@ -1080,42 +1081,20 @@ Returns undef if the move failed or the biblionumber of the destination record o
 
 sub MoveItemFromBiblio {
     my ($itemnumber, $frombiblio, $tobiblio) = @_;
-    my $dbh = C4::Context->dbh;
-    my ( $tobiblioitem ) = $dbh->selectrow_array(q|
-        SELECT biblioitemnumber
-        FROM biblioitems
-        WHERE biblionumber = ?
-    |, undef, $tobiblio );
-    my $return = $dbh->do(q|
-        UPDATE items
-        SET biblioitemnumber = ?,
-            biblionumber = ?
-        WHERE itemnumber = ?
-            AND biblionumber = ?
-    |, undef, $tobiblioitem, $tobiblio, $itemnumber, $frombiblio );
-    if ($return == 1) {
-        ModZebra( $tobiblio, "specialUpdate", "biblioserver" );
-        ModZebra( $frombiblio, "specialUpdate", "biblioserver" );
-	    # Checking if the item we want to move is in an order 
-        require C4::Acquisition;
-        my $order = C4::Acquisition::GetOrderFromItemnumber($itemnumber);
-	    if ($order) {
-		    # Replacing the biblionumber within the order if necessary
-		    $order->{'biblionumber'} = $tobiblio;
-	        C4::Acquisition::ModOrder($order);
-	    }
 
-        # Update reserves, hold_fill_targets, tmp_holdsqueue and linktracker tables
-        for my $table_name ( qw( reserves hold_fill_targets tmp_holdsqueue linktracker ) ) {
-            $dbh->do( qq|
-                UPDATE $table_name
-                SET biblionumber = ?
-                WHERE itemnumber = ?
-            |, undef, $tobiblio, $itemnumber );
-        }
-        return $tobiblio;
-	}
-    return;
+    my $item = Koha::Items->find($itemnumber);
+    return unless $item;
+
+    my $biblio = Koha::Biblios->find($tobiblio);
+    return unless $biblio;
+
+    return unless $item->biblionumber != $biblio->biblionumber;
+
+    $item->move_to_biblio($biblio);
+    ModZebra($tobiblio, 'specialUpdate', 'biblioserver');
+    ModZebra($frombiblio, 'specialUpdate', 'biblioserver');
+
+    return $tobiblio;
 }
 
 =head2 _marc_from_item_hash
