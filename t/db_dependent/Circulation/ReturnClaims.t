@@ -51,6 +51,8 @@ Koha::CirculationRules->set_rule(
         branchcode   => undef,
         categorycode => undef,
         itemtype     => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'issuelength',
         rule_value   => 1
     }

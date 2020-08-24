@@ -53,6 +53,8 @@ sub calculate_dropbox_date {
             categorycode => undef,
             itemtype     => undef,
             branchcode   => $branchcode,
+            ccode             => undef,
+            shelving_location => undef,
         }
     );
     my $calendar     = Koha::Calendar->new( branchcode => $branchcode, days_mode => $daysmode );

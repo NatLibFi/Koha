@@ -91,6 +91,28 @@
                                     <span class="required"> Required</span>
                                 </li>
                                 <li>
+                                    <label for="ccode" class="required">Collection code: </label>
+                                    <select id="ccode" name="ccode" required="required">
+                                        <option value=""> Choose </option>
+                                        <option value="*" selected="selected">All</option>
+                                        [% FOREACH ccode IN ccodes %]
+                                            <option value = "[% ccode.authorised_value | html %]"> [% ccode.lib | html %]
+                                        [%END%]
+                                    </select>
+                                    <span class="required"> Required</span>
+                                </li>
+                                <li>
+                                    <label for="shelving_location" class="required">Shelving location: </label>
+                                    <select id="shelving_location" name="shelving_location" required="required">
+                                        <option value=""> Choose </option>
+                                        <option value="*" selected="selected">All</option>
+                                        [% FOREACH loc IN locs %]
+                                            <option value = "[% loc.authorised_value | html %]"> [% loc.lib | html %]
+                                        [%END%]
+                                    </select>
+                                    <span class="required"> Required</span>
+                                </li>
+                                <li>
                                     <label for="maxissueqty" class="required">Current checkouts allowed: </label>
                                     <input type="text" inputmode="numeric" pattern="[0-9]*" name="maxissueqty" id="maxissueqty" size="10" value="50" class="required" required="required" />
                                     <span class="required">Required</span>

@@ -31,6 +31,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $categorycode,
         itemtype     => $itemtype,
         branchcode   => $branchcode,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             issuelength   => $issuelength,
             renewalperiod => $renewalperiod,
@@ -170,6 +172,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $dayweek_categorycode,
         itemtype     => $dayweek_itemtype,
         branchcode   => $dayweek_branchcode,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             issuelength   => $dayweek_issuelength,
             renewalperiod => $dayweek_renewalperiod,
