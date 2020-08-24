@@ -74,6 +74,8 @@ our $sample_data = {
         categorycode  => 'test_cat',
         itemtype      => 'IT4test',
         branchcode    => undef,
+        ccode             => undef,
+        shelving_location => undef,
         maxissueqty   => '5',
         issuelength   => '5',
         lengthunit    => 'days',
@@ -163,6 +165,8 @@ SKIP: {
             categorycode => $issuing_rules->{categorycode},
             itemtype     => $issuing_rules->{itemtype},
             branchcode   => $issuing_rules->{branchcode},
+            ccode             => $issuing_rules->{ccode},
+            shelving_location => $issuing_rules->{shelving_location},
             rules => {
                 maxissueqty     => $issuing_rules->{maxissueqty},
                 issuelength     => $issuing_rules->{issuelength},
