@@ -249,11 +249,15 @@ sub set_waiting {
 
     if ( C4::Context->preference("ExcludeHolidaysFromMaxPickUpDelay") ) {
         my $itemtype = $self->item ? $self->item->effective_itemtype : $self->biblio->itemtype;
+        my $itemccode = $self->item ? $self->item->ccode : undef;
+        my $itemlocation = $self->item ? $self->item->location : undef;
         my $daysmode = Koha::CirculationRules->get_effective_daysmode(
             {
                 categorycode => $self->borrower->categorycode,
                 itemtype     => $itemtype,
                 branchcode   => $self->branchcode,
+                ccode             => $itemccode,
+                shelving_location => $itemlocation,
             }
         );
         my $calendar = Koha::Calendar->new( branchcode => $self->branchcode, days_mode => $daysmode );
@@ -503,6 +507,8 @@ sub cancellation_requestable_from_opac {
             categorycode => $patron->categorycode,
             itemtype     => $item->itype,
             branchcode   => $controlbranch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'waiting_hold_cancellation',
         }
     ) ? 1 : 0;

@@ -63,6 +63,8 @@ Koha::CirculationRules->set_rule(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'issuelength',
         rule_value   => 1,
     }
@@ -234,6 +236,8 @@ subtest 'Handle ids duplication' => sub {
             categorycode => undef,
             itemtype     => undef,
             branchcode   => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rules        => {
                 chargeperiod => 1,
                 fine         => 1,

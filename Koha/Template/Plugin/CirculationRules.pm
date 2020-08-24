@@ -40,17 +40,21 @@ Returns the effective rule value for the given tuple.
 =cut
 
 sub Get {
-    my ( $self, $branchcode, $categorycode, $itemtype, $rule_name ) = @_;
+    my ( $self, $branchcode, $categorycode, $itemtype, $rule_name, $ccode, $location ) = @_;
 
     $branchcode   = undef if $branchcode eq q{}   or $branchcode eq q{*};
     $categorycode = undef if $categorycode eq q{} or $categorycode eq q{*};
     $itemtype     = undef if $itemtype eq q{}     or $itemtype  eq q{*};
+    $ccode        = undef if ! defined $ccode     or $ccode eq q{}    or $ccode  eq q{*};
+    $location     = undef if ! defined $location  or $location eq q{} or $location eq q{*};
 
     my $rule = Koha::CirculationRules->get_effective_rule(
         {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => $ccode,
+            shelving_location => $location,
             rule_name    => $rule_name,
         }
     );
@@ -71,17 +75,21 @@ the rule object.
 =cut
 
 sub Search {
-    my ( $self, $branchcode, $categorycode, $itemtype, $rule_name, $params) = @_;
+    my ( $self, $branchcode, $categorycode, $itemtype, $rule_name, $params, $ccode, $location) = @_;
 
     $branchcode   = undef if $branchcode eq q{}   or $branchcode eq q{*};
     $categorycode = undef if $categorycode eq q{} or $categorycode eq q{*};
     $itemtype     = undef if $itemtype eq q{}     or $itemtype eq q{*};
+    $ccode        = undef if ! defined $ccode     or $ccode eq q{}    or $ccode  eq q{*};
+    $location     = undef if ! defined $location  or $location eq q{} or $location eq q{*};
 
     my $rule = Koha::CirculationRules->search(
         {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => $ccode,
+            shelving_location => $location,
             rule_name    => $rule_name,
         }
     )->next;
