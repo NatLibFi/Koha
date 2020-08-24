@@ -354,6 +354,8 @@ sub GetWaitingHolds {
                 categorycode => $issue->{categorycode},
                 itemtype     => $item->effective_itemtype,
                 branchcode   => $issue->{site},
+                ccode             => $item->ccode,
+                shelving_location => $item->location,
             }
         );
 
