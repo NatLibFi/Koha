@@ -90,14 +90,14 @@ sub Getoverdues {
     my $statement;
     if ( C4::Context->preference('item-level_itypes') ) {
         $statement = "
-   SELECT issues.*, items.itype as itemtype, items.homebranch, items.barcode, items.itemlost, items.replacementprice, items.biblionumber
+   SELECT issues.*, items.itype as itemtype, items.homebranch, items.barcode, items.itemlost, items.replacementprice, items.biblionumber, items.ccode, items.location
      FROM issues 
 LEFT JOIN items       USING (itemnumber)
     WHERE date_due < NOW()
 ";
     } else {
         $statement = "
-   SELECT issues.*, biblioitems.itemtype, items.itype, items.homebranch, items.barcode, items.itemlost, replacementprice, items.biblionumber
+   SELECT issues.*, biblioitems.itemtype, items.itype, items.homebranch, items.barcode, items.itemlost, replacementprice, items.biblionumber, items.ccode, items.location
      FROM issues 
 LEFT JOIN items       USING (itemnumber)
 LEFT JOIN biblioitems USING (biblioitemnumber)
@@ -229,6 +229,8 @@ sub CalcFine {
             categorycode => $bortype,
             itemtype     => $itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->{ccode},
+            shelving_location => $item->{location},
             rules => [
                 'lengthunit',
                 'firstremind',

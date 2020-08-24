@@ -104,6 +104,8 @@ Koha::CirculationRules->set_rules(
         branchcode   => undef,
         categorycode => undef,
         itemtype     => $item->itype,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             issuelength     => '14',
             lengthunit      => 'days',
