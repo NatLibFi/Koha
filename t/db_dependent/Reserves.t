@@ -185,6 +185,8 @@ Koha::CirculationRules->set_rules(
         branchcode   => undef,
         categorycode => undef,
         itemtype     => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed => 25,
             holds_per_record => 1,
@@ -626,6 +628,8 @@ Koha::CirculationRules->set_rules(
         categorycode => $categorycode,
         itemtype     => $item->effective_itemtype,
         branchcode   => $holdingbranch,
+        ccode             => undef,
+        shelving_location => undef,
         rules => {
             onshelfholds => 1,
         }
