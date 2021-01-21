@@ -1078,7 +1078,7 @@
                     </xsl:variable>
                     <xsl:choose>
                         <xsl:when test="$UseControlNumber = '1' and marc:subfield[@code='w']">
-                            <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template></xsl:attribute>
+                            <a><xsl:attribute name="href">/cgi-bin/koha/catalogue/search.pl?q=Control-number:<xsl:call-template name="extractControlNumber"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template> AND cni:"<xsl:call-template name="extractCNI"><xsl:with-param name="subfieldW" select="marc:subfield[@code='w']"/></xsl:call-template>"</xsl:attribute>
                             <xsl:value-of select="translate($f773, '()', '')"/>
                             </a>
                         </xsl:when>
