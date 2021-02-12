@@ -83,6 +83,7 @@ do_stop()
 {
     # We stop everything, including disabled ones.
     koha-zebra --stop $(koha-list) || true
+
     koha-sip   --stop $(koha-list --sip)
     koha-plack --stop --quiet $(koha-list --enabled --plack)
     koha-z3950-responder --stop --quiet $(koha-list --enabled --z3950)
@@ -91,9 +92,8 @@ do_stop()
     # long_tasks queue
     koha-worker --stop --queue long_tasks --quiet $(koha-list --enabled)
 
-    if [ "$USE_INDEXER_DAEMON" = "yes" ]; then
-        koha-indexer --stop --quiet $(koha-list --enabled)
-    fi
+    # We stop everything, including disabled ones.
+    koha-indexer --stop --quiet $(koha-list --enabled) || true
 
     koha-es-indexer --stop --quiet $(koha-list --enabled --elasticsearch)
 }
