@@ -52,6 +52,11 @@ run_rebuild_zebra()
 {
     local instancename=$1; shift
 
+    if [ "$USE_ZEBRA_SEARCH" = "no"  ]; then
+        echo "ERROR: Zebra search disabled (USE_ZEBRA_SEARCH)"
+        return
+    fi
+
     if [ "$USE_INDEXER_DAEMON" = "no"  ] ||
        [     "${full_reindex}" = "yes" ] ||
        [            "${force}" = "yes" ] ; then
