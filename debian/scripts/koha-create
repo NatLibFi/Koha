@@ -905,8 +905,10 @@ then
     fi
     service apache2 restart
 
-    # Start Zebra.
-    koha-zebra --start "$name"
+    if [ "$USE_ZEBRA_SEARCH" = "yes" ]; then
+        # Start Zebra.
+        koha-zebra --start "$name"
+    fi
 
     # Start workers
     for queue in $(get_worker_queues); do
