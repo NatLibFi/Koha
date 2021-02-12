@@ -22,6 +22,8 @@ Commands:
   restart <instance> <svc>   Restart specific service for instance
   status <instance> <svc>    Show status of specific service for instance
 
+  zebra-enabled              Check the host-wide Zebra switch
+
   sync-es-indexers           Enable and start the ES indexer for every
                              instance configured to use Elasticsearch
 
@@ -35,6 +37,14 @@ Examples:
 EOF
     exit 1
 }
+
+if [ "${1:-}" = "zebra-enabled" ]; then
+    if [ -r /etc/default/koha-common ]; then
+        . /etc/default/koha-common
+    fi
+    [ "${USE_ZEBRA_SEARCH:-yes}" = "yes" ]
+    exit $?
+fi
 
 if [ "${1:-}" = "sync-es-indexers" ]; then
     # Which search engine an instance uses is plain koha-conf.xml state, so
