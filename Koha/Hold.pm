@@ -576,6 +576,8 @@ sub cancel {
                         categorycode => $self->borrower->categorycode,
                         itemtype     => $item->effective_itemtype,
                         branchcode   => $branchcode,
+                        ccode        => $item->ccode,
+                        shelving_location => $item->location,
                         rule_name    => 'expire_reserves_charge',
                     }
                 );
