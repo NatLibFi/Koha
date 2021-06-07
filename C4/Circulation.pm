@@ -2171,6 +2171,7 @@ sub AddReturn {
             if ( $transfer->tobranch eq $branch ) {
                 $transfer->receive;
                 $messages->{'TransferArrived'} = $transfer->frombranch;
+                $validTransfer = 1 if $transfer->reason eq 'Reserve';
             }
             else {
                 $messages->{'WrongTransfer'}     = $transfer->tobranch;
@@ -2181,6 +2182,7 @@ sub AddReturn {
             if ( $transfer->tobranch eq $branch ) {
                 $transfer->receive;
                 $messages->{'TransferArrived'} = $transfer->frombranch;
+                $validTransfer = 1 if $transfer->reason eq 'Reserve';
             }
             else {
                 $messages->{'WasTransfered'}   = $transfer->tobranch;
