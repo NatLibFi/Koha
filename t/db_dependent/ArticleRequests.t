@@ -160,6 +160,8 @@ my $rule = Koha::CirculationRules->set_rule(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'article_requests',
         rule_value   => 'yes',
     }
@@ -175,6 +177,8 @@ $rule = Koha::CirculationRules->set_rule(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'article_requests',
         rule_value   => 'bib_only',
     }
@@ -190,6 +194,8 @@ $rule = Koha::CirculationRules->set_rule(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'article_requests',
         rule_value   => 'item_only',
     }
@@ -205,6 +211,8 @@ $rule = Koha::CirculationRules->set_rule(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rule_name    => 'article_requests',
         rule_value   => 'no',
     }

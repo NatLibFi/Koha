@@ -20,6 +20,8 @@ my $issuingrule = Koha::CirculationRules->set_rules(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             fine                   => 1,
             finedays               => 0,
@@ -49,6 +51,8 @@ $issuingrule = Koha::CirculationRules->set_rules(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             chargeperiod_charge_at => 1,
         }

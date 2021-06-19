@@ -73,6 +73,8 @@ $cache->clear_from_cache( Koha::CirculationRules::GUESSED_ITEMTYPES_KEY );
 if ($op eq 'delete') {
     my $itemtype     = $input->param('itemtype');
     my $categorycode = $input->param('categorycode');
+    my $ccode             = $input->param('ccode');
+    my $shelving_location = $input->param('shelving_location');
     $debug and warn "deleting $1 $2 $branch";
 
     Koha::CirculationRules->set_rules(
@@ -80,6 +82,8 @@ if ($op eq 'delete') {
             categorycode => $categorycode eq '*' ? undef : $categorycode,
             branchcode   => $branch eq '*' ? undef : $branch,
             itemtype     => $itemtype eq '*' ? undef : $itemtype,
+            ccode              => $ccode eq '*'            ? undef : $ccode,
+            shelving_location => $shelving_location eq '*' ? undef : $shelving_location,
             rules        => {
                 maxissueqty                      => undef,
                 maxonsiteissueqty                => undef,
@@ -251,6 +255,8 @@ elsif ($op eq 'add') {
     my $br = $branch; # branch
     my $bor  = $input->param('categorycode'); # borrower category
     my $itemtype  = $input->param('itemtype');     # item type
+    my $ccode             = $input->param('ccode');
+    my $shelving_location = $input->param('shelving_location');
     my $fine = $input->param('fine');
     my $finedays     = $input->param('finedays');
     my $maxsuspensiondays = $input->param('maxsuspensiondays') || '';
@@ -290,7 +296,7 @@ elsif ($op eq 'add') {
     my $cap_fine_to_replacement_price = ($input->param('cap_fine_to_replacement_price') || '') eq 'on';
     my $note = $input->param('note');
     my $decreaseloanholds = $input->param('decreaseloanholds') || undef;
-    $debug and warn "Adding $br, $bor, $itemtype, $fine, $maxissueqty, $maxonsiteissueqty, $cap_fine_to_replacement_price";
+    $debug and warn "Adding $br, $bor, $itemtype, $ccode, $shelving_location, $fine, $maxissueqty, $maxonsiteissueqty, $cap_fine_to_replacement_price";
 
     my $rules = {
         maxissueqty                   => $maxissueqty,
@@ -332,6 +338,8 @@ elsif ($op eq 'add') {
             categorycode => $bor eq '*' ? undef : $bor,
             itemtype     => $itemtype eq '*' ? undef : $itemtype,
             branchcode   => $br eq '*' ? undef : $br,
+            ccode              => $ccode eq '*'            ? undef : $ccode,
+            shelving_location => $shelving_location eq '*' ? undef : $shelving_location,
             rules        => $rules,
         }
     );
@@ -559,6 +567,10 @@ my $patron_categories = Koha::Patron::Categories->search({}, { order_by => ['des
 
 my $itemtypes = Koha::ItemTypes->search_with_localization;
 
+my $ccodesloop = Koha::AuthorisedValues->search_with_library_limits({ category => 'CCODE'}, {}, $branch eq '*' ? undef : $branch);
+
+my $locsloop   = Koha::AuthorisedValues->search_with_library_limits({ category => 'LOC'}, {}, $branch eq '*' ? undef : $branch);
+
 my $humanbranch = ( $branch ne '*' ? $branch : undef );
 
 my $all_rules = Koha::CirculationRules->search({ branchcode => $humanbranch });
@@ -567,7 +579,7 @@ my $definedbranch = $all_rules->count ? 1 : 0;
 my $rules = {};
 while ( my $r = $all_rules->next ) {
     $r = $r->unblessed;
-    $rules->{ $r->{categorycode} // '' }->{ $r->{itemtype} // '' }->{ $r->{rule_name} } = $r->{rule_value};
+    $rules->{ $r->{categorycode} // '' }->{ $r->{itemtype} // '' }->{ $r->{ccode} // '' }->{ $r->{shelving_location} // '' }->{ $r->{rule_name} } = $r->{rule_value};
 }
 
 $template->param(show_branch_cat_rule_form => 1);
@@ -575,6 +587,8 @@ $template->param(show_branch_cat_rule_form => 1);
 $template->param(
     patron_categories => $patron_categories,
     itemtypeloop      => $itemtypes,
+    ccodesloop        => $ccodesloop,
+    locsloop          => $locsloop,
     humanbranch       => $humanbranch,
     current_branch    => $branch,
     definedbranch     => $definedbranch,

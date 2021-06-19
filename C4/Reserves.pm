@@ -431,6 +431,8 @@ sub CanItemBeReserved {
                 itemtype     => $item->effective_itemtype,
                 categorycode => $borrower->{categorycode},
                 branchcode   => $branchcode,
+                ccode             => $item->ccode,
+                shelving_location => $item->location,
                 rule_name    => 'reservesallowed',
         })
     ) {
@@ -2278,6 +2280,8 @@ sub GetMaxPatronHoldsForRecord {
             categorycode => $categorycode,
             itemtype     => $itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'holds_per_record'
         });
         my $holds_per_record = $rule ? $rule->rule_value : 0;
