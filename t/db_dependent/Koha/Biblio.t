@@ -706,7 +706,7 @@ sub host_record {
     return $marc;
 }
 
-subtest 'adopt_items_from_biblio() tests' => sub {
+subtest 'adopt_holdings_from_biblio() tests' => sub {
 
     plan tests => 2;
 
@@ -717,7 +717,7 @@ subtest 'adopt_items_from_biblio() tests' => sub {
     my $item1 = $builder->build_sample_item({ biblionumber => $biblio1->biblionumber });
     my $item2 = $builder->build_sample_item({ biblionumber => $biblio1->biblionumber });
 
-    $biblio2->adopt_items_from_biblio($biblio1);
+    $biblio2->adopt_holdings_from_biblio($biblio1);
 
     $item1->discard_changes;
     $item2->discard_changes;

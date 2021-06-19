@@ -224,6 +224,11 @@ foreach my $subscription (@subscriptions) {
     push @subs, \%cell;
 }
 
+# Summary holdings
+my $summary_holdings;
+if (C4::Context->preference('SummaryHoldings')) {
+    $summary_holdings = $biblio->holdings;
+}
 
 # Get acquisition details
 if ( C4::Context->preference('AcquisitionDetails') ) {
@@ -447,13 +452,14 @@ $template->param(
     itemdata_stocknumber => $itemfields{stocknumber},
     itemdata_publisheddate => $itemfields{publisheddate},
     volinfo                => $itemfields{enumchron},
-        itemdata_itemnotes  => $itemfields{itemnotes},
-        itemdata_nonpublicnotes => $itemfields{itemnotes_nonpublic},
+    itemdata_itemnotes  => $itemfields{itemnotes},
+    itemdata_nonpublicnotes => $itemfields{itemnotes_nonpublic},
     z3950_search_params    => C4::Search::z3950_search_args($dat),
-        hostrecords         => $hostrecords,
-    analytics_flag    => $analytics_flag,
+    hostrecords         => $hostrecords,
+    analytics_flag      => $analytics_flag,
     C4::Search::enabled_staff_search_views,
-        materials       => $materials_flag,
+    materials       => $materials_flag,
+    summary_holdings    => $summary_holdings,
 );
 
 if (C4::Context->preference("AlternateHoldingsField") && scalar @items == 0) {

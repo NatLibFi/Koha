@@ -314,3 +314,11 @@ Cataloging:
                   opac: "OPAC"
                   both: "both staff interface and OPAC"
             - record detail pages. UNIMARC is not supported.
+
+    Holdings:
+        -
+            - pref: SummaryHoldings
+              choices:
+                  yes: Use
+                  no: "Don't use"
+            - summary holdings records.

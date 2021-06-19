@@ -66,6 +66,7 @@ use Koha::Database;
 
 use Koha::Biblios;
 use Koha::Biblioitems;
+use Koha::Holdings;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::SearchEngine;

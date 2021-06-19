@@ -94,6 +94,8 @@ sub GetRecords {
         if ( $include_items )  {
             $sql = "($sql) UNION (SELECT DISTINCT(biblionumber) FROM deleteditems $criteria)";
             push @bind_params, @part_bind_params;
+            $sql .= " UNION (SELECT DISTINCT(biblionumber) FROM holdings $criteria)";
+            push @bind_params, @part_bind_params;
             if (!$deleted) {
                 $sql .= " UNION (SELECT DISTINCT(biblionumber) FROM items $criteria)";
                 push @bind_params, @part_bind_params;
@@ -113,6 +115,8 @@ sub GetRecords {
                         SELECT timestamp FROM deletedbiblio_metadata WHERE biblionumber = ?
                         UNION
                         SELECT timestamp FROM deleteditems WHERE biblionumber = ?
+                        UNION
+                        SELECT timestamp FROM holdings WHERE biblionumber = ?
                     ) bis
                 ";
             } else {
@@ -124,6 +128,8 @@ sub GetRecords {
                         SELECT timestamp FROM deleteditems WHERE biblionumber = ?
                         UNION
                         SELECT timestamp FROM items WHERE biblionumber = ?
+                        UNION
+                        SELECT timestamp FROM holdings WHERE biblionumber = ?
                     ) bi
                 ";
             }
@@ -151,7 +157,7 @@ sub GetRecords {
             }
             my @params = ($biblionumber);
             if ( $include_items ) {
-                push @params, $deleted ? ( $biblionumber ) : ( $biblionumber, $biblionumber );
+                push @params, $deleted ? ( $biblionumber, $biblionumber ) : ( $biblionumber, $biblionumber, $biblionumber );
             }
             $ts_sth->execute( @params ) || die( 'Could not execute statement: ' . $ts_sth->errstr );
 

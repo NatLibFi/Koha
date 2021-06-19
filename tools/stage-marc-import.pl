@@ -94,7 +94,7 @@ if ($completedJobID) {
 
     my ( $errors, $marcrecords );
     if( $format eq 'MARCXML' ) {
-        ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, $encoding);
+        ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, $record_type, $encoding);
     } elsif( $format eq 'ISO2709' ) {
         ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromISO2709File( $file, $record_type, $encoding );
     } else { # plugin based

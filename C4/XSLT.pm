@@ -161,6 +161,12 @@ sub _get_best_default_xslt_filename {
     return $xslfilename;
 }
 
+=head2 get_xslt_sysprefs
+
+Returns XML for system preferences.
+
+=cut
+
 sub get_xslt_sysprefs {
     my $sysxml = "<sysprefs>\n";
     foreach my $syspref ( qw/ hidelostitems OPACURLOpenInNewWindow
@@ -244,10 +250,14 @@ sub XSLTParse4Display {
     # grab the XML, run it through our stylesheet, push it out to the browser
     my $record = transformMARCXML4XSLT($biblionumber, $orig_record);
     my $itemsxml;
+    my $holdingsxml;
     if ( $xslsyspref eq "OPACXSLTDetailsDisplay" || $xslsyspref eq "XSLTDetailsDisplay" || $xslsyspref eq "XSLTResultsDisplay" ) {
-        $itemsxml = ""; #We don't use XSLT for items display on these pages
+        # We don't use XSLT for items or holdings display on these pages
+        $itemsxml = "";
+        $holdingsxml = "";
     } else {
         $itemsxml = buildKohaItemsNamespace($biblionumber, $hidden_items);
+        $holdingsxml = buildKohaHoldingsNamespace($biblionumber);
     }
     my $xmlrecord = $record->as_xml(C4::Context->preference('marcflavour'));
 
@@ -305,7 +315,7 @@ sub XSLTParse4Display {
     }
     $varxml .= "</variables>\n";
 
-    $xmlrecord =~ s/\<\/record\>/$itemsxml$sysxml$varxml$partsxml\<\/record\>/;
+    $xmlrecord =~ s/\<\/record\>/$itemsxml$holdingsxml$sysxml$varxml$partsxml\<\/record\>/;
     if ($fixamps) { # We need to correct the ampersand entities that Zebra outputs
         $xmlrecord =~ s/\&amp;amp;/\&amp;/g;
         $xmlrecord =~ s/\&amp\;lt\;/\&lt\;/g;
@@ -413,6 +423,43 @@ sub buildKohaItemsNamespace {
           . "</item>";
     }
     $xml = "<items xmlns=\"http://www.koha-community.org/items\">".$xml."</items>";
+    return $xml;
+}
+
+=head2 buildKohaHoldingsNamespace
+
+Returns XML for holdings records.
+Is only used in this module currently.
+
+=cut
+
+sub buildKohaHoldingsNamespace {
+    my ($biblionumber) = @_;
+
+    my $holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef })->as_list;
+
+    my $shelflocations =
+      { map { $_->{authorised_value} => $_->{opac_description} } Koha::AuthorisedValues->get_descriptions_by_koha_field( { frameworkcode => 'HLD', kohafield => 'holdings.location' } ) };
+
+    my %branches = map { $_->branchcode => $_->branchname } Koha::Libraries->search({}, { order_by => 'branchname' });
+
+    my $location = "";
+    my $ccode = "";
+    my $xml = '';
+    foreach my $holding ( @{$holdings} ) {
+        my $holdingbranch = $holding->{holdingbranch} ? xml_escape($branches{$holding->{holdingbranch}}) : '';
+        my $location = $holding->{location} ? xml_escape($shelflocations->{$holding->{location}} || $holding->{location}) : '';
+        my $callnumber = xml_escape($holding->{callnumber});
+        my $suppress = $holding->{suppress} || '0';
+        $xml .=
+            "<holding>"
+          . "<holdingbranch>$holdingbranch</holdingbranch>"
+          . "<location>$location</location>"
+          . "<callnumber>$callnumber</callnumber>"
+          . "<suppress>$suppress</suppress>"
+          . "</holding>";
+    }
+    $xml = "<holdings xmlns=\"http://www.koha-community.org/holdings\">$xml</holdings>";
     return $xml;
 }
 
