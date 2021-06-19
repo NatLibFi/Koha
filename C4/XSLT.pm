@@ -31,6 +31,7 @@ use C4::Circulation;
 use C4::Reserves;
 use Koha::AuthorisedValues;
 use Koha::ItemTypes;
+use Koha::Util::Search;
 use Koha::XSLT::Base;
 use Koha::Libraries;
 
@@ -266,13 +267,45 @@ sub XSLTParse4Display {
             $variables->{OpenURLResolverURL} = $biblio->get_openurl;
         }
     }
+
+    my $partsxml = '';
+    # possibly insert component records into Detail views
+    if ($xslsyspref =~ m/Details/) {
+        my $showcomp = C4::Context->preference('ShowComponentRecords');
+        if ( $showcomp eq 'both' ||
+             ($showcomp eq 'staff' && $xslsyspref !~ m/OPAC/ ) ||
+             ($showcomp eq 'opac' && $xslsyspref =~ m/OPAC/  ) ) {
+            my $biblio = Koha::Biblios->find( $biblionumber );
+            my $max_results = 300;
+
+            if ( $biblio->components($max_results) ) {
+                my $search_query = Koha::Util::Search::get_component_part_query($biblionumber);
+                $variables->{ComponentPartQuery} = $search_query;
+
+                my @componentPartRecordXML = ('<componentPartRecords>');
+                for my $cb ( @{ $biblio->components($max_results) } ) {
+                    if( ref $cb eq 'MARC::Record'){
+                        $cb = $cb->as_xml_record();
+                    } else {
+                        $cb = decode('utf8', $cb);
+                    }
+                    # Remove the xml header
+                    $cb =~ s/^<\?xml.*?\?>//;
+                    push @componentPartRecordXML,$cb;
+                }
+                push @componentPartRecordXML, '</componentPartRecords>';
+                $partsxml = join "\n", @componentPartRecordXML;
+            }
+        }
+    }
+
     my $varxml = "<variables>\n";
     while (my ($key, $value) = each %$variables) {
         $varxml .= "<variable name=\"$key\">$value</variable>\n";
     }
     $varxml .= "</variables>\n";
 
-    $xmlrecord =~ s/\<\/record\>/$itemsxml$sysxml$varxml\<\/record\>/;
+    $xmlrecord =~ s/\<\/record\>/$itemsxml$sysxml$varxml$partsxml\<\/record\>/;
     if ($fixamps) { # We need to correct the ampersand entities that Zebra outputs
         $xmlrecord =~ s/\&amp;amp;/\&amp;/g;
         $xmlrecord =~ s/\&amp\;lt\;/\&lt\;/g;

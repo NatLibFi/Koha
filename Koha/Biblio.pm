@@ -43,6 +43,9 @@ use Koha::Items;
 use Koha::Libraries;
 use Koha::Suggestions;
 use Koha::Subscriptions;
+use Koha::SearchEngine;
+use Koha::SearchEngine::Search;
+use Koha::Util::Search;
 
 =head1 NAME
 
@@ -495,6 +498,31 @@ sub suggestions {
 
     my $suggestions_rs = $self->_result->suggestions;
     return Koha::Suggestions->_new_from_dbic( $suggestions_rs );
+}
+
+=head3 components
+
+my $components = $self->components();
+
+Returns an array of MARCXML data, which are component parts of
+this object (MARC21 773$w points to this)
+
+=cut
+
+sub components {
+    my ($self, $max_results) = @_;
+
+    return if (C4::Context->preference('marcflavour') ne 'MARC21');
+
+    my $searchstr = Koha::Util::Search::get_component_part_query($self->id);
+
+    if (defined($searchstr)) {
+        my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
+        my ( $errors, $results, $total_hits ) = $searcher->simple_search_compat( $searchstr, 0, $max_results );
+        $self->{_components} = $results if ( defined($results) && scalar(@$results) );
+    }
+
+    return $self->{_components} || ();
 }
 
 =head3 subscriptions
