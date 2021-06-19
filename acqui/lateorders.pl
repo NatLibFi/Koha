@@ -78,6 +78,16 @@ my $estimateddeliverydatefrom_dt =
   ? dt_from_string($estimateddeliverydatefrom)
   : undef;
 
+###### ------- HOTFIX to be later developed as Preferences configurable value by Petro
+# if no date from and no delay -- let's limit results from 1 month ago:
+if ( ! $delay
+     and not defined $estimateddeliverydatefrom_dt
+     and not defined $estimateddeliverydateto ) {
+
+    $estimateddeliverydatefrom_dt = dt_from_string() - DateTime::Duration->new( months => 1 );
+}
+###### <<<<<<< ------- HOTFIX to be later developed as Preferences configurable value by Petro
+
 # Get the "date to" param. If it is not defined and $delay is not defined too, it is the today's date.
 my $estimateddeliverydateto_dt = $estimateddeliverydateto
     ? dt_from_string($estimateddeliverydateto)
