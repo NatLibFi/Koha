@@ -930,7 +930,6 @@ sub _clean_search_term {
     $term =~ s/=/:/g;
 
     $term = $self->_convert_index_strings_freeform($term);
-    $term =~ s/[{}]/"/g;
 
     # Remove unbalanced quotes
     my $unquoted = $term;
@@ -939,12 +938,58 @@ sub _clean_search_term {
         $term = $unquoted;
     }
 
-    # Remove unquoted colons that have whitespace on either side of them
-    $term =~ s/(:+)(\s+)$lookahead/$2/g;
-    $term =~ s/(\s+)(:+)$lookahead/$1/g;
-    $term =~ s/^://;
-
     $term = $self->_query_regex_escape_process($term);
+
+    # because of _truncate_terms and if QueryAutoTruncate enabled
+    # we will have any special operators ruined by _truncate_terms:
+    # for ex. search for "test [6 TO 7]" will be converted to "test* [6* TO* 7]"
+    # so no reason to keep ranges in QueryAutoTruncate==true case:
+    my $truncate = C4::Context->preference("QueryAutoTruncate") || 0;
+    unless($truncate) {
+        # replace all ranges with any square/curly brackets combinations to temporary substitutions (ex: "{a TO b]"" -> "~~LC~~a TO b~~RS~~")
+        $term =~ s/(?<!\\)((?:[\\]{2})*)(\{|\[)([^\s\[\]\{\}]+ TO [^\s\[\]\{\}]+(?<!\\)(?:[\\]{2})*)(\}|\])/$1.'~~L'.($2 eq '[' ? 'S':'C').'~~'.$3.'~~R'.($4 eq ']' ? 'S':'C').'~~'/ge;
+    }
+
+    # save all regex contents away before escaping brackets:
+    my @saved_regexes;
+    my $rgx_i = 0;
+    while(
+            $term =~ s@(
+                (?<!\\)(?:[\\]{2})*/
+                (?:[^/]+|(?<=\\)(?:[\\]{2})*/)+
+                (?<!\\)(?:[\\]{2})*/
+            )$lookahead@"~~XI$rgx_i~~"@ex
+    ) {
+        @saved_regexes[$rgx_i++] = $1;
+    }
+
+    # remove leading and trailing colons mixed with optional slashes and spaces
+    $term =~ s/^([\s\\]*:\s*)+//;
+    $term =~ s/([\s\\]*:\s*)+$//;
+    # remove unquoted colons that have whitespace on either side of them
+    $term =~ s/([\s\\]*:\s*)+(\s+)$lookahead/$2/g;
+    $term =~ s/(\s+)([\s\\]*:\s*)+$lookahead/$1/g;
+    # replace with spaces all repeated colons no matter how they surrounded with spaces and slashes
+    $term =~ s/([\s\\]*:\s*){2,}$lookahead/ /g;
+    # screen all followups for colons after first colon,
+    # and correctly ignore unevenly backslashed:
+    $term =~ s/((?<!\\)(?:[\\]{2})*:[^:\s]+(?<!\\)(?:[\\]{2})*)(?=:)/$1\\/g;
+
+    # screen all exclamation signs that either are the last symbol or have white space after them
+    $term =~ s/(?:[\s\\]*!\s*)+(\s|$)/$1/g;
+
+    # screen all brackets with backslash
+    $term =~ s/(?<!\\)(?:[\\]{2})*([\{\}\[\]])$lookahead/\\$1/g;
+
+    # restore all regex contents after escaping brackets:
+    for (my $i = 0; $i < @saved_regexes; $i++) {
+        $term =~ s/~~XI$i~~/$saved_regexes[$i]/;
+    }
+
+    unless($truncate) {
+        # restore temporary weird substitutions back to normal brackets
+        $term =~ s/~~L(C|S)~~([^\s\[\]\{\}]+ TO [^\s\[\]\{\}]+)~~R(C|S)~~/($1 eq 'S' ? '[':'{').$2.($3 eq 'S' ? ']':'}')/ge;
+    }
 
     return $term;
 }
