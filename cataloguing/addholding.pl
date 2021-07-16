@@ -20,26 +20,19 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-# TODO: refactor to avoid duplication from addbiblio
+use Modern::Perl;
 
-use strict;
-#use warnings; FIXME - Bug 2505
 use CGI q(-utf8);
-use C4::Output;
-use C4::Auth;
-use C4::Search;
-use C4::Biblio;
+use C4::Output qw( output_html_with_http_headers );
+use C4::Auth qw( get_template_and_user haspermission );
+use C4::Biblio
+  qw( GetMarcFromKohaField GetMarcStructure GetUsedMarcStructure TransformHtmlToMarc );
 use C4::Context;
 use MARC::Record;
-use C4::Log;
-use C4::Koha;
-use C4::ClassSource;
-use C4::ImportBatch;
-use C4::Charset;
+use C4::ClassSource qw( GetClassSources );
 use Koha::Biblios;
 use Koha::BiblioFrameworks;
-use Koha::DateUtils;
-use C4::Matcher;
+use Koha::DateUtils qw( dt_from_string );
 
 use Koha::ItemTypes;
 use Koha::Libraries;
@@ -47,7 +40,7 @@ use Koha::Libraries;
 use Date::Calc qw(Today);
 use MARC::File::USMARC;
 use MARC::File::XML;
-use URI::Escape;
+use URI::Escape qw( uri_escape_utf8 );
 
 if ( C4::Context->preference('marcflavour') eq 'UNIMARC' ) {
     MARC::File::XML->default_record_format('UNIMARC');
