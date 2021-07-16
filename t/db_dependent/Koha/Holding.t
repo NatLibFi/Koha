@@ -38,7 +38,7 @@ my $schema = Koha::Database->new->schema;
 
 subtest 'Koha::Holding tests' => sub {
 
-    plan tests => 19;
+    plan tests => 20;
 
     $schema->storage->txn_begin;
 
@@ -167,6 +167,7 @@ subtest 'Koha::Holding tests' => sub {
     is(ref $holding, 'Koha::Holding', 'Found a Koha::Holding object');
     is($holding->frameworkcode(), $frameworkcode, 'Framework code correct in Koha::Holding object');
     is($holding->holdingbranch(), 'ABC', 'Location correct in Koha::Holding object');
+    is($holding->biblio()->biblionumber(), $biblionumber, 'Biblio correct in Koha::Holding object');
 
     my $branch = $holding->holding_branch();
     is(ref $branch, 'Koha::Library', 'holding_branch() returns a Koha::Library object');

@@ -22,9 +22,10 @@ use Modern::Perl;
 
 use Carp;
 
-use C4::Charset; # SetUTF8Flag
-use C4::Log; # logaction
+use C4::Charset qw( SetUTF8Flag );
+use C4::Log qw( logaction );
 
+use Koha::Biblio;
 use Koha::Database;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Holdings::Metadatas;
@@ -41,6 +42,22 @@ Koha::Holding - Koha Holding Object class
 =head2 Class Methods
 
 =cut
+
+=head3 biblio
+
+  my $biblio = $holding->biblio();
+
+Returns the holding biblio for this record.
+
+=cut
+
+sub biblio {
+    my ($self) = @_;
+
+    my $biblio = $self->_result->biblionumber();
+    return unless $biblio;
+    return Koha::Biblio->_new_from_dbic($biblio);
+}
 
 =head3 holding_branch
 

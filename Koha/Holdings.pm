@@ -23,7 +23,7 @@ use Modern::Perl;
 use Carp;
 
 use C4::Biblio;
-use C4::Charset; # For SetMarcUnicodeFlag
+use C4::Charset qw( SetMarcUnicodeFlag );
 use C4::Context;
 
 use Koha::Holding;
