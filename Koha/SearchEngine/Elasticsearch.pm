@@ -1501,7 +1501,9 @@ sub process_error {
     warn $msg;    # simple logging
 
     # This is super-primitive
-    return "Unable to understand your search query, please rephrase and try again.\n"
+    return "There might be results, but there is ElasticSearch query language syntax error in your search request: remove or ".
+           "escape with backslash ES-language reserved characters (those are: + - = && || > < ! ( ) { } [ ] ^ \" ~ * ? : \ / ) ".
+           "or change it to be the proper ES-language request and try again.\n"
         if $msg =~ /ParseException|parse_exception/;
 
     return "Unable to perform your search. Please try again.\n";
