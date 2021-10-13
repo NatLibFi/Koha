@@ -98,9 +98,7 @@ sub GetRecords {
                   UNION
                 (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)
             ";
-            push @bind_params, @part_bind_params;
-            push @bind_params, @part_bind_params;
-            push @bind_params, @part_bind_params;
+            push @bind_params, (@part_bind_params) x 3;
             $sql = "SELECT biblionumber FROM ($sql) main $order_limit";
 
             $ts_sql = "
