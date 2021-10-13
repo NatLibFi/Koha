@@ -90,16 +90,14 @@ sub GetRecords {
         # but avoiding joins or subqueries makes this so much faster that it does not matter.
         if ( $include_items && !$deleted )  {
             $sql = "
-                (SELECT biblionumber
-                FROM $table main
-                WHERE $where $order_limit)
+                (SELECT biblionumber FROM $table main WHERE $where $order_limit)
                   UNION
-                (SELECT DISTINCT(biblionumber) FROM deleteditems main JOIN biblio USING (biblionumber) WHERE $where
-                $order_limit)
+                (SELECT DISTINCT(biblionumber) FROM deleteditems main JOIN biblio USING (biblionumber) WHERE $where $order_limit)
                   UNION
                 (SELECT DISTINCT(biblionumber) FROM holdings main WHERE $where $order_limit)
                   UNION
-                (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)";
+                (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)
+            ";
             push @bind_params, @part_bind_params;
             push @bind_params, @part_bind_params;
             push @bind_params, @part_bind_params;
@@ -119,9 +117,7 @@ sub GetRecords {
             ";
         } else {
             $sql = "
-                SELECT biblionumber
-                FROM $table main
-                WHERE $where
+                SELECT biblionumber FROM $table main WHERE $where
             ";
 
             $ts_sql = "SELECT max(timestamp) FROM $table WHERE biblionumber = ?";
