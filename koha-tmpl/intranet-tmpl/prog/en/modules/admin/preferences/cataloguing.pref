@@ -334,6 +334,6 @@ Cataloging:
         -
             - pref: SummaryHoldings
               choices:
-                  yes: Use
-                  no: "Don't use"
+                  1: Use
+                  0: "Don't use"
             - summary holdings records.
