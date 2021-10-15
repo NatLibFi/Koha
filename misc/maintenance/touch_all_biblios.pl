@@ -17,8 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-use strict;
-use warnings;
+use Modern::Perl;
+use Getopt::Long qw( GetOptions :config no_ignore_case );
+use Pod::Usage qw( pod2usage );
+
 BEGIN {
     # find Koha's Perl modules
     # test carefully before changing this
@@ -26,14 +28,9 @@ BEGIN {
     eval { require "$FindBin::Bin/../kohalib.pl" };
 }
 
-# possible modules to use
-use Getopt::Long qw( GetOptions );
-
 use Koha::Script;
 use C4::Context;
 use C4::Biblio qw( GetMarcBiblio ModBiblio );
-use Pod::Usage qw( pod2usage );
-
 
 sub usage {
     pod2usage( -verbose => 2 );
@@ -44,68 +41,75 @@ sub usage {
 my $dbh = C4::Context->dbh;
 
 # Benchmarking variables
-my $startime = time();
-my $goodcount = 0;
-my $badcount = 0;
+my $startime   = time();
+my $goodcount  = 0;
+my $badcount   = 0;
 my $totalcount = 0;
 
 # Options
+my $help = 0;
+my $dry_run;
 my $verbose;
 my $whereclause = '';
-my $help;
 my $outfile;
 
 GetOptions(
-  'o|output:s' => \$outfile,
-  'v' => \$verbose,
-  'where:s' => \$whereclause,
-  'help|h'   => \$help,
-);
-
+    'h|?|help'   => \$help,
+    'v|verbose+' => \$verbose,
+    'n|dry-run'  => \$dry_run,
+    'o|output:s' => \$outfile,
+    'where:s'    => \$whereclause,
+) or usage();
 usage() if $help;
 
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
+}
+
 if ($whereclause) {
-   $whereclause = "WHERE $whereclause";
+    $whereclause = "WHERE $whereclause";
 }
 
 # output log or STDOUT
 my $fh;
-if (defined $outfile) {
-   open ($fh, '>', $outfile) || die ("Cannot open output file");
+if ( defined $outfile ) {
+    open( $fh, '>', $outfile ) || die("Cannot open output file");
 } else {
-   open($fh, '>&', \*STDOUT) || die ("Couldn't duplicate STDOUT: $!");
+    open( $fh, '>&', \*STDOUT ) || die("Couldn't duplicate STDOUT: $!");
 }
 
 my $sth1 = $dbh->prepare("SELECT biblionumber, frameworkcode FROM biblio $whereclause");
 $sth1->execute();
 
 # fetch info from the search
-while (my ($biblionumber, $frameworkcode) = $sth1->fetchrow_array){
-  my $record = GetMarcBiblio({ biblionumber => $biblionumber });
- 
-  my $modok = ModBiblio($record, $biblionumber, $frameworkcode);
+while ( my ( $biblionumber, $frameworkcode ) = $sth1->fetchrow_array ) {
+    my $record = GetMarcBiblio( { biblionumber => $biblionumber } );
 
-  if ($modok) {
-     $goodcount++;
-     print $fh "Touched biblio $biblionumber\n" if (defined $verbose);
-  } else {
-     $badcount++;
-     print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
-  }
+    my $modok = ModBiblio( $record, $biblionumber, $frameworkcode );
 
-  $totalcount++;
+    if ($modok) {
+        $goodcount++;
+        print $fh "Touched biblio $biblionumber\n" if $verbose;
+    } else {
+        $badcount++;
+        print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+    }
+
+    $totalcount++;
 
 }
 close($fh);
 
 # Benchmarking
-my $endtime = time();
-my $time = $endtime-$startime;
-my $accuracy = $totalcount ? ($goodcount / $totalcount) * 100 : 0; # this is a percentage
+my $endtime     = time();
+my $time        = $endtime - $startime;
+my $accuracy    = $totalcount ? ( $goodcount / $totalcount ) * 100 : 0; # this is a percentage
 my $averagetime = 0;
 $averagetime = $time / $totalcount if $totalcount;
 print "Good: $goodcount, Bad: $badcount (of $totalcount) in $time seconds\n";
-printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if (defined $verbose);
+printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if $verbose;
 
 =head1 NAME
 

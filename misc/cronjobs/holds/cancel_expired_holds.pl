@@ -39,7 +39,7 @@ This script calls C4::Reserves::CancelExpiredReserves which will find and cancel
 =cut
 
 use Modern::Perl;
-use Getopt::Long qw( GetOptions );
+use Getopt::Long qw( GetOptions :config no_ignore_case );
 use Pod::Usage qw( pod2usage );
 
 BEGIN {
@@ -53,6 +53,11 @@ use Koha::Script -cron;
 use C4::Reserves;
 use C4::Log qw( cronlogaction );
 
+sub usage {
+    pod2usage( -verbose => 2 );
+    exit;
+}
+
 =head1 OPTIONS
 
 =over 8
@@ -65,19 +70,38 @@ Print a brief help message and exits.
 
 Optionally adds a reason for cancellation (which will trigger a notice to be sent to the patron)
 
+=item B<--verbose|-v>
+
+Be verbose
+
+=item B<--dry-run|-n>
+
+Don't change data (dry-run)
+
 =back
 
 =cut
 
 my $help = 0;
+my $dry_run;
+my $verbose;
 my $reason;
 
 GetOptions(
-    'help|?'   => \$help,
-    'reason=s' => \$reason
-) or pod2usage(1);
-pod2usage(1) if $help;
+    'h|?|help'   => \$help,
+    'v|verbose+' => \$verbose,
+    'n|dry-run'  => \$dry_run,
+    'reason=s'   => \$reason,
+) or usage();
+usage() if $help;
 
-cronlogaction();
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
+}
 
-C4::Reserves::CancelExpiredReserves($reason);
+C4::Reserves::CancelExpiredReserves($reason, {
+    verbose => $verbose,
+    dry_run => $dry_run,
+});
