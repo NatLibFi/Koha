@@ -586,7 +586,7 @@ my ($template, $loggedinuser, $cookie) = get_template_and_user(
 
 my $record = $holding_id ? Koha::Holdings->find($holding_id) : Koha::Holding->new();
 
-$frameworkcode = $record->frameworkcode if ($record);
+$frameworkcode = $record->frameworkcode if $holding_id && $record;
 $frameworkcode = 'HLD' if not $frameworkcode or $frameworkcode eq '';
 
 # TODO: support in advanced editor?
