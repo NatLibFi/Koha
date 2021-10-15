@@ -26,36 +26,30 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-use strict;
-use warnings;
-use 5.010;
+use Modern::Perl;
+use Getopt::Long qw( GetOptions :config no_ignore_case );
+# use Pod::Usage qw( pod2usage );
+
+use File::Spec;
+use Try::Tiny qw( catch try );
+use Carp qw( carp croak );
+
+BEGIN {
+    # find Koha's Perl modules
+    # test carefully before changing this
+    use FindBin ();
+    eval { require "$FindBin::Bin/../kohalib.pl" };
+}
 
 use Koha::Script -cron;
 use C4::Context;
 use C4::Overdues qw( Getoverdues CalcFine UpdateFine );
-use Getopt::Long qw( GetOptions );
-use Carp qw( carp croak );
-use File::Spec;
-use Try::Tiny qw( catch try );
 
 use Koha::Calendar;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Patrons;
 use C4::Log qw( cronlogaction );
 
-my $help;
-my $verbose;
-my $output_dir;
-my $log;
-my $maxdays;
-
-GetOptions(
-    'h|help'    => \$help,
-    'v|verbose' => \$verbose,
-    'l|log'     => \$log,
-    'o|out:s'   => \$output_dir,
-    'm|maxdays:i' => \$maxdays,
-);
 my $usage = << 'ENDUSAGE';
 
 This script calculates and charges overdue fines
@@ -64,18 +58,36 @@ whether the fines are calculated and charged to the patron accounts ("Calculate 
 or not calculated ("Don't calculate").
 
 This script has the following parameters :
-    -h --help: this message
+    -h -? --help: this message
     -l --log: log the output to a file (optional if the -o parameter is given)
     -o --out:  ouput directory for logs (defaults to env or /tmp if !exist)
     -v --verbose
     -m --maxdays: how many days back of overdues to process
+    -n --dry-run: do not call UpdateFine, but imitate. For testing purposes
 
 ENDUSAGE
 
-if ($help) {
+sub usage {
     print $usage;
     exit;
 }
+
+my $help = 0;
+my $dry_run;
+my $verbose;
+my $output_dir;
+my $log;
+my $maxdays;
+
+GetOptions(
+    'h|?|help'    => \$help,
+    'v|verbose+'  => \$verbose,
+    'n|dry-run'   => \$dry_run,
+    'l|log'       => \$log,
+    'o|out:s'     => \$output_dir,
+    'm|maxdays:i' => \$maxdays,
+) or usage();
+usage() if $help;
 
 my $script_handler = Koha::Script->new({ script => $0 });
 
@@ -90,7 +102,11 @@ catch {
     exit;
 };
 
-cronlogaction();
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
+}
 
 my @borrower_fields =
   qw(cardnumber categorycode surname firstname email phone address citystate);
@@ -157,15 +173,19 @@ for my $overdue ( @{$overdues} ) {
         && ( $amount && $amount > 0 )
       )
     {
-        UpdateFine(
-            {
-                issue_id       => $overdue->{issue_id},
-                itemnumber     => $overdue->{itemnumber},
-                borrowernumber => $overdue->{borrowernumber},
-                amount         => $amount,
-                due            => output_pref($datedue),
-            }
-        );
+        if ( $dry_run ) {
+            print "Dry run: expected to update fine for borrower $overdue->{borrowernumber} for amount $amount.\n";
+        } else {
+            UpdateFine(
+                {
+                    issue_id       => $overdue->{issue_id},
+                    itemnumber     => $overdue->{itemnumber},
+                    borrowernumber => $overdue->{borrowernumber},
+                    amount         => $amount,
+                    due            => output_pref($datedue),
+                }
+            );
+        }
         $updated++;
     }
     my $borrower = $patron->unblessed;
@@ -190,6 +210,9 @@ Fines assessment -- $today
 EOM
     if ($filename) {
         say "Saved to $filename";
+    }
+    if ( $dry_run ) {
+        $updated = "$updated (simulated)";
     }
     print <<"EOM";
 Number of Overdue Items:
