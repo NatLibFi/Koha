@@ -18,26 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-=head1 NAME
-
-cancel_expired_holds.pl - cron script to cancel holds as they expire
-
-=head1 SYNOPSIS
-
-  ./cancel_expired_holds.pl
-  ./cancel_expired_holds.pl --reason="EXPIRED"
-
-or, in crontab:
-
-  0 1 * * * cancel_expired_holds.pl
-  0 1 * * * cancel_expired_holds.pl --reason="EXPIRED"
-
-=head1 DESCRIPTION
-
-This script calls C4::Reserves::CancelExpiredReserves which will find and cancel all expired reseves in the system.
-
-=cut
-
 use Modern::Perl;
 use Getopt::Long qw( GetOptions :config no_ignore_case );
 use Pod::Usage qw( pod2usage );
@@ -57,30 +37,6 @@ sub usage {
     pod2usage( -verbose => 2 );
     exit;
 }
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<--help>
-
-Print a brief help message and exits.
-
-=item B<--reason>
-
-Optionally adds a reason for cancellation (which will trigger a notice to be sent to the patron)
-
-=item B<--verbose|-v>
-
-Be verbose
-
-=item B<--dry-run|-n>
-
-Don't change data (dry-run)
-
-=back
-
-=cut
 
 my $help = 0;
 my $dry_run;
@@ -105,3 +61,47 @@ C4::Reserves::CancelExpiredReserves($reason, {
     verbose => $verbose,
     dry_run => $dry_run,
 });
+
+=head1 NAME
+
+cancel_expired_holds.pl - cron script to cancel holds as they expire
+
+=head1 SYNOPSIS
+
+  ./cancel_expired_holds.pl
+  ./cancel_expired_holds.pl --reason="EXPIRED"
+
+or, in crontab:
+
+  0 1 * * * cancel_expired_holds.pl
+  0 1 * * * cancel_expired_holds.pl --reason="EXPIRED"
+
+=head1 DESCRIPTION
+
+This script calls C4::Reserves::CancelExpiredReserves which will find and cancel all expired reseves in the system.
+
+=cut
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--help>
+
+Print a brief help message and exits.
+
+=item B<--reason>
+
+Optionally adds a reason for cancellation (which will trigger a notice to be sent to the patron)
+
+=item B<--verbose|-v>
+
+Be verbose
+
+=item B<--dry-run|-n>
+
+Don't change data (dry-run)
+
+=back
+
+=cut
