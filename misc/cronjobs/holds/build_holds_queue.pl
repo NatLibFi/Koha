@@ -19,20 +19,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-=head1 NAME
-
-build_holds_queue.pl - builds a holds queue in the tmp_holdsqueue table
-
-=head1 SYNOPSIS
-
-  ./build_holds_queue.pl ...
-
-=head1 DESCRIPTION
-
-This script calls C4::Reserves::CancelExpiredReserves which will find and cancel all expired reseves in the system.
-
-=cut
-
 use Modern::Perl;
 use Getopt::Long qw( GetOptions :config no_ignore_case );
 use Pod::Usage qw( pod2usage );
@@ -52,26 +38,6 @@ sub usage {
     pod2usage( -verbose => 2 );
     exit;
 }
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<--help>
-
-Print a brief help message and exits.
-
-=item B<--verbose|-v>
-
-Be verbose
-
-=item B<--dry-run|-n>
-
-Don't change data (dry-run)
-
-=back
-
-=cut
 
 my $help = 0;
 my $dry_run;
@@ -94,3 +60,37 @@ C4::HoldsQueue::CreateQueue({
     verbose => $verbose,
     dry_run => $dry_run,
 });
+
+=head1 NAME
+
+build_holds_queue.pl - builds a holds queue in the tmp_holdsqueue table
+
+=head1 SYNOPSIS
+
+  ./build_holds_queue.pl ...
+
+=head1 DESCRIPTION
+
+This script calls C4::Reserves::CancelExpiredReserves which will find and cancel all expired reseves in the system.
+
+=cut
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--help>
+
+Print a brief help message and exits.
+
+=item B<--verbose|-v>
+
+Be verbose
+
+=item B<--dry-run|-n>
+
+Don't change data (dry-run)
+
+=back
+
+=cut
