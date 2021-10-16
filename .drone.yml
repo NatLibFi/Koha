@@ -30,7 +30,8 @@ steps:
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
       - git fetch --depth=1 origin +refs/heads/master
-      - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
+      - COMMIT_COMMUNITYMASTER="[hash unknown]";
+      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
       - COMMIT_PREPROD=`git rev-parse --short HEAD`
       - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
 
