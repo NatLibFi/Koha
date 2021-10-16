@@ -1,13 +1,5 @@
 #!/usr/bin/perl
 
-#  This script loops through each overdue item, determines the fine,
-#  and updates the total amount of fines due by each user.  It relies on
-#  the existence of /tmp/fines, which is created by ???
-# Doesn't really rely on it, it relys on being able to write to /tmp/
-# It creates the fines file
-#
-#  This script is meant to be run nightly out of cron.
-
 # Copyright 2000-2002 Katipo Communications
 # Copyright 2011 PTFS-Europe Ltd
 #
@@ -28,7 +20,7 @@
 
 use Modern::Perl;
 use Getopt::Long qw( GetOptions :config no_ignore_case );
-# use Pod::Usage qw( pod2usage );
+use Pod::Usage qw( pod2usage );
 
 use File::Spec;
 use Try::Tiny qw( catch try );
@@ -50,25 +42,8 @@ use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Patrons;
 use C4::Log qw( cronlogaction );
 
-my $usage = << 'ENDUSAGE';
-
-This script calculates and charges overdue fines
-to patron accounts.  The Koha system preference 'finesMode' controls
-whether the fines are calculated and charged to the patron accounts ("Calculate and charge");
-or not calculated ("Don't calculate").
-
-This script has the following parameters :
-    -h -? --help: this message
-    -l --log: log the output to a file (optional if the -o parameter is given)
-    -o --out:  ouput directory for logs (defaults to env or /tmp if !exist)
-    -v --verbose
-    -m --maxdays: how many days back of overdues to process
-    -n --dry-run: do not call UpdateFine, but imitate. For testing purposes
-
-ENDUSAGE
-
 sub usage {
-    print $usage;
+    pod2usage( -verbose => 2 );
     exit;
 }
 
@@ -247,3 +222,29 @@ sub get_filename {
     }
     return $name;
 }
+
+=head1 NAME
+
+fines.pl - cron script to run nightly to calculate fines
+
+=head1 SYNOPSIS
+
+This script loops through each overdue item, determines the fine,
+and updates the total amount of fines due by each user.  It relies on
+the existence of /tmp/fines, which is created by ???
+Doesn't really rely on it, it relys on being able to write to /tmp/
+It creates the fines file
+
+This script calculates and charges overdue fines
+to patron accounts.  The Koha system preference 'finesMode' controls
+whether the fines are calculated and charged to the patron accounts ("Calculate and charge");
+or not calculated ("Don't calculate").
+
+This script has the following parameters :
+    -h -? --help: this message
+    -l --log: log the output to a file (optional if the -o parameter is given)
+    -o --out:  ouput directory for logs (defaults to env or /tmp if !exist)
+    -v --verbose
+    -m --maxdays: how many days back of overdues to process
+    -n --dry-run: do not call UpdateFine, but imitate. For testing purposes
+
