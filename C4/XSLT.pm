@@ -451,10 +451,10 @@ sub buildKohaHoldingsNamespace {
     my $ccode = "";
     my $xml = '';
     while (my $holding = $holdings->next()) {
-        my $holdingbranch = $holding->holdingbranch ? xml_escape($branches{$holding->holdingbranch}) : '';
-        my $location = $holding->location ? xml_escape($shelflocations->{$holding->location} || $holding->location) : '';
-        my $callnumber = xml_escape($holding->callnumber);
-        my $suppress = xml_escape($holding->suppress || '0');
+        my $holdingbranch = $holding->holdingbranch ? C4::Koha::xml_escape($branches{$holding->holdingbranch}) : '';
+        my $location = $holding->location ? C4::Koha::xml_escape($shelflocations->{$holding->location} || $holding->location) : '';
+        my $callnumber = C4::Koha::xml_escape($holding->callnumber);
+        my $suppress = C4::Koha::xml_escape($holding->suppress || '0');
         $xml .=
             "<holding>"
           . "<holdingbranch>$holdingbranch</holdingbranch>"
