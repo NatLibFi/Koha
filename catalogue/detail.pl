@@ -243,7 +243,7 @@ foreach my $subscription (@subscriptions) {
 
 # Get component parts details
 my $showcomp = C4::Context->preference('ShowComponentRecords');
-my $show_analytics;
+my $show_analytics = 0;
 if ( $showcomp eq 'both' || $showcomp eq 'staff' ) {
     if ( my $components =
         !$invalid_marc_record ? $biblio->get_marc_components( C4::Context->preference('MaxComponentRecords') ) : undef )
