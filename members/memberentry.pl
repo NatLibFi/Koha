@@ -360,8 +360,8 @@ if ($op eq 'save' || $op eq 'insert'){
     push @errors, "ERROR_login_exist";
   }
 
-  my $password = $input->param('password');
-  my $password2 = $input->param('password2');
+  my $password = $input->param('password') // '';
+  my $password2 = $input->param('password2') // '';
   push @errors, "ERROR_password_mismatch" if ( $password ne $password2 );
 
   if ( $password and $password ne '****' ) {
