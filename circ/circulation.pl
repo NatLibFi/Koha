@@ -84,7 +84,7 @@ if (C4::Context->preference("AutoSwitchPatron") && $barcode) {
         $autoswitched = 1;
     }
 }
-$findborrower ||= $query->param('findborrower') || q{};
+$findborrower ||= $query->param('findborrower') || q{}; # maybe set: // q{}; as in others/everywhere?
 $findborrower =~ s|,| |g;
 
 # Barcode given by user could be '0'
