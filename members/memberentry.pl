@@ -328,7 +328,7 @@ my $extended_patron_attributes;
 if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
 
     # If the cardnumber is blank, treat it as null.
-    $newdata{'cardnumber'} = undef if $newdata{'cardnumber'} =~ /^\s*$/;
+    $newdata{'cardnumber'} = undef if defined $newdata{'cardnumber'} and $newdata{'cardnumber'} =~ /^\s*$/;
 
     my $new_barcode = $newdata{'cardnumber'};
     Koha::Plugins->call( 'patron_barcode_transform', \$new_barcode );
