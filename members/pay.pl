@@ -63,7 +63,7 @@ if ( !$borrowernumber ) {
 }
 
 my $payment_id = $input->param('payment_id');
-our $change_given = $input->param('change_given');
+our $change_given = $input->param('change_given') // '';
 our @renew_results = $input->multi_param('renew_result');
 
 # get borrower details
