@@ -719,10 +719,11 @@ sub _convert_sort_fields {
 
     # Convert the fields and orders, drop anything we don't know about.
     grep { $_->{field} } map {
-        my ( $f, $d ) = /(.+)_(.+)/;
+        my ( $f, $d ) = /^(.+?)(?:_([^_]+))?$/;
+        warn "Can't match regex for '$_'" if not defined $f;
         {
             field     => $sort_field_convert{$f},
-            direction => $sort_order_convert{$d}
+            direction => defined $d ? $sort_order_convert{$d} : undef,
         }
     } @sort_by;
 }
