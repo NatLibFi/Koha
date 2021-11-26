@@ -151,6 +151,7 @@
                                     <td>
                                         [% plugin.metadata.description | html %]
 
+                                        [%# TODO: compared versoins not float, but multi-level dotted: need special tricks %]
                                         [% IF ( plugin.metadata.minimum_version && koha_version < plugin.metadata.minimum_version ) %]
                                             <div class="dialog alert">
                                                 Warning: This report was written for a newer version of Koha. Run at your own risk.
