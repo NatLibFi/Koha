@@ -189,11 +189,12 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
             for my $i ( 0 .. $#subf ) {
                 $subf[$i][0] = "@" unless defined $subf[$i][0];
                 next
-                  if (
+                  if ( defined $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{tab} and
                     $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{tab}
                     ne $tabloop );
                 next
-                  if ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
+                  if ( defined $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{hidden} and
+                    $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
                     ->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/);
                 my %subfield_data;
                 $subfield_data{short_desc} = $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{lib};
@@ -209,7 +210,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
                     $subfield_data{marc_value} = $subf[$i][1];
 					$subfield_data{is_url} = 1;
                 }
-                elsif ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
+                elsif ( defined $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{kohafield} and
+                        $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
                     ->{kohafield} eq "biblioitems.isbn" )
                 {
 
@@ -278,8 +280,10 @@ foreach my $field (@fields) {
 
     # loop through each subfield
     for my $i ( 0 .. $#subf ) {
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/);
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/);
 
         push @item_subfield_codes, $subf[$i][0];
         $witness{ $subf[$i][0] } =
