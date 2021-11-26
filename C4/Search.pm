@@ -1967,7 +1967,7 @@ sub searchResults {
                         $other_items->{$key}->{$_} = $item->{$_};
                     }
                     $other_items->{$key}->{branchcode}     = $item->{branchcode};
-                    $other_items->{$key}->{intransit} = ( $transfertwhen ne '' ) ? 1 : 0;
+                    $other_items->{$key}->{intransit} = ( defined $transfertwhen && $transfertwhen ne '' ) ? 1 : 0;
                     $other_items->{$key}->{recalled} = ($recallstatus) ? 1 : 0;
                     $other_items->{$key}->{onhold} = ($reservestatus) ? 1 : 0;
                     $other_items->{$key}->{notforloan} = GetAuthorisedValueDesc('','',$item->{notforloan},'','',$notforloan_authorised_value) if $notforloan_authorised_value and $item->{notforloan};
