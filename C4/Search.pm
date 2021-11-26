@@ -2023,7 +2023,7 @@ sub searchResults {
                     }
                     $other_items->{$key}->{branchothercount} = $branch_other_count;
                     $other_items->{$key}->{branchcode}       = $item->{branchcode};
-                    $other_items->{$key}->{intransit}        = ( $transfertwhen ne '' ) ? 1 : 0;
+                    $other_items->{$key}->{intransit}        = ( defined $transfertwhen && $transfertwhen ne '' ) ? 1 : 0;
                     $other_items->{$key}->{recalled}         = ($recallstatus)          ? 1 : 0;
                     $other_items->{$key}->{onhold}           = ($reservestatus)         ? 1 : 0;
                     $other_items->{$key}->{notforloan} =
