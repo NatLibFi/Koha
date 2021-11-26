@@ -375,8 +375,8 @@ if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
 
     # Bug 32426 removed the userid unique-check here. Postpone it to patron->store.
 
-    my $password  = $input->param('password');
-    my $password2 = $input->param('password2');
+    my $password  = $input->param('password') // '';
+    my $password2 = $input->param('password2') // '';
     push @errors, "ERROR_password_mismatch" if ( $password ne $password2 );
 
     if ( $password and $password ne '****' ) {
