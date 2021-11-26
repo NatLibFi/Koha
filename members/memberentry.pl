@@ -313,7 +313,7 @@ if ($op eq 'save' || $op eq 'insert'){
         my $patron = Koha::Patron->new({ dateofbirth => $dateofbirth });
         my $age = $patron->get_age;
         my ($low,$high) = ($category->dateofbirthrequired, $category->upperagelimit);
-        if (($high && ($age > $high)) or ($age < $low)) {
+        if (($high && ($age > $high)) or $low && ($age < $low)) {
             push @errors, 'ERROR_age_limitations';
             $template->param( age_low => $low);
             $template->param( age_high => $high);
