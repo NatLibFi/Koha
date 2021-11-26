@@ -77,6 +77,8 @@ sub GetCriteriumDesc {
     if ( $displayby =~ /suggestedby/ || $displayby =~ /managedby/ || $displayby =~ /acceptedby/ ) {
         my $patron = Koha::Patrons->find($criteriumvalue);
         return "" unless $patron;
+        return $patron->surname unless $patron->firstname;
+        return $patron->firstname unless $patron->surname;
         return $patron->surname . ", " . $patron->firstname;
     }
     if ( $displayby =~ /budgetid/ ) {
