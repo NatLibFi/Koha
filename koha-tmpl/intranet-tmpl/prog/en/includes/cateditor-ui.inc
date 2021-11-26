@@ -1231,7 +1231,7 @@ require( [ 'koha-backend', 'search', 'macros', 'marc-editor', 'marc-record', 'pr
             if ( state.backend == 'catalog' ) {
                 window.location = '/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=' + state.recordID;
             } else if ( state.backend == 'new' ) {
-                window.location = '/cgi-bin/koha/cataloguing/addbiblio.pl';
+                window.location = '/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=' + editor.getRecord().frameworkcode;
             } else {
                 humanMsg.displayAlert( _("Cannot open this record in the basic editor"), { className: 'humanError' } );
             }
