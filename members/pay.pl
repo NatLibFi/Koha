@@ -63,7 +63,7 @@ if ( !$borrowernumber ) {
 }
 
 my $payment_id = $input->param('payment_id');
-our $change_given = $input->param('change_given');
+our $change_given = $input->param('change_given') // '';
 my $payment_credit_type;
 if ($payment_id) {
     my $payment =
