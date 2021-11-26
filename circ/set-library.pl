@@ -84,7 +84,7 @@ if ( $desk_id && ( !$userenv_desk or $userenv_desk ne $desk_id ) ) {
     $desk_id = $userenv_desk;
 }
 
-if ( defined($register_id)
+if ( defined($userenv_register_id) && defined($register_id)
     && ( $userenv_register_id ne $register_id ) )
 {
     my $old_register_name = C4::Context->userenv->{'register_name'} || '';
