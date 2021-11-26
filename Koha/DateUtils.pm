@@ -59,7 +59,7 @@ to the system preferences. If the date string is empty DateTime->now is returned
 sub dt_from_string {
     my ( $date_string, $date_format, $tz ) = @_;
 
-    return if $date_string and $date_string =~ m|^0000-0|;
+    return undef if $date_string and $date_string =~ m|^0000-0|;
 
     my $do_fallback = defined($date_format) ? 0 : 1;
     my $server_tz = C4::Context->tz;
