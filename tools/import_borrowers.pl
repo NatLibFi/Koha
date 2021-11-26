@@ -106,6 +106,8 @@ my $patronlistname   = $uploadborrowers . ' (' . $timestamp . ')';
 
 if ( $op eq 'cud-import' && $uploadborrowers && length($uploadborrowers) > 0 ) {
 
+    my $patronlistname = $uploadborrowers . ' (' . $timestamp .')';
+
     my $handle              = $input->upload('uploadborrowers');
     my %defaults            = $input->Vars;
     my $overwrite_passwords = defined $input->param('overwrite_passwords') ? 1 : 0;
