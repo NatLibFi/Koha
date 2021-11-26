@@ -193,6 +193,22 @@ sub GetMandatoryFieldZ3950 {
     my @issn          = GetMarcFromKohaField('biblioitems.issn');
     my @lccn          = GetMarcFromKohaField('biblioitems.lccn');
 
+    if( ! $isbn[1] ) {
+        warn "biblioitems.isbn mapping missing (usually 020 a)\n";
+    }
+    if( ! $title[1] ) {
+        warn "biblio.title mapping missing (usually 245 a)\n";
+    }
+    if( ! $author[1] ) {
+        warn "biblio.author mapping missing (usually 100 a)\n";
+    }
+    if( ! $issn[1] ) {
+        warn "biblioitems.issn mapping missing (usually 022 a)\n";
+    }
+    if( ! $lccn[1] ) {
+        warn "biblioitems.lccn mapping missing (usually 010 a)\n";
+    }
+
     return {
         $isbn[0] . $isbn[1]     => 'isbn',
         $title[0] . $title[1]   => 'title',
