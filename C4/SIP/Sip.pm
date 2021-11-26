@@ -228,7 +228,7 @@ sub siplog {
       : $level eq 'LOG_WARNING' ? 'warn'
       :                           'error';
 
-    my $message = @args ? sprintf($mask, @args) : $mask;
+    my $message = @args ? sprintf($mask, map { $_ // '-undef-' } @args) : $mask;
 
     my $logger = C4::SIP::Logger::get_logger();
     $logger->$method($message) if $logger;
