@@ -195,7 +195,7 @@
                                 <td>[% IF credit_type.can_be_added_manually %]Manual credit[% END %]</td>
                                 <td>[% IF credit_type.credit_number_enabled %]Yes[% ELSE %]No[% END %]</td>
                                 <td>
-                                    [% IF credit_type.library_limits.count > 0 %]
+                                    [% IF credit_type.library_limits AND credit_type.library_limits.count > 0 %]
                                         [% library_limits_str = "" %]
                                         [% FOREACH library IN credit_type.library_limits %]
                                             [%- IF loop.first -%]
