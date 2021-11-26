@@ -184,6 +184,8 @@
         [% END %]
     </form>
 
+    [% total_adj = 0 %]
+
     <form action="/cgi-bin/koha/acqui/invoice.pl" method="post" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
         <fieldset class="rows">
@@ -200,7 +202,6 @@
                         <th>Encumber while invoice open</th>
                         [% UNLESS readonly %]<th>&nbsp;</th>[% END %]
                     </tr>
-                    [% total_adj = 0 %]
                     [% FOREACH adjustment IN adjustments %]
                         [% total_adj = total_adj + adjustment.adjustment %]
                         <tr>
