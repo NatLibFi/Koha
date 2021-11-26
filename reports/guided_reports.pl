@@ -700,6 +700,7 @@ elsif ($phase eq 'Run this report'){
             my %uniq_params;
             for(my $i=0;$i<($#split/2);$i++) {
                 my ($text,$authorised_value_all) = split /\|/,$split[$i*2+1];
+                $authorised_value_all //='';
                 my $sep = $authorised_value_all ? "|" : "";
                 if( defined $uniq_params{$text.$sep.$authorised_value_all} ){
                     next;
