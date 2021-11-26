@@ -80,7 +80,7 @@ if ( $op eq 'display' ) {
 
     $template->param(
         active        => $supplier->active,
-        tax_rate      => $supplier->tax_rate + 0.0,
+        tax_rate      => ($supplier->tax_rate || 0) + 0.0,
         invoiceprice  => $supplier->invoiceprice,
         listprice     => $supplier->listprice,
         basketcount   => $supplier->baskets->count,
@@ -106,7 +106,7 @@ if ( $op eq 'display' ) {
     $template->param(
         # set active ON by default for supplier add (id empty for add)
         active     => $supplier ? $supplier->active         : 1,
-        tax_rate   => $supplier ? $supplier->tax_rate + 0.0 : 0,
+        tax_rate   => $supplier ? ($supplier->tax_rate || 0) + 0.0 : 0,
         vendor        => $supplier,
         gst_values    => \@gst_values,
         currencies    => Koha::Acquisition::Currencies->search,
