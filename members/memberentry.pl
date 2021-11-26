@@ -394,7 +394,7 @@ if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
         my ( $low, $high ) = ( $category->dateofbirthrequired, $category->upperagelimit );
         my $age_restriction = C4::Context->preference("PatronAgeRestriction");
 
-        if ( ( $high && ( $age > $high ) ) or ( $age < $low ) ) {
+        if ( ( $high && ( $age > $high ) ) or $low && ( $age < $low ) ) {
             push @errors, 'ERROR_age_limitations';
             $template->param( age_low  => $low );
             $template->param( age_high => $high );
