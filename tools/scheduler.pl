@@ -47,7 +47,7 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     }
 );
 
-my $mode = $input->param('mode');
+my $mode = $input->param('mode') // q{};
 my $id   = $input->param('id');
 
 if ( $mode eq 'job_add' ) {
