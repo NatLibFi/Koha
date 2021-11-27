@@ -210,6 +210,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
 					$subfield_data{is_url} = 1;
                 }
                 elsif ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
+                    ->{kohafield} and
+                        $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }
                     ->{kohafield} eq "biblioitems.isbn" )
                 {
 
