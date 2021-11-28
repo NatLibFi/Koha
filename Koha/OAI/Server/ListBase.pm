@@ -90,16 +90,15 @@ sub GetRecords {
         # but avoiding joins or subqueries makes this so much faster that it does not matter.
         if ( $include_items && !$deleted )  {
             $sql = "
-                (SELECT biblionumber
-                FROM $table main
-                WHERE $where $order_limit)
+                (SELECT biblionumber FROM $table main WHERE $where $order_limit)
                   UNION
-                (SELECT DISTINCT(biblionumber) FROM deleteditems main JOIN biblio USING (biblionumber) WHERE $where
-                $order_limit)
+                (SELECT DISTINCT(biblionumber) FROM deleteditems main JOIN biblio USING (biblionumber) WHERE $where $order_limit)
                   UNION
-                (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)";
-            push @bind_params, @part_bind_params;
-            push @bind_params, @part_bind_params;
+                (SELECT DISTINCT(biblionumber) FROM holdings main WHERE $where $order_limit)
+                  UNION
+                (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)
+            ";
+            push @bind_params, (@part_bind_params) x 3;
             $sql = "SELECT biblionumber FROM ($sql) main $order_limit";
 
             $ts_sql = "
@@ -110,13 +109,13 @@ sub GetRecords {
                     SELECT timestamp FROM deleteditems WHERE biblionumber = ?
                     UNION
                     SELECT timestamp FROM items WHERE biblionumber = ?
+                    UNION
+                    SELECT timestamp FROM holdings WHERE biblionumber = ?
                 ) bi
             ";
         } else {
             $sql = "
-                SELECT biblionumber
-                FROM $table main
-                WHERE $where
+                SELECT biblionumber FROM $table main WHERE $where
             ";
 
             $ts_sql = "SELECT max(timestamp) FROM $table WHERE biblionumber = ?";
@@ -145,7 +144,7 @@ sub GetRecords {
             }
             my @params = ($biblionumber);
             if ( $include_items && !$deleted ) {
-                push @params, $deleted ? ( $biblionumber ) : ( $biblionumber, $biblionumber );
+                push @params, $deleted ? ( $biblionumber, $biblionumber ) : ( $biblionumber, $biblionumber, $biblionumber );
             }
             $ts_sth->execute( @params ) || die( 'Could not execute statement: ' . $ts_sth->errstr );
 

@@ -1,5 +1,6 @@
 [% USE raw %]
 [% USE Asset %]
+[% USE Holdings %]
 [% USE Koha %]
 [% USE KohaDates %]
 [% USE Price %]
@@ -14,6 +15,8 @@
 
 [% INCLUDE 'header.inc' %]
 [% INCLUDE 'acquisitions-search.inc' %]
+
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
 
 <nav id="breadcrumbs" aria-label="Breadcrumb" class="breadcrumb">
     <ol>
@@ -289,6 +292,7 @@
                       <tr>
                           <th class="noExport">Actions</th>
                           <th>Barcode</th>
+                          [% IF (ShowSummaryHoldings) %]<th id="holdings_record">Holdings record</th>[% END %]
                           <th>Home library</th>
                           <th>Holding library</th>
                           <th>Not for loan</th>
@@ -618,7 +622,7 @@
 
         $(document).ready(function(){
             [% IF AcqCreateItemOrdering and not basket.is_standing %]
-                cloneItemBlock(0, '[% UniqueItemFields | html %]');
+                cloneItemBlock(0, '[% UniqueItemFields | html %]', null, [% biblionumber | html %]);
             [% END %]
 
             [% IF ( suggestionid ) %]updateCosts();[% END %]

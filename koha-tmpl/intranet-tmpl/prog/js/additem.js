@@ -85,6 +85,9 @@ function constructTrNode(index, unique_item_fields) {
     var fields = ['barcode', 'homebranch', 'holdingbranch', 'notforloan',
         'restricted', 'location', 'itemcallnumber', 'copynumber',
         'stocknumber', 'ccode', 'itype', 'materials', 'itemnotes'];
+    if ($('th#holdings_record').length) {
+        fields.splice(1, 0, 'holding_id');
+    }
 
     var result = "<tr idblock='" + index + "'>";
     var edit_link = "<a href='#itemfieldset' style='text-decoration:none' onclick='showItem(\"" + index + "\");' class='btn btn-default btn-xs'><i class='fa fa-pencil'></i> "
@@ -147,7 +150,7 @@ function deleteItemBlock(node_a, index, unique_item_fields) {
     }
 }
 
-function cloneItemBlock(index, unique_item_fields, callback) {
+function cloneItemBlock(index, unique_item_fields, callback, biblionumber) {
     var original;
     if(index) {
         original = $("#" + index); //original <div>
@@ -164,6 +167,7 @@ function cloneItemBlock(index, unique_item_fields, callback) {
         url: "/cgi-bin/koha/services/itemrecorddisplay.pl",
         dataType: 'html',
         data: {
+            biblionumber: biblionumber,
             frameworkcode: 'ACQ'
         },
         success: function(data) {

@@ -108,6 +108,7 @@ use Koha::Caches;
 use Koha::Authority::Types;
 use Koha::Acquisition::Currencies;
 use Koha::Biblio::Metadatas;
+use Koha::Holdings;
 use Koha::Holds;
 use Koha::ItemTypes;
 use Koha::MarcOverlayRules;
@@ -484,6 +485,25 @@ sub DelBiblio {
 
         # Fix this to use a status the template can understand
         $error .= "This Biblio has items attached, please delete them first before deleting this biblio ";
+    }
+
+    # Check for attached holdings records
+    my $holdings = $biblio->holdings;
+    if ($holdings->count > 0) {
+        if (C4::Context->preference('SummaryHoldings')) {
+            # Fix this to use a status the template can understand
+            $error .= "This Biblio has holdings records attached, please delete them first before deleting this biblio ";
+        }
+        else {
+            # Summary holdings disabled, so just delete any existing holdings records. Use
+            # holdings record's delete method to mark the records deleted. Note that as long
+            # as biblios are deleted from the biblio table, the foreign key will cause the
+            # holdings records to be deleted as well, but this will allow things to work
+            # better in the future when biblios are no longer moved to another table.
+            while (my $holding = $holdings->next) {
+                $holding->delete;
+            }
+        }
     }
 
     return $error if $error;
@@ -1462,6 +1482,23 @@ sub GetAuthorisedValueDesc {
         if ( $tagslib->{$tag}->{$subfield}->{'authorised_value'} eq "cn_source" ) {
             my $source = GetClassSource($value);
             return $source ? $source->{description} : q||;
+        }
+
+        #---- holdings
+        if ( $tagslib->{$tag}->{$subfield}->{'authorised_value'} eq "holdings" ) {
+            my $holding = Koha::Holdings->find( $value );
+            if ( $holding ) {
+                my @parts;
+
+                push @parts, $value;
+                push @parts, $holding->holdingbranch() if $holding->holdingbranch();
+                push @parts, $holding->location() if $holding->location();
+                push @parts, $holding->ccode() if $holding->ccode();
+                push @parts, $holding->callnumber() if $holding->callnumber();
+
+                return join(' ', @parts);
+            }
+            return q||;
         }
 
         #---- "true" authorized value
@@ -2565,14 +2602,15 @@ sub ModZebra {
 =head2 EmbedItemsInMarcBiblio
 
     EmbedItemsInMarcBiblio({
-        marc_record  => $marc,
-        biblionumber => $biblionumber,
-        item_numbers => $itemnumbers,
-        opac         => $opac });
+        marc_record   => $marc,
+        biblionumber  => $biblionumber,
+        item_numbers  => $itemnumbers,
+        opac          => $opac,
+        skip_holdings => 1 });
 
 Given a MARC::Record object containing a bib record,
 modify it to include the items attached to it as 9XX
-per the bib's MARC framework.
+per the bib's MARC framework and any holdings location information.
 if $itemnumbers is defined, only specified itemnumbers are embedded.
 
 If $opac is true, then opac-relevant suppressions are included.
@@ -2580,11 +2618,15 @@ If $opac is true, then opac-relevant suppressions are included.
 If opac filtering will be done, borcat should be passed to properly
 override if necessary.
 
+If $skip_holdings is set, it overrides the default of embedding basic
+location information from holdings records if summary holdings are
+enabled.
+
 =cut
 
 sub EmbedItemsInMarcBiblio {
     my ($params) = @_;
-    my ($marc, $biblionumber, $itemnumbers, $opac, $borcat);
+    my ($marc, $biblionumber, $itemnumbers, $opac, $borcat, $skip_holdings);
     $marc = $params->{marc_record};
     if ( !$marc ) {
         carp 'EmbedItemsInMarcBiblio: No MARC record passed';
@@ -2594,8 +2636,14 @@ sub EmbedItemsInMarcBiblio {
     $itemnumbers = $params->{item_numbers};
     $opac = $params->{opac};
     $borcat = $params->{borcat} // q{};
+    $skip_holdings = $params->{skip_holdings} // 0;
 
     $itemnumbers = [] unless defined $itemnumbers;
+
+    if ( !$skip_holdings && C4::Context->preference('SummaryHoldings') && !@$itemnumbers ) {
+        my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $biblionumber });
+        $marc->append_fields(@$holdings_fields) if ( @$holdings_fields );
+    }
 
     my $frameworkcode = GetFrameworkCode($biblionumber);
     _strip_item_fields($marc, $frameworkcode);

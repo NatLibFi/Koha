@@ -247,6 +247,16 @@ sub generate_subfield_form {
 
             #---- "true" authorised value
         }
+        elsif ( $subfield->{authorised_value} eq "holdings" ) {
+            push @authorised_values, "" unless ( $subfield->{mandatory} );
+            my $holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef }, { order_by => ['holdingbranch'] });
+            while (my $holding = $holdings->next()) {
+                push @authorised_values, $holding->holding_id;
+                $authorised_lib{$holding->holding_id} = $holding->holding_id . ' ' . $holding->holdingbranch . ' ' . $holding->location . ' ' . $holding->ccode . ' ' . $holding->callnumber;
+            }
+            my $input = CGI->new;
+            $value = $input->param('holding_id') unless ($value);
+        }
         else {
             push @authorised_values, qq{};
             my $av = GetAuthorisedValues( $subfield->{authorised_value} );
