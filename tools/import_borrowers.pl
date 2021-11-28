@@ -93,7 +93,7 @@ if ( $input->param('sample') ) {
     exit 0;
 }
 
-my @preserve_fields = $input->param('preserve_existing');
+my @preserve_fields = $input->multi_param('preserve_existing');
 
 my $uploadborrowers = $input->param('uploadborrowers');
 my $matchpoint      = $input->param('matchpoint');
@@ -105,7 +105,6 @@ if ($matchpoint) {
 my $createpatronlist = $input->param('createpatronlist') || 0;
 my $dt = dt_from_string();
 my $timestamp = $dt->ymd('-').' '.$dt->hms(':');
-my $patronlistname = $uploadborrowers . ' (' . $timestamp .')';
 
 $template->param( SCRIPT_NAME => '/cgi-bin/koha/tools/import_borrowers.pl' );
 
@@ -115,6 +114,8 @@ if ( $uploadborrowers && length($uploadborrowers) > 0 ) {
             session_id => scalar $input->cookie('CGISESSID'),
             token  => scalar $input->param('csrf_token'),
         });
+
+    my $patronlistname = $uploadborrowers . ' (' . $timestamp .')';
 
     my $handle   = $input->upload('uploadborrowers');
     my %defaults = $input->Vars;

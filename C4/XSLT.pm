@@ -283,7 +283,13 @@ sub XSLTParse4Display {
 
     my $varxml = "<variables>\n";
     while (my ($key, $value) = each %$variables) {
-        $varxml .= "<variable name=\"$key\">$value</variable>\n";
+        if( ! defined $value ) {
+            warn "Undef value for key '$key'";
+            $varxml .= "<variable name=\"$key\"></variable>\n";
+        }
+        else {
+            $varxml .= "<variable name=\"$key\">$value</variable>\n";
+        }
     }
     $varxml .= "</variables>\n";
 
