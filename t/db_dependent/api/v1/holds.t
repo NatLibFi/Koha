@@ -123,6 +123,8 @@ Koha::CirculationRules->set_rules(
         categorycode => undef,
         branchcode   => undef,
         itemtype     => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             reservesallowed => 1,
             holds_per_record => 99
