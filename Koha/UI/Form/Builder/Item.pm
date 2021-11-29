@@ -252,7 +252,23 @@ sub generate_subfield_form {
             my $holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef }, { order_by => ['holdingbranch'] });
             while (my $holding = $holdings->next()) {
                 push @authorised_values, $holding->holding_id;
-                $authorised_lib{$holding->holding_id} = $holding->holding_id . ' ' . $holding->holdingbranch . ' ' . $holding->location . ' ' . $holding->ccode . ' ' . $holding->callnumber;
+
+                # Rare, but potentual UX issue: because all rendered in single string without
+                # delimters, in case of empty (or undef) $holding-> methods results below, user
+                # might be confused with "to which next value belongs", for example, one record has:
+                #     holdingbranch = ‘MN’
+                #     location = undef
+                # and the other has:
+                #     holdingbranch = ''
+                #     location = ‘MN’
+                # the user will get two selects for "MN" which will look the same,
+                # so the user won't be able to distinguisgh.
+
+                $authorised_lib{$holding->holding_id} = $holding->holding_id
+                    . ' ' . ($holding->holdingbranch // '')
+                    . ' ' . ($holding->location // '')
+                    . ' ' . ($holding->ccode // '')
+                    . ' ' . ($holding->callnumber // '');
             }
             my $input = CGI->new;
             $value = $input->param('holding_id') unless ($value);
