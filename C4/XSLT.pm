@@ -30,6 +30,7 @@ use Koha::AuthorisedValues;
 use Koha::ItemTypes;
 use Koha::XSLT::Base;
 use Koha::Libraries;
+use Koha::Holdings;
 
 my $engine; #XSLT Handler object
 my %authval_per_framework;

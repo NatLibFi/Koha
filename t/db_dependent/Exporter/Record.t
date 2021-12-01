@@ -38,7 +38,6 @@ use Koha::Biblio::Metadata;
 use Koha::Biblio::Metadatas;
 use Koha::BiblioFramework;
 use Koha::BiblioFrameworks;
-use Koha::Holdings;
 
 my $schema  = Koha::Database->new->schema;
 $schema->storage->txn_begin;

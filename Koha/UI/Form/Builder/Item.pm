@@ -24,6 +24,7 @@ use C4::ClassSource qw( GetClassSources );
 
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Libraries;
+use Koha::Holdings;
 
 =head1 NAME
 
