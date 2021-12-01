@@ -625,7 +625,7 @@ if ($op eq 'add') {
         exit;
     } elsif ($redirect eq 'just_save') {
         my $tab = $input->param('current_tab');
-        print $input->redirect("/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=$biblionumber&holding_id=$holding_id&framework=$frameworkcode&tab=$tab&searchid=$searchid");
+        print $input->redirect("/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=$biblionumber&holding_id=$holding_id&frameworkcode=$frameworkcode&tab=$tab&searchid=$searchid");
     } else {
         $template->param(
             biblionumber => $biblionumber,
