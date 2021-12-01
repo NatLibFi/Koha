@@ -41,7 +41,6 @@ use Pod::Usage qw( pod2usage );
 
 use Koha::Logger;
 use Koha::Biblios;
-use Koha::Holdings;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Search;
 

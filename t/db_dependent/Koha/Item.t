@@ -27,7 +27,6 @@ use C4::Biblio qw( GetMarcSubfieldStructure );
 use C4::Circulation qw( AddIssue AddReturn );
 
 use Koha::Caches;
-use Koha::Holdings;
 use Koha::Items;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );

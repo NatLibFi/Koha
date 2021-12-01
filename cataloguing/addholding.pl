@@ -36,6 +36,7 @@ use Koha::DateUtils qw( dt_from_string );
 
 use Koha::ItemTypes;
 use Koha::Libraries;
+use Koha::Holdings;
 
 use Date::Calc qw(Today);
 use MARC::File::USMARC;
