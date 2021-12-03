@@ -21968,6 +21968,18 @@ msgstr ""
 msgid "Clear date"
 msgstr "Tyhjennä päiväys"
 
+#: koha-tmpl/intranet-tmpl/prog/en/includes/calendar.inc:92
+msgid "Yesterday"
+msgstr "Eilen"
+
+#: koha-tmpl/intranet-tmpl/prog/en/includes/calendar.inc:95
+msgid "Today"
+msgstr "Tänään"
+
+#: koha-tmpl/intranet-tmpl/prog/en/includes/calendar.inc:98
+msgid "Tomorrow"
+msgstr "Huomenna"
+
 #: koha-tmpl/intranet-tmpl/prog/en/includes/auth-finder-search.inc:4
 #, c-format
 msgid "Clear field"
