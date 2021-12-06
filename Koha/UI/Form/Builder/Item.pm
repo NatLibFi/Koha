@@ -85,6 +85,7 @@ sub generate_subfield_form {
     my $branch_limit = $params->{branch_limit};
     my $default_branches_empty = $params->{default_branches_empty};
     my $readonly = $params->{readonly};
+    my $holding_id = $params->{holding_id};
 
     my $item         = $self->{item};
     my $subfield     = $tagslib->{$tag}{$subfieldtag};
@@ -496,6 +497,7 @@ sub edit_form {
     my $prefill_with_default_values = $params->{prefill_with_default_values};
     my $branch_limit = $params->{branch_limit};
     my $default_branches_empty = $params->{default_branches_empty};
+    my $holding_id = $params->{holding_id};
 
     my $libraries =
       Koha::Libraries->search( {}, { order_by => ['branchname'] } )->unblessed;
@@ -513,6 +515,14 @@ sub edit_form {
     my $biblionumber   = $self->{biblionumber};
     my $frameworkcode  = $biblionumber ? GetFrameworkCode($biblionumber) : q{};
     my $marc_record    = $biblionumber ? GetMarcBiblio( { biblionumber => $biblionumber } ) : undef;
+
+    # Overlay/add holdings defaults:
+    if ( C4::Context->preference('SummaryHoldings') && $holding_id ) {
+        my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $biblionumber, holding_id => $holding_id });
+        $marc_record->append_fields(@$holdings_fields) if @$holdings_fields;
+    }
+
+
     my @subfields;
     my $tagslib = GetMarcStructure( 1, $frameworkcode );
     foreach my $tag ( keys %{$tagslib} ) {

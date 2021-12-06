@@ -74,7 +74,10 @@ sub get_embeddable_marc_fields {
     }
 
     my ($holdingstag, $holdingssubfield) = Koha::Holding->get_marc_field_mapping({ field => 'holdings.holdingbranch' });
-    my $holdings = $class->search({ biblionumber => $params->{biblionumber}, deleted_on => undef })->unblessed();
+    my $holdings = $class->search({
+        biblionumber => $params->{biblionumber},
+        ($params->{holding_id} ? (holding_id => $params->{holding_id}) : ()),
+        deleted_on => undef })->unblessed();
     foreach my $holding (@$holdings) {
         my $mungedholding = {
             map {
