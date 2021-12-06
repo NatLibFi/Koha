@@ -103,6 +103,8 @@ my $fa_branch             = $input->param('branch');
 my $fa_stickyduedate      = $input->param('stickyduedate');
 my $fa_duedatespec        = $input->param('duedatespec');
 
+my $holding_id = $input->param('holding_id') // '';
+
 our $frameworkcode = &GetFrameworkCode($biblionumber);
 
 # Defining which userflag is needing according to the framework currently used
@@ -591,6 +593,7 @@ my $subfields =
         ),
         prefill_with_default_values => 1,
         branch_limit => C4::Context->userenv->{"branch"},
+        holding_id => $holding_id,
     }
 );
 

@@ -48,7 +48,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $biblionumber= $input->param('id');
 my $importid= $input->param('importid');
 my $view= $input->param('viewas')||'';
-my $holding_id= $input->param('holding_id')||'';
+my $holding_id = $input->param('holding_id') // '';
 
 my $record;
 if ($holding_id) {
