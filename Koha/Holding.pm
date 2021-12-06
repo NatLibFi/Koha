@@ -338,6 +338,20 @@ sub marc_to_koha_fields {
         my ($table, $column) = split /[.]/, $kohafield, 2;
         next unless $table eq 'holdings' && $mss->{$kohafield};
 
+        if ( $column eq 'callnumber' && C4::Context->preference('itemcallnumber') ) {
+
+            my @CN_prefs_mapping;
+            foreach my $itemcn_pref (split(/,/,C4::Context->preference('itemcallnumber'))){
+                my $CNtag      = substr( $itemcn_pref, 0, 3 );
+                my @CNsubfields = split('',substr( $itemcn_pref, 3 ));
+                @CNsubfields = ('') unless @CNsubfields;
+                foreach my $CNsubfield (@CNsubfields) {
+                    push @CN_prefs_mapping, { tagfield => $CNtag, tagsubfield => $CNsubfield };
+                }
+            }
+            @{$mss->{$kohafield}} = @CN_prefs_mapping if @CN_prefs_mapping;
+        }
+
         my @values;
         foreach my $field (@{$mss->{$kohafield}}) {
             my $tag = $field->{tagfield};
