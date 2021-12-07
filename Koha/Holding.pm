@@ -364,7 +364,7 @@ sub marc_to_koha_fields {
                 }
             }
         }
-        $result->{$column} = scalar(@values) ? join(' | ', @values) : undef;
+        $result->{$column} = scalar(@values) ? join(' ', @values) : undef;
     }
 
     # convert suppress field to boolean
