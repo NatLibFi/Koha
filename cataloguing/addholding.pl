@@ -455,7 +455,8 @@ sub build_tabs {
                     foreach my $subfield ( keys %{ $tagslib->{$tag} } )
                     {
                         next if ( length $subfield != 1 );
-                        next if ( $tagslib->{$tag}->{$subfield}->{tab} ne $tabloop );
+                        next if ( defined $tagslib->{$tag}->{$subfield}->{tab} and
+                            $tagslib->{$tag}->{$subfield}->{tab} ne $tabloop );
                         next if ( $tag < 10 );
                         next
                           if ( ( $tagslib->{$tag}->{$subfield}->{hidden} <= -4 )
