@@ -678,6 +678,15 @@ if (!$biblionumber) {
     $biblionumber = $record->biblionumber;
 }
 my $biblio = Koha::Biblios->find($biblionumber);
+if (!$biblio) {
+    warn "Orphan holdings record? Attached to removed biblio? "
+        ."\$frameworkcode='$frameworkcode', "
+        ."\$holding_id='$holding_id', "
+        ."\$biblionumber='$biblionumber', "
+        ."\$record->holding_id()='".($record->holding_id()//'-undef-')."', "
+        ."referer: ".$input->referer()
+        ;
+}
 build_tabs($template, $marc, C4::Context->dbh, '', $input);
 $template->param(
     holding_id               => $holding_id,
