@@ -55,7 +55,7 @@ my ($template, $borrowernumber, $cookie)
                 type => "intranet",
                 flagsrequired => { reports => '*'},
                 });
-our $sep     = $input->param("sep");
+our $sep     = $input->param("sep") // '';
 $sep = "\t" if ($sep eq 'tabulation');
 $template->param(do_it => $do_it,
         );
