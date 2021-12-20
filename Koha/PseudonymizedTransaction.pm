@@ -18,6 +18,8 @@ use Modern::Perl;
 
 use Crypt::Eksblowfish::Bcrypt qw( bcrypt );
 
+use C4::Context;
+
 use Koha::Database;
 use Koha::Exceptions::Config;
 use Koha::Patrons;
@@ -63,6 +65,9 @@ sub new_from_statistic {
         $values->{itemcallnumber} = $statistic->item->itemcallnumber;
     }
 
+    if ( grep { $_ eq 'interface' } @t_fields_to_copy ) {
+        $values->{interface} = C4::Context->interface;
+    }
 
     @t_fields_to_copy = grep {
              $_ ne 'transaction_branchcode'
@@ -70,12 +75,22 @@ sub new_from_statistic {
           && $_ ne 'homebranch'
           && $_ ne 'transaction_type'
           && $_ ne 'itemcallnumber'
+          && $_ ne 'interface'
     } @t_fields_to_copy;
 
     $values = { %$values, map { $_ => $statistic->$_ } @t_fields_to_copy };
 
     my $patron = Koha::Patrons->find($statistic->borrowernumber);
     my @p_fields_to_copy = split ',', C4::Context->preference('PseudonymizationPatronFields') || '';
+
+    if ( grep { $_ eq 'age' } @p_fields_to_copy ) {
+        $values->{age} = $patron->get_age;
+    }
+
+    @p_fields_to_copy = grep {
+             $_ ne 'age'
+    } @p_fields_to_copy;
+
     $values = { %$values, map { $_ => $patron->$_ } @p_fields_to_copy };
 
     $values->{has_cardnumber} = $patron->cardnumber ? 1 : 0;
