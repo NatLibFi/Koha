@@ -78,9 +78,6 @@ sub new_from_statistic {
     my @p_fields_to_copy = split ',', C4::Context->preference('PseudonymizationPatronFields') || '';
     $values = { %$values, map { $_ => $patron->$_ } @p_fields_to_copy };
 
-    $values->{branchcode} = $patron->branchcode; # FIXME Must be removed from the pref options, or FK removed (?)
-    $values->{categorycode} = $patron->categorycode;
-
     $values->{has_cardnumber} = $patron->cardnumber ? 1 : 0;
 
     my $self = $class->SUPER::new($values);
