@@ -618,7 +618,9 @@ if ($op eq 'add') {
     $record->set_marc({ record => $marc });
     $record->store();
 
-    if ($redirect eq 'items' || ($mode ne 'popup' && !$holding_id && $redirect ne 'view' && $redirect ne 'just_save')) {
+    $holding_id = $record->holding_id;
+
+    if ($redirect eq 'items' || ($mode ne 'popup' && $redirect ne 'view' && $redirect ne 'just_save')) {
         print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&searchid=$searchid");
         exit;
     } elsif ($holding_id && $redirect eq 'view') {
