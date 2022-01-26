@@ -48,6 +48,7 @@ my $frameworkcode = $input->param('frameworkcode') || '';
 
 my $result = PrepareItemrecordDisplay($biblionumber, $itemnumber, undef, $frameworkcode);
 unless($result) {
+    warn "Double call to PrepareItemrecordDisplay beucause of [" . ($frameworkcode // '-undef-') . "]";
     $result = PrepareItemrecordDisplay($biblionumber, $itemnumber, undef, '');
 }
 
