@@ -455,7 +455,8 @@ sub build_tabs {
                     foreach my $subfield ( keys %{ $tagslib->{$tag} } )
                     {
                         next if ( length $subfield != 1 );
-                        next if ( $tagslib->{$tag}->{$subfield}->{tab} ne $tabloop );
+                        next if ( defined $tagslib->{$tag}->{$subfield}->{tab} and
+                            $tagslib->{$tag}->{$subfield}->{tab} ne $tabloop );
                         next if ( $tag < 10 );
                         next
                           if ( ( $tagslib->{$tag}->{$subfield}->{hidden} <= -4 )
@@ -617,7 +618,9 @@ if ($op eq 'add') {
     $record->set_marc({ record => $marc });
     $record->store();
 
-    if ($redirect eq 'items' || ($mode ne 'popup' && !$holding_id && $redirect ne 'view' && $redirect ne 'just_save')) {
+    $holding_id = $record->holding_id;
+
+    if ($redirect eq 'items' || ($mode ne 'popup' && $redirect ne 'view' && $redirect ne 'just_save')) {
         print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&searchid=$searchid");
         exit;
     } elsif ($holding_id && $redirect eq 'view') {
@@ -675,6 +678,15 @@ if (!$biblionumber) {
     $biblionumber = $record->biblionumber;
 }
 my $biblio = Koha::Biblios->find($biblionumber);
+if (!$biblio) {
+    warn "Orphan holdings record? Attached to removed biblio? "
+        ."\$frameworkcode='$frameworkcode', "
+        ."\$holding_id='$holding_id', "
+        ."\$biblionumber='$biblionumber', "
+        ."\$record->holding_id()='".($record->holding_id()//'-undef-')."', "
+        ."referer: ".$input->referer()
+        ;
+}
 build_tabs($template, $marc, C4::Context->dbh, '', $input);
 $template->param(
     holding_id               => $holding_id,

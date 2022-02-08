@@ -1541,7 +1541,14 @@ sub PrepareItemrecordDisplay {
     my ( $bibnum, $itemnum, $defaultvalues, $frameworkcode ) = @_;
 
     my $dbh = C4::Context->dbh;
-    $frameworkcode = C4::Biblio::GetFrameworkCode($bibnum) if $bibnum;
+    if ($bibnum) {
+        my $new_frameworkcode = C4::Biblio::GetFrameworkCode($bibnum);
+        if ($frameworkcode && $new_frameworkcode) {
+            warn "PrepareItemrecordDisplay: Framework code provided '$frameworkcode' but overlapped with '$new_frameworkcode' brom biblioitem";
+        }
+        $frameworkcode = $new_frameworkcode;
+    }
+
     my ( $itemtagfield, $itemtagsubfield ) = C4::Biblio::GetMarcFromKohaField( "items.itemnumber" );
 
     # Note: $tagslib obtained from GetMarcStructure() in 'unsafe' mode is
