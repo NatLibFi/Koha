@@ -24,6 +24,7 @@ use C4::ClassSource qw( GetClassSources );
 
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Libraries;
+use Koha::Holdings;
 
 =head1 NAME
 
@@ -246,6 +247,32 @@ sub generate_subfield_form {
             $value = $default_source if !$value && $prefill_with_default_values;
 
             #---- "true" authorised value
+        }
+        elsif ( $subfield->{authorised_value} eq "holdings" ) {
+            push @authorised_values, "" unless ( $subfield->{mandatory} );
+            my $holdings = Koha::Holdings->search({ biblionumber => $biblionumber, deleted_on => undef }, { order_by => ['holdingbranch'] });
+            while (my $holding = $holdings->next()) {
+                push @authorised_values, $holding->holding_id;
+
+                # Rare, but potentual UX issue: because all rendered in single string without
+                # delimters, in case of empty (or undef) $holding-> methods results below, user
+                # might be confused with "to which next value belongs", for example, one record has:
+                #     holdingbranch = ‘MN’
+                #     location = undef
+                # and the other has:
+                #     holdingbranch = ''
+                #     location = ‘MN’
+                # the user will get two selects for "MN" which will look the same,
+                # so the user won't be able to distinguisgh.
+
+                $authorised_lib{$holding->holding_id} = $holding->holding_id
+                    . ' ' . ($holding->holdingbranch // '')
+                    . ' ' . ($holding->location // '')
+                    . ' ' . ($holding->ccode // '')
+                    . ' ' . ($holding->callnumber // '');
+            }
+            my $input = CGI->new;
+            $value = $input->param('holding_id') unless ($value);
         }
         else {
             push @authorised_values, qq{};
