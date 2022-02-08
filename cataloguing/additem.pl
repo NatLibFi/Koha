@@ -95,7 +95,7 @@ my $biblio = Koha::Biblios->find($biblionumber);
 my $op           = $input->param('op') || q{};
 my $hostitemnumber = $input->param('hostitemnumber');
 my $marcflavour  = C4::Context->preference("marcflavour");
-my $searchid     = $input->param('searchid');
+my $searchid     = $input->param('searchid') // q{};
 # fast cataloguing datas
 my $fa_circborrowernumber = $input->param('circborrowernumber');
 my $fa_barcode            = $input->param('barcode');
@@ -355,6 +355,8 @@ if ($op eq "additem") {
 } elsif ($op eq "edititem") {
 #-------------------------------------------------------------------------------
 # retrieve item if exist => then, it's a modif
+    # TODO: prevent DIEs,
+    # Can't call method "unblessed" on an undefined value at /usr/share/koha/intranet/cgi-bin/cataloguing/additem.pl line 358.
     $current_item = Koha::Items->find($itemnumber)->unblessed;
     # FIXME Handle non existent item
     $nextop = "saveitem";

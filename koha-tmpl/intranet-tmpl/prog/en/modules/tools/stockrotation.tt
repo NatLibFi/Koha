@@ -97,7 +97,7 @@
 
                     <h2>Stock rotation</h2>
 
-                    [% IF existing_rotas.size > 0 %]
+                    [% IF existing_rotas AND existing_rotas.size > 0 %]
                         <table id="stock_rotation" class="rotas_table" role="grid">
                             <thead>
                                 <tr>

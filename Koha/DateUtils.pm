@@ -57,7 +57,7 @@ to the system preferences. If the date string is empty DateTime->now is returned
 sub dt_from_string {
     my ( $date_string, $date_format, $tz ) = @_;
 
-    return if $date_string and $date_string =~ m|^0000-0|;
+    return undef if $date_string and $date_string =~ m|^0000-0|;
 
     my $do_fallback = defined($date_format) ? 0 : 1;
     my $server_tz = C4::Context->tz;
@@ -190,6 +190,8 @@ sub dt_from_string {
         $ampm = $+{ampm};
     }
     else {
+        # TODO: should give stack trace from where called, to understand for devs why such date came:
+        # The given date (199-05-01) does not match the date format (dmydot) at /usr/share/koha/lib/Koha/DateUtils.pm line 193.
         die "The given date ($date_string) does not match the date format ($date_format)";
     }
 

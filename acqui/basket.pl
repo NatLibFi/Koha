@@ -173,7 +173,7 @@ if ( $op eq 'delete_confirm' ) {
     exit;
 } elsif ($op eq 'email') {
     my $err = eval {
-        SendAlerts( 'orderacquisition', $query->param('basketno'), 'ACQORDER' );
+        SendAlerts( 'orderacquisition', scalar $query->param('basketno'), 'ACQORDER' );
     };
     if ( $@ ) {
         push @messages, { type => 'error', code => $@ };
@@ -535,6 +535,8 @@ sub edi_close_and_order {
         if ( create_edi_order($edi_params) ) {
             #$template->param( edifile => 1 );
         }
+        # FIXME: uncaught exception 'Koha::Exceptions::Acquisition::Basket::AlreadyClosed'
+        # makes site 500 error and logs only  'Basket is already closed'
         Koha::Acquisition::Baskets->find($basketno)->close;
 
         # if requested, create basket group, close it and attach the basket
