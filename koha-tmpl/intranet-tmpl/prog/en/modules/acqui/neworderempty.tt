@@ -626,7 +626,7 @@
 
         $(document).ready(function(){
             [% IF AcqCreateItemOrdering and not basket.is_standing %]
-                cloneItemBlock(0, '[% UniqueItemFields | html %]', null, [% biblionumber | html %]);
+                cloneItemBlock(0, '[% UniqueItemFields | html %]');
             [% END %]
 
             [% IF ( suggestionid ) %]updateCosts();[% END %]

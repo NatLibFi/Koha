@@ -150,7 +150,7 @@ function deleteItemBlock(node_a, index, unique_item_fields) {
     }
 }
 
-function cloneItemBlock(index, unique_item_fields, callback, biblionumber) {
+function cloneItemBlock(index, unique_item_fields, callback) {
     var original;
     if(index) {
         original = $("#" + index); //original <div>
@@ -167,7 +167,6 @@ function cloneItemBlock(index, unique_item_fields, callback, biblionumber) {
         url: "/cgi-bin/koha/services/itemrecorddisplay.pl",
         dataType: 'html',
         data: {
-            biblionumber: biblionumber,
             frameworkcode: 'ACQ'
         },
         success: function(data) {
