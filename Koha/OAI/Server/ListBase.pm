@@ -115,7 +115,9 @@ sub GetRecords {
             ";
         } else {
             $sql = "
-                SELECT biblionumber FROM $table main WHERE $where
+                SELECT biblionumber
+                FROM $table main
+                WHERE $where $order_limit
             ";
 
             $ts_sql = "SELECT max(timestamp) FROM $table WHERE biblionumber = ?";
