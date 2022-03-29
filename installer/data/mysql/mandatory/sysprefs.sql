@@ -568,7 +568,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('ProtectSuperlibrarianPrivileges','1',NULL,'If enabled, non-superlibrarians cannot set superlibrarian privileges','YesNo'),
 ('Pseudonymization','0',NULL,'If enabled patrons and transactions will be copied in a separate table for statistics purpose','YesNo'),
 ('PseudonymizationPatronFields','','title,city,state,zipcode,country,branchcode,categorycode,dateenrolled,sex,age,sort1,sort2','Patron fields to copy to the pseudonymized_transactions table','multiple'),
-('PseudonymizationTransactionFields','','datetime,branchcode,transaction_type,interface,itemnumber,itemtype,holdingbranch,location,itemcallnumber,ccode','Transaction fields to copy to the pseudonymized_transactions table','multiple'),
+('PseudonymizationTransactionFields','','datetime,branchcode,transaction_type,interface,operator,itemnumber,itemtype,holdingbranch,location,itemcallnumber,ccode','Transaction fields to copy to the pseudonymized_transactions table','multiple'),
 ('PurgeSuggestionsOlderThan', '', NULL, 'If this script is called without the days parameter', 'Integer'),
 ('QueryAutoTruncate','1',NULL,'If ON, query truncation is enabled by default','YesNo'),
 ('QueryFuzzy','1',NULL,'If ON, enables fuzzy option for searches','YesNo'),

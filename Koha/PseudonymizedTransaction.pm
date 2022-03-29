@@ -69,6 +69,20 @@ sub new_from_statistic {
         $values->{interface} = C4::Context->interface;
     }
 
+    my $userenv = C4::Context->userenv;
+    if ( $userenv and $userenv->{number} and grep { $_ eq 'operator' } @t_fields_to_copy ) {
+        if( defined $userenv->{flags} ) {
+            $values->{operator} = $userenv->{number};
+        }
+        elsif( $statistic->borrowernumber != $userenv->{number} ) {
+            warn "Pseudonymization / new record: unflagged user tries to change another user: "
+               . $statistic->borrowernumber
+               . " != "
+               . $userenv->{number}
+               . "\n";
+        }
+    }
+
     @t_fields_to_copy = grep {
              $_ ne 'transaction_branchcode'
           && $_ ne 'holdingbranch'
@@ -76,6 +90,7 @@ sub new_from_statistic {
           && $_ ne 'transaction_type'
           && $_ ne 'itemcallnumber'
           && $_ ne 'interface'
+          && $_ ne 'operator'
     } @t_fields_to_copy;
 
     $values = { %$values, map { $_ => $statistic->$_ } @t_fields_to_copy };

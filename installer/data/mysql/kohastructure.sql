@@ -4409,6 +4409,7 @@ CREATE TABLE `pseudonymized_transactions` (
   `transaction_branchcode` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `transaction_type` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `interface` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Interface (sip/api/opac/intranet/cron/etc)',
+  `operator` int(11) DEFAULT NULL COMMENT 'User id (if user has extra permissions, operator, api-keys user, sip-user, librarian)',
   `itemnumber` int(11) DEFAULT NULL,
   `itemtype` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `holdingbranch` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -4419,7 +4420,9 @@ CREATE TABLE `pseudonymized_transactions` (
   PRIMARY KEY (`id`),
   KEY `pseudonymized_transactions_ibfk_1` (`categorycode`),
   KEY `pseudonymized_transactions_borrowers_ibfk_2` (`branchcode`),
-  KEY `pseudonymized_transactions_borrowers_ibfk_3` (`transaction_branchcode`)
+  KEY `pseudonymized_transactions_borrowers_ibfk_3` (`transaction_branchcode`),
+  KEY `pseudonymized_transactions_reporting_1` (`interface`),
+  KEY `pseudonymized_transactions_reporting_2` (`operator`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

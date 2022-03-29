@@ -31,5 +31,11 @@ return {
             say $out "Warning: pseudonymized_transactions already has 'interface'"
         }
 
+        unless( column_exists('pseudonymized_transactions','operator') ){
+            $dbh->do( "ALTER TABLE pseudonymized_transactions ADD COLUMN operator INT(11) DEFAULT NULL AFTER interface" );
+        } else {
+            say $out "Warning: pseudonymized_transactions already has 'operator'"
+        }
+
     },
 }
