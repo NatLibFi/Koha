@@ -197,7 +197,21 @@ sub authenticate_api_request {
             );
         }
     }
-    elsif ( $authorization_header and $authorization_header =~ /^Basic / ) {
+    elsif ( $authorization_header and $authorization_header =~ /^Basic /
+            and ! $c->req->headers->header('x-koha-httpauthlayer')
+            # make apache config header precense to skip Basic auth
+            # if someone uses HTTP-Auth layer on it's own separated
+            # to protect Koha from outer world:
+            #
+            #  <Location />
+            #     AuthType Basic
+            #     AuthName "Password Required"
+            #     AuthUserFile /somewhere/.httpasswords
+            #     Require valid-user
+            #     RequestHeader set x-koha-httpauthlayer "1"
+            # </Location>
+            #
+            ) {
         unless ( C4::Context->preference('RESTBasicAuth') ) {
             Koha::Exceptions::Authentication::Required->throw(
                 error => 'Basic authentication disabled'
