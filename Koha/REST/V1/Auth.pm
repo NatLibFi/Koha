@@ -182,7 +182,28 @@ sub authenticate_api_request {
             # failed, do not try other authentication means
             Koha::Exceptions::Authentication::Required->throw( error => 'Authentication failure.' );
         }
-    } elsif ( $authorization_header and $authorization_header =~ /^Basic / ) {
+    } elsif ( $authorization_header and $authorization_header =~ /^Basic /
+            and ! $c->req->headers->header('x-koha-httpauthlayer')
+            # make apache config header presence to skip Basic auth
+            # if someone uses HTTP-Auth layer on it's own separated
+            # to protect Koha from outer world:
+            #
+            # <Location /cgi-bin/>
+            #     AuthType Basic
+            #     AuthName "Password Required"
+            #     AuthUserFile /somewhere/.httpasswords
+            #     Require valid-user
+            #     RequestHeader set x-koha-httpauthlayer "1"
+            # </Location>
+            #
+            # Note: consider that API might not need to be protected:
+            # <Location "/api">
+            #     SetEnvIf Authorization .+ HTTP_AUTHORIZATION=$0
+            #     # Require ip 123.456.789.000/24
+            #     Require all granted
+            # </Location>
+            #
+            ) {
         unless ( C4::Context->preference('RESTBasicAuth') ) {
             Koha::Exceptions::Authentication::Required->throw( error => 'Basic authentication disabled' );
         }
