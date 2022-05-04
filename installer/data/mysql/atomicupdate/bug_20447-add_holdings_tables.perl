@@ -69,16 +69,27 @@ if( CheckVersion( $DBversion ) ) {
     });
 
     if (C4::Context->preference("marcflavour") eq 'MARC21') {
+
         # items.holding_id in the default framework
         $dbh->do(q{
             INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
                     ('952', 'k', 'Holdings record', 'Holdings record', 0, 0, 'items.holding_id', 10, 'holdings', '', '', NULL, -1, '', '', '', NULL);
         });
+
         # items.holding_id in the ACQ framework
-        $dbh->do(q{
-            INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
-                    ('952', 'k', 'Holdings record', 'Holdings record', 0, 0, 'items.holding_id', 10, 'holdings', '', '', NULL, -1, 'ACQ', '', '', NULL);
-        });
+        # add only if ACQ framework exists:
+        my $sth = $dbh->prepare("SELECT COUNT(1) FROM `biblio_framework` WHERE frameworkcode = 'ACQ'");
+        $sth->execute;
+        my ($value) = $sth->fetchrow;
+        if($value == 1) {
+            $dbh->do(q{
+                INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
+                        ('952', 'k', 'Holdings record', 'Holdings record', 0, 0, 'items.holding_id', 10, 'holdings', '', '', NULL, -1, 'ACQ', '', '', NULL);
+            });
+        }
+        else {
+            
+        }
 
         # Holdings framework
         $dbh->do(q{
