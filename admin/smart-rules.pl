@@ -110,6 +110,7 @@ if ($op eq 'delete') {
                 opacitemholds                    => undef,
                 overduefinescap                  => undef,
                 cap_fine_to_replacement_price    => undef,
+                expire_reserves_charge           => undef,
                 article_requests                 => undef,
                 note                             => undef,
                 recalls_allowed                  => undef,
@@ -292,6 +293,7 @@ elsif ($op eq 'add') {
     my $article_requests = $input->param('article_requests') || 'no';
     my $overduefinescap = $input->param('overduefinescap') || q{};
     my $cap_fine_to_replacement_price = ($input->param('cap_fine_to_replacement_price') || q{}) eq 'on';
+    my $expire_reserves_charge = $input->param('expire_reserves_charge') // q{};
     my $note = $input->param('note');
     my $decreaseloanholds = $input->param('decreaseloanholds') || q{};
     my $recalls_allowed = $input->param('recalls_allowed');
@@ -331,6 +333,7 @@ elsif ($op eq 'add') {
         opacitemholds                 => $opacitemholds,
         overduefinescap               => $overduefinescap,
         cap_fine_to_replacement_price => $cap_fine_to_replacement_price,
+        expire_reserves_charge        => $expire_reserves_charge,
         article_requests              => $article_requests,
         note                          => $note,
         decreaseloanholds             => $decreaseloanholds,
