@@ -171,14 +171,20 @@ sub GetHoldsQueueItems {
 
 =head2 CreateQueue
 
-  CreateQueue();
+  CreateQueue($params);
 
 Top level function that turns reserves into tmp_holdsqueue and hold_fill_targets.
+In C<$params> hashref can be boolean keys 'verbose' and 'dry_run' for console
+scripts usage.
 
 =cut
 
 sub CreateQueue {
+    my $params = shift;
+
     my $dbh   = C4::Context->dbh;
+
+    die "DRY_RUN: not capable to dry run yet: needs code refactoring and transactions.\n" if $params->{dry_run};
 
     $dbh->do("DELETE FROM tmp_holdsqueue");  # clear the old table for new info
     $dbh->do("DELETE FROM hold_fill_targets");
@@ -201,7 +207,11 @@ sub CreateQueue {
 
     $branches_to_use = load_branches_to_pull_from($use_transport_cost_matrix);
 
+    warn "Branches to use: @$branches_to_use\n" if $params->{verbose} and $branches_to_use;
+
     my $bibs_with_pending_requests = GetBibsWithPendingHoldRequests();
+
+    warn "Bibslios with pending hold requests: @$bibs_with_pending_requests\n" if $params->{verbose} and $bibs_with_pending_requests;
 
     foreach my $biblionumber (@$bibs_with_pending_requests) {
         $total_bibs++;
@@ -218,11 +228,15 @@ sub CreateQueue {
         $num_items_mapped += $item_map_size;
         CreatePicklistFromItemMap($item_map);
         AddToHoldTargetMap($item_map);
+
+        warn "Created and added hold to target map for items: " . join(', ', keys %$item_map) . "\n" if $params->{verbose};
+
         if (($item_map_size < scalar(@$hold_requests  )) and
             ($item_map_size < scalar(@$available_items))) {
             # DOUBLE CHECK, but this is probably OK - unfilled item-level requests
             # FIXME
-            #warn "unfilled requests for $biblionumber";
+            warn "Unfilled item-level requests(?) for $biblionumber\n" if $params->{verbose};
+            #warn "";
             #warn Dumper($hold_requests), Dumper($available_items), Dumper($item_map);
         }
     }
