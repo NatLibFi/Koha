@@ -267,7 +267,23 @@ sub GetMandatoryFieldZ3950 {
     my @author = GetMarcFromKohaField( 'biblio.author' );
     my @issn   = GetMarcFromKohaField( 'biblioitems.issn' );
     my @lccn   = GetMarcFromKohaField( 'biblioitems.lccn' );
-    
+
+    if( ! $isbn[1] ) {
+        warn "biblioitems.isbn mapping missing (usually 020 a)\n";
+    }
+    if( ! $title[1] ) {
+        warn "biblio.title mapping missing (usually 245 a)\n";
+    }
+    if( ! $author[1] ) {
+        warn "biblio.author mapping missing (usually 100 a)\n";
+    }
+    if( ! $issn[1] ) {
+        warn "biblioitems.issn mapping missing (usually 022 a)\n";
+    }
+    if( ! $lccn[1] ) {
+        warn "biblioitems.lccn mapping missing (usually 010 a)\n";
+    }
+
     return {
         $isbn[0].$isbn[1]     => 'isbn',
         $title[0].$title[1]   => 'title',
@@ -715,7 +731,7 @@ my $parentbiblio  = $input->param('parentbiblionumber');
 my $breedingid    = $input->param('breedingid');
 my $z3950         = $input->param('z3950');
 my $op            = $input->param('op') // q{};
-my $mode          = $input->param('mode');
+my $mode          = $input->param('mode') // q{};
 my $frameworkcode = $input->param('frameworkcode');
 my $redirect      = $input->param('redirect');
 my $searchid      = $input->param('searchid') // "";
@@ -769,7 +785,7 @@ if ($frameworkcode eq 'FA'){
 } elsif ( $op ne "delete" &&
             C4::Context->preference('EnableAdvancedCatalogingEditor') &&
             C4::Auth::haspermission(C4::Context->userenv->{id},{'editcatalogue'=>'advanced_editor'}) &&
-            $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced' &&
+            $input->cookie( 'catalogue_editor_' . $loggedinuser ) && $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced' &&
             !$breedingid ) {
     # Only use the advanced editor for non-fast-cataloging.
     # breedingid is not handled because those would only come off a Z39.50
@@ -921,7 +937,7 @@ if ( $op eq "addbiblio" ) {
     }
     elsif ($redirect eq "just_save"){
         my $tab = $input->param('current_tab');
-        print $input->redirect("/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=$biblionumber&framework=$frameworkcode&tab=$tab&searchid=$searchid");
+        print $input->redirect("/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=$biblionumber&frameworkcode=$frameworkcode&tab=$tab&searchid=$searchid");
     }
     else {
           $template->param(

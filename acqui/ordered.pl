@@ -90,7 +90,7 @@ my @ordered;
 
 my $total = 0;
 while ( my $data = $sth->fetchrow_hashref ) {
-    $data->{'itemtypes'} = [split('\|', $data->{itypes})];
+    $data->{'itemtypes'} = defined $data->{itypes} ? [split('\|', $data->{itypes})] : [];
     my $left = $data->{'tleft'};
     if ( !$left || $left eq '' ) {
         $left = $data->{'quantity'};

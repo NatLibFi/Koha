@@ -2873,7 +2873,7 @@ sub populate_order_with_prices {
 
     my $receiving = $params->{receiving};
     my $ordering  = $params->{ordering};
-    my $discount  = $order->{discount};
+    my $discount  = $order->{discount} || 0;
     $discount /= 100 if $discount > 1;
 
     if ($ordering) {
