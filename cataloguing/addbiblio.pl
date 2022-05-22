@@ -571,7 +571,7 @@ if ( $frameworkcode eq 'FA' ) {
 } elsif ( $op ne "cud-delete"
     && C4::Context->preference('EnableAdvancedCatalogingEditor')
     && C4::Auth::haspermission( C4::Context->userenv->{id}, { 'editcatalogue' => 'advanced_editor' } )
-    && $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced'
+    && ( $input->cookie( 'catalogue_editor_' . $loggedinuser ) // '' ) eq 'advanced'
     && !$breedingid )
 {
     # Only use the advanced editor for non-fast-cataloging.
