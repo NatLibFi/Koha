@@ -160,7 +160,16 @@ while (1) {
 
         # FIXME This means we need to have create the DB entry before
         # It could work in a first step, but then we will want to handle job that will be created from the message received
+        # sleep 2;
         my $job = Koha::BackgroundJobs->search( { id => $args->{job_id}, status => 'new' } )->next;
+        if(! $job) {
+            warn localtime().": Job $args->{job_id} not found, race conditions, sleeping 2 secs more:\n";
+            sleep 2;
+            $job = Koha::BackgroundJobs->search( { id => $args->{job_id}, status => 'new' } )->next;
+            if(! $job) {
+                die localtime().": Anyway failed to get job $args->{job_id}.\n";
+            }
+        }
 
         unless( $job ) {
             Koha::Logger->get( { interface => 'worker' } )
