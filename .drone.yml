@@ -121,7 +121,7 @@ steps:
         from_secret: username
     when:
       branch:
-        - preproduction
+        - builds/*/preproduction
 
 ---
 kind: secret
