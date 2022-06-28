@@ -93,6 +93,7 @@ builder {
         if ( Log::Log4perl->get_logger('plack-opac')->has_appenders ){
             enable 'Log4perl', category => 'plack-opac';
             enable 'LogWarn';
+            enable 'LogErrors';
         }
         enable "+Koha::Middleware::CSRF";
         $opac;
@@ -113,6 +114,7 @@ builder {
         if ( Log::Log4perl->get_logger('plack-intranet')->has_appenders ){
             enable 'Log4perl', category => 'plack-intranet';
             enable 'LogWarn';
+            enable 'LogErrors';
         }
         enable "+Koha::Middleware::CSRF";
         $intranet;
@@ -121,6 +123,7 @@ builder {
         if ( Log::Log4perl->get_logger('plack-api')->has_appenders ){
             enable 'Log4perl', category => 'plack-api';
             enable 'LogWarn';
+            enable 'LogErrors';
         }
         $apiv1;
     };
