@@ -143,7 +143,7 @@ my $item_group             = $input->param('item_group');
 my $item_group_description = $input->param('item_group_description');
 my $display_order          = $input->param('item_group_display_order');
 
-our $frameworkcode = &GetFrameworkCode($biblionumber);
+our $frameworkcode = &GetFrameworkCode($biblionumber) // '';
 
 # Defining which userflag is needing according to the framework currently used
 my $userflags;
