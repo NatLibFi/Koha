@@ -139,7 +139,7 @@ my $volume_description    = $input->param('volume_description');
 
 my $holding_id = $input->param('holding_id') // '';
 
-our $frameworkcode = &GetFrameworkCode($biblionumber);
+our $frameworkcode = &GetFrameworkCode($biblionumber) // '';
 
 # Defining which userflag is needing according to the framework currently used
 my $userflags;
