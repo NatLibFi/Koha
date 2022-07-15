@@ -146,6 +146,21 @@ my @errors; # store errors found while checking data BEFORE saving item.
 # Getting last created item cookie
 my $prefillitem = C4::Context->preference('PrefillItem');
 
+# Pre-check item existance for some operations which depends from this:
+my $found_item;
+if (     $op eq "edititem"
+      or $op eq "dupeitem"
+      or $op eq "delitem"
+      or $op eq "saveitem") {
+
+    $found_item = Koha::Items->find($itemnumber)
+        if $itemnumber;
+
+    unless ($found_item) {
+        push @errors, "item_not_exist";
+    }
+}
+
 #-------------------------------------------------------------------------------
 if ($op eq "additem") {
 
@@ -356,18 +371,16 @@ if ($op eq "additem") {
 
 
 #-------------------------------------------------------------------------------
-} elsif ($op eq "edititem") {
+} elsif ($op eq "edititem" and $found_item) {
 #-------------------------------------------------------------------------------
 # retrieve item if exist => then, it's a modif
-    $current_item = Koha::Items->find($itemnumber)->unblessed;
-    # FIXME Handle non existent item
+    $current_item = $found_item->unblessed;
     $nextop = "saveitem";
 #-------------------------------------------------------------------------------
-} elsif ($op eq "dupeitem") {
+} elsif ($op eq "dupeitem" and $found_item) {
 #-------------------------------------------------------------------------------
 # retrieve item if exist => then, it's a modif
-    $current_item = Koha::Items->find($itemnumber)->unblessed;
-    # FIXME Handle non existent item
+    $current_item = $found_item->unblessed;
     if (C4::Context->preference('autoBarcode') eq 'incremental') {
         my ( $barcode ) = C4::Barcodes::ValueBuilder::incremental::get_barcode;
         $current_item->{barcode} = $barcode;
@@ -378,10 +391,10 @@ if ($op eq "additem") {
 
     $nextop = "additem";
 #-------------------------------------------------------------------------------
-} elsif ($op eq "delitem") {
+} elsif ($op eq "delitem" and $found_item) {
 #-------------------------------------------------------------------------------
     # check that there is no issue on this item before deletion.
-    my $item = Koha::Items->find($itemnumber);
+    my $item = $found_item;
     my $deleted = $item->safe_delete;
     if ( $deleted ) {
         print $input->redirect("additem.pl?biblionumber=$biblionumber&frameworkcode=$frameworkcode&searchid=$searchid");
@@ -418,11 +431,11 @@ if ($op eq "additem") {
         exit;
     }
 #-------------------------------------------------------------------------------
-} elsif ($op eq "saveitem") {
+} elsif ($op eq "saveitem" and $found_item) {
 #-------------------------------------------------------------------------------
 
     my $itemnumber = $input->param('itemnumber');
-    my $item = Koha::Items->find($itemnumber);
+    my $item = $found_item;
     # FIXME Handle non existent item
     my $olditemlost = $item->itemlost;
     my @columns = Koha::Items->columns;
