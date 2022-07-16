@@ -355,6 +355,9 @@ sub output_and_exit_if_error {
             # We are testing the record to avoid additem to fetch the Koha::Biblio
             # But in the long term we will want to get a biblio in parameter
             $error = 'unknown_biblio' unless $params->{record};
+        } elsif ( $params->{module} eq 'items' ) {
+            # We are testing the item to avoid additem to fetch the item
+            $error = 'unknown_item' unless $params->{item};
         }
     } elsif ( $params and exists $params->{check} ) {
         if ( $params->{check} eq 'csrf_token' ) {
