@@ -189,6 +189,8 @@ sub dt_from_string {
         );
         $ampm = $+{ampm};
     } else {
+        # TODO: should give stack trace from where called, to understand for devs why such date came:
+        # The given date (199-05-01) does not match the date format (dmydot) at /usr/share/koha/lib/Koha/DateUtils.pm line 193.
         die "The given date ($date_string) does not match the date format ($date_format)";
     }
 
