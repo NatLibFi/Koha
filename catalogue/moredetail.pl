@@ -24,7 +24,7 @@ use CGI      qw ( -utf8 );
 use HTML::Entities;
 use C4::Biblio      qw( GetBiblioData GetFrameworkCode );
 use C4::Acquisition qw( GetOrderFromItemnumber GetBasket GetInvoice );
-use C4::Output      qw( output_and_exit output_html_with_http_headers );
+use C4::Output      qw( output_and_exit output_html_with_http_headers output_and_exit_if_error );
 use C4::Auth        qw( get_template_and_user );
 use C4::Serials     qw( CountSubscriptionFromBiblionumber );
 use C4::Search      qw( enabled_staff_search_views z3950_search_args );
@@ -71,6 +71,11 @@ my $itemnumber;
 if ( $query->param('itemnumber') && !$query->param('biblionumber') ) {
     $itemnumber = $query->param('itemnumber');
     my $item = Koha::Items->find($itemnumber);
+
+    # bring global error if no $item record exists:
+    output_and_exit_if_error( $query, $cookie, $template,
+        { module => 'items', item => $item } );
+
     $biblionumber = $item->biblionumber;
 } else {
     $biblionumber = $query->param('biblionumber');
