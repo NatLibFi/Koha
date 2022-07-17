@@ -1873,7 +1873,8 @@ sub searchResults {
                 $onloan_items->{$key}->{itemcallnumber} = $item->{itemcallnumber};
                 $onloan_items->{$key}->{description}    = $item->{description};
                 $onloan_items->{$key}->{imageurl} =
-                  getitemtypeimagelocation( $search_context->{'interface'}, $itemtypes{ $item->{itype} }->{imageurl} );
+                  getitemtypeimagelocation( $search_context->{'interface'}, $itemtypes{ $item->{itype} }->{imageurl} )
+                    if $item->{itype};
                 $onloan_items->{$key}->{collectioncode} = GetAuthorisedValueDesc('','',$item->{ccode},'','','CCODE');
 
                 # if something's checked out and lost, mark it as 'long overdue'
