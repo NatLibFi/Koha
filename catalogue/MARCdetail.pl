@@ -281,15 +281,32 @@ foreach my $field (@fields) {
         }
 
         my $kohafield = $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{kohafield};
-        $item->{ $subf[$i][0] } = output_pref( { str => $item->{ $subf[$i][0] }, dateonly => 1 } )
-            if grep { $kohafield eq $_ }
-            qw( items.dateaccessioned items.onloan items.datelastseen items.datelastborrowed items.replacementpricedate );
+
+        if( not defined $kohafield ) {
+            warn "[NTWIP] Undefined but expected 'kohafield' parameter for biblio $biblionumber for tag ".$field->tag().$subf[$i][0];
+        } else {
+            $item->{ $subf[$i][0] } = output_pref( { str => $item->{ $subf[$i][0] }, dateonly => 1 } )
+                if grep { $kohafield eq $_ }
+                qw( items.dateaccessioned items.onloan items.datelastseen items.datelastborrowed items.replacementpricedate );
+        }
     }
     push @item_loop, $item if $item;
 }
 
 my ( $holdingbrtagf, $holdingbrtagsubf ) = &GetMarcFromKohaField("items.holdingbranch");
-@item_loop = sort { $a->{$holdingbrtagsubf} cmp $b->{$holdingbrtagsubf} } @item_loop;
+@item_loop = sort {
+    my $x = $a->{$holdingbrtagsubf};
+    if( not defined $x ) {
+        warn  "[NTWIP] Undefined value for items.holdingbranch tag $holdingbrtagf$holdingbrtagsubf for biblio $biblionumber, var \$a";
+        $x = '';
+    }
+    my $y = $b->{$holdingbrtagsubf};
+    if( not defined $y ) {
+        warn  "[NTWIP] Undefined value for items.holdingbranch tag $holdingbrtagf$holdingbrtagsubf for biblio $biblionumber, var \$b";
+        $y = '';
+    }
+    $x cmp $y;
+} @item_loop;
 
 @item_subfield_codes = uniq @item_subfield_codes;
 
