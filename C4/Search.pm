@@ -1918,7 +1918,7 @@ sub searchResults {
                 $onloan_items->{$key}->{imageurl}       = getitemtypeimagelocation(
                     $search_context->{'interface'},
                     $itemtypes{ $item->{itype} }->{imageurl}
-                );
+                ) if $item->{itype};
                 $onloan_items->{$key}->{collectioncode} =
                     GetAuthorisedValueDesc( '', '', $item->{ccode}, '', '', 'CCODE' );
 
