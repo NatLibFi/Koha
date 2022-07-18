@@ -20,6 +20,7 @@
 use Modern::Perl;
 
 use constant DEFAULT_ZEBRAQ_PURGEDAYS             => 30;
+use constant DEFAULT_BGTASKS_PURGEDAYS            => 30;
 use constant DEFAULT_MAIL_PURGEDAYS               => 30;
 use constant DEFAULT_IMPORT_PURGEDAYS             => 60;
 use constant DEFAULT_LOGS_PURGEDAYS               => 180;
@@ -59,6 +60,20 @@ Usage: $0 [-h|--help] [--confirm] [--sessions] [--sessdays DAYS] [-v|--verbose] 
    --sessdays DAYS    purge only sessions older than DAYS days.
    -v --verbose       will cause the script to give you a bit more information
                       about the run.
+   --bgjobslog DAYS   purge successfully completed background jobs older than DAYS-1 days.
+                      Defaults to 29 days if no days specified.
+   --preserve-job     Specify which background jobs type to exclude. Repeatable.
+   --jobs-remove      Specify which background jobs type to remove. Repeatable.
+                      current types are:
+                          batch_authority_record_deletion
+                          batch_authority_record_modification
+                          batch_biblio_record_deletion
+                          batch_biblio_record_modification
+                          batch_item_record_deletion
+                          batch_item_record_modification
+                          batch_hold_cancel
+                          update_elastic_index
+                          update_holds_queue_for_biblios
    --zebraqueue DAYS  purge completed zebraqueue entries older than DAYS days.
                       Defaults to 30 days if no days specified.
    -m --mail DAYS     purge items from the mail queue that are older than DAYS days.
@@ -117,6 +132,9 @@ my $sessions;
 my $sess_days;
 my $verbose;
 my $zebraqueue_days;
+my $bgjobslog_days;
+my @preserve_jobs;
+my @jobs_remove;
 my $mail;
 my $purge_merged;
 my $pImport;
@@ -157,6 +175,9 @@ GetOptions(
     'v|verbose'         => \$verbose,
     'm|mail:i'          => \$mail,
     'zebraqueue:i'      => \$zebraqueue_days,
+    'bgjobslog:i'       => \$bgjobslog_days,
+    'preserve-jobs:s'   => \@preserve_jobs,
+    'jobs-remove:s'     => \@jobs_remove,
     'merged'            => \$purge_merged,
     'import:i'          => \$pImport,
     'z3950'             => \$pZ3950,
@@ -195,6 +216,7 @@ $sessions          = 1                                    if $sess_days         
 $pImport           = DEFAULT_IMPORT_PURGEDAYS             if defined($pImport)           && $pImport == 0;
 $pLogs             = DEFAULT_LOGS_PURGEDAYS               if defined($pLogs)             && $pLogs == 0;
 $zebraqueue_days   = DEFAULT_ZEBRAQ_PURGEDAYS             if defined($zebraqueue_days)   && $zebraqueue_days == 0;
+$bgjobslog_days    = DEFAULT_BGTASKS_PURGEDAYS            if defined($bgjobslog_days)    && $bgjobslog_days == 0;
 $mail              = DEFAULT_MAIL_PURGEDAYS               if defined($mail)              && $mail == 0;
 $pSearchhistory    = DEFAULT_SEARCHHISTORY_PURGEDAYS      if defined($pSearchhistory)    && $pSearchhistory == 0;
 $pListShareInvites = DEFAULT_SHARE_INVITATION_EXPIRY_DAYS if defined($pListShareInvites) && $pListShareInvites == 0;
@@ -207,6 +229,7 @@ if ($help) {
 
 unless ( $sessions
     || $zebraqueue_days
+    || $bgjobslog_days
     || $mail
     || $purge_merged
     || $pImport
@@ -298,6 +321,38 @@ if ($zebraqueue_days) {
     if ( $verbose ) {
         say $confirm ? "$count records were deleted." : "$count records would have been deleted.";
         say "Done with zebraqueue purge.";
+    }
+}
+
+if ($bgjobslog_days) {
+    my $count = 0;
+    print "Background tasks log purge triggered for completed tasks $bgjobslog_days days.\n" if $verbose;
+    my $log_query = q{
+            SELECT id,type,status
+            FROM background_jobs
+            WHERE status='finished' AND ended_on < date_sub(curdate(), INTERVAL ? DAY)
+    };
+    my @query_params = ();
+    if( @preserve_jobs ){
+        $log_query .= " AND type NOT IN (" . join(',',('?') x @preserve_jobs ) . ")";
+        push @query_params, @preserve_jobs;
+    }
+    if( @jobs_remove ){
+        $log_query .= " AND type IN (" . join(',',('?') x @jobs_remove ) . ")";
+        push @query_params, @jobs_remove;
+    }
+    $sth = $dbh->prepare( $log_query ) or die $dbh->errstr;
+    $sth->execute($bgjobslog_days - 1, @query_params) or die $dbh->errstr;
+    $sth2 = $dbh->prepare(q{ DELETE FROM background_jobs WHERE id=? });
+    while ( my $record = $sth->fetchrow_hashref ) {
+        if ( $confirm ) {
+            $sth2->execute( $record->{id} ) or die $dbh->errstr;
+        }
+        $count++;
+    }
+    if ( $verbose ) {
+        say $confirm ? "$count records were deleted." : "$count records would have been deleted.";
+        say "Done with background tasks log purge.";
     }
 }
 
