@@ -263,7 +263,8 @@ elsif ($op eq 'add') {
     my $chargeperiod_charge_at = $input->param('chargeperiod_charge_at');
     my $maxissueqty = strip_non_numeric( scalar $input->param('maxissueqty') );
     my $maxonsiteissueqty = strip_non_numeric( scalar $input->param('maxonsiteissueqty') );
-    my $renewalsallowed  = $input->param('renewalsallowed');
+    my $renewalsallowed  = strip_non_numeric( scalar $input->param('renewalsallowed') );
+    $renewalsallowed = $renewalsallowed eq q{} ? undef : $renewalsallowed;
     my $unseen_renewals_allowed  = strip_non_numeric( scalar $input->param('unseen_renewals_allowed') ) // q{};
     my $renewalperiod    = $input->param('renewalperiod');
     my $norenewalbefore  = $input->param('norenewalbefore');
@@ -276,6 +277,7 @@ elsif ($op eq 'add') {
     $no_auto_renewal_after_hard_limit = output_pref( { dt => $no_auto_renewal_after_hard_limit, dateonly => 1, dateformat => 'iso' } ) if ( $no_auto_renewal_after_hard_limit );
     my $reservesallowed  = strip_non_numeric( scalar $input->param('reservesallowed') );
     my $holds_per_record = strip_non_numeric( scalar $input->param('holds_per_record') );
+    $holds_per_record = $holds_per_record eq q{} ? undef : $holds_per_record;
     my $holds_per_day    = strip_non_numeric( scalar $input->param('holds_per_day') );
     my $onshelfholds     = $input->param('onshelfholds') || 0;
     my $issuelength  = $input->param('issuelength') || 0;
