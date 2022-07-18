@@ -221,7 +221,22 @@ foreach my $item (@items) {
             my $payment_offsets = $accountline->debit_offsets(
                 {
                     credit_id                 => { '!=' => undef },                        # it is not the debit itself
-                    'credit.credit_type_code' => { '!=' => [ 'Writeoff', 'Forgiven' ] },
+                    'credit.credit_type_code' =>
+                      # yes, this odd pseudo-hash is what DBIc expects (http://lists.scsys.co.uk/pipermail/dbix-class/2014-December/011837.html):
+                      { '!=' => [ -and => 'Writeoff', 'Forgiven' ] },
+
+                      # this is second option:
+                      # [ -and => {'!=' => 'Writeoff' }, {'!=' => 'Forgiven'}]
+
+                      # this is wrong (http://lists.scsys.co.uk/pipermail/dbix-class/2014-December/011837.html):
+                      # { '!=' => [ -and => [ 'Writeoff', 'Forgiven' ] ] },
+
+                      # this is now it was:
+                      # { '!=' => [ 'Writeoff', 'Forgiven' ] },
+                      # hence the warning:
+                      #     A multi-element arrayref as an argument to the inequality op '!=' is technically equivalent to an always-true 1=1
+                      #     (you probably wanted to say ...{ $inequality_op => [ -and => @values ] }... instead)
+
                 },
                 { join => 'credit', order_by => { '-desc' => 'created_on' } }
             );
