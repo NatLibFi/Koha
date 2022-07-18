@@ -831,32 +831,31 @@ sub get_keywords {
 
     ## loop over all 6XX fields
     foreach my $kwfield (@keywords) {
-        if ($kwfield != undef) {
-            ## authornames get special treatment
-            if ($fieldname eq "600") {
-                my $val = normalize_author($kwfield->subfield('a'), $kwfield->subfield('b'), $kwfield->subfield('c'), $kwfield->indicator('1'));
-                push @kw, $val;
-                print "<marc>Field $kwfield subfield a:", $kwfield->subfield('a'), "\r\n<marc>Field $kwfield subfield b:", $kwfield->subfield('b'), "\r\n<marc>Field $kwfield subfield c:", $kwfield->subfield('c'), "\r\n" if $marcprint;
-            }
-            else {
-                ## retrieve all available subfields
-                my @kwsubfields = $kwfield->subfields();
+        next unless defined $kwfield;
+        ## authornames get special treatment
+        if ($fieldname eq "600") {
+            my $val = normalize_author($kwfield->subfield('a'), $kwfield->subfield('b'), $kwfield->subfield('c'), $kwfield->indicator('1'));
+            push @kw, $val;
+            print "<marc>Field $kwfield subfield a:", $kwfield->subfield('a'), "\r\n<marc>Field $kwfield subfield b:", $kwfield->subfield('b'), "\r\n<marc>Field $kwfield subfield c:", $kwfield->subfield('c'), "\r\n" if $marcprint;
+        }
+        else {
+            ## retrieve all available subfields
+            my @kwsubfields = $kwfield->subfields();
 
-                ## loop over all available subfield tuples
-                foreach my $kwtuple (@kwsubfields) {
-                    ## loop over all subfields to check
-                    foreach my $subfield (@subfields) {
-                        ## [0] contains subfield code
-                        if (@$kwtuple[0] eq $subfield) {
-                            ## [1] contains value, remove trailing separators
-                            @$kwtuple[1] =~ s% *[,;.:/]*$%%;
-                            if (length(@$kwtuple[1]) > 0) {
-                                push @kw, @$kwtuple[1];
-                                print "<marc>Field $fieldname subfield $subfield:", @$kwtuple[1], "\r\n" if $marcprint;
-                            }
-                            ## we can leave the subfields loop here
-                            last;
+            ## loop over all available subfield tuples
+            foreach my $kwtuple (@kwsubfields) {
+                ## loop over all subfields to check
+                foreach my $subfield (@subfields) {
+                    ## [0] contains subfield code
+                    if (@$kwtuple[0] eq $subfield) {
+                        ## [1] contains value, remove trailing separators
+                        @$kwtuple[1] =~ s% *[,;.:/]*$%%;
+                        if (length(@$kwtuple[1]) > 0) {
+                            push @kw, @$kwtuple[1];
+                            print "<marc>Field $fieldname subfield $subfield:", @$kwtuple[1], "\r\n" if $marcprint;
                         }
+                        ## we can leave the subfields loop here
+                        last;
                     }
                 }
             }
