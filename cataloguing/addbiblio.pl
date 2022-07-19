@@ -531,6 +531,17 @@ if ($biblionumber){
         $biblionumber = undef;
         $template->param( bib_doesnt_exist => 1 );
     }
+    else {
+        # DEBUG: ... add [NTWIP] to warn later?
+        if(not defined $frameworkcode) {
+            warn "Undefined frameworkcode, $ENV{REQUEST_METHOD}"
+                . "\n\t$ENV{REQUEST_URI}"
+                . ($ENV{HTTP_REFERER} ? "\n\tRef: $ENV{HTTP_REFERER}":'')
+                . ($input->request_method eq 'POST'
+                    ? " Form parameters:\n\t" . join("\n\t", map { "$_=[".$input->params()."]" } $input->params ) : '')
+            ."\n";
+        }
+    }
 }
 
 if ($frameworkcode eq 'FA'){
