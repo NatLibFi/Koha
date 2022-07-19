@@ -341,6 +341,19 @@ foreach my $item (@items) {
 
     # checking for holds
     my $item_object = Koha::Items->find( $item->{itemnumber} );
+
+    # HOTFIX: we had dies on prods with item not found (sic!)
+    unless ( $item_object ) {
+        # DEBUG: ... add [NTWIP] to warn later?
+        warn "UNEXPECTEDLY. Item id $item->{itemnumber} not found in DB in loop. $ENV{REQUEST_METHOD}"
+            . "\n\t$ENV{REQUEST_URI}"
+            . ($ENV{HTTP_REFERER} ? "\n\tRef: $ENV{HTTP_REFERER}":'')
+            . ($query->request_method eq 'POST'
+                ? " Form parameters:\n\t" . join("\n\t", map { "$_=[".$query->params()."]" } $query->params ) : '')
+        ."\n"; # [NTWIP] ?
+        next;
+    }
+
     my $holds = $item_object->current_holds;
     if ( my $first_hold = $holds->next ) {
         $item->{first_hold} = $first_hold;
