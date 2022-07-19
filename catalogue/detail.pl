@@ -84,8 +84,10 @@ if ( C4::Context->config('enable_plugins') ) {
 
 my $biblionumber = $query->param('biblionumber');
 $biblionumber = HTML::Entities::encode($biblionumber);
-my $record       = GetMarcBiblio({ biblionumber => $biblionumber });
-my $biblio = Koha::Biblios->find( $biblionumber );
+
+my $record = $biblionumber ? GetMarcBiblio({ biblionumber => $biblionumber }) : undef;
+my $biblio = $biblionumber ? Koha::Biblios->find( $biblionumber ) : undef;
+
 $template->param( 'biblio', $biblio );
 
 if ( not defined $record ) {
