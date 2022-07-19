@@ -88,7 +88,6 @@ This function attempts to find duplicate records using a hard-coded, fairly simp
 
 sub FindDuplicate {
     my ($record) = @_;
-    my $dbh      = C4::Context->dbh;
     my $result   = TransformMarcToKoha( { record => $record } );
     my $sth;
     my $query;
@@ -1659,7 +1658,6 @@ Format results in a form suitable for passing to the template
 # building the HTML output for the template
 sub searchResults {
     my ( $search_context, $searchdesc, $hits, $results_per_page, $offset, $scan, $marcresults, $xslt_variables ) = @_;
-    my $dbh = C4::Context->dbh;
     my @newresults;
 
     require C4::Items;
