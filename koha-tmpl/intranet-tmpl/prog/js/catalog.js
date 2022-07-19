@@ -51,7 +51,7 @@ function confirm_deletion(link) {
     }
     if (is_confirmed) {
         $("#deletebiblio").unbind('click');
-        window.location="/cgi-bin/koha/cataloguing/addbiblio.pl?op=delete&amp;biblionumber=" + biblionumber + (searchid ? "&amp;searchid="+searchid : "");
+        window.location="/cgi-bin/koha/cataloguing/addbiblio.pl?op=delete&amp;frameworkcode=&amp;biblionumber=" + biblionumber + (searchid ? "&amp;searchid="+searchid : "");
     } else {
         return false;
     }
