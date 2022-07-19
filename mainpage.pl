@@ -72,6 +72,9 @@ $template->param(
     daily_quote => Koha::Quotes->get_daily_quote(),
 );
 
+warn "YOU ASKED ME to WARN." if $query->param('do_warn');
+die "YOU ASKED ME to DIE." if $query->param('do_die');
+
 my $branch =
     (      C4::Context->preference("IndependentBranchesPatronModifications")
         || C4::Context->preference("IndependentBranches") )
