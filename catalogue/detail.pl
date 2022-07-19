@@ -153,8 +153,6 @@ $template->param(
 
 my $itemtypes = { map { $_->{itemtype} => $_ } @{ Koha::ItemTypes->search->unblessed } };
 
-my $dbh = C4::Context->dbh;
-
 my @all_items = GetItemsInfo( $biblionumber );
 my @items;
 my $patron = Koha::Patrons->find( $borrowernumber );

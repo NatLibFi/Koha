@@ -424,7 +424,6 @@ sub TooMany {
     my $onsite_checkout = $params->{onsite_checkout} || 0;
     my $switch_onsite_checkout = $params->{switch_onsite_checkout} || 0;
     my $cat_borrower    = $borrower->{'categorycode'};
-    my $dbh             = C4::Context->dbh;
     # Get which branchcode we need
     my $branch = _GetCircControlBranch($item_object->unblessed,$borrower);
     my $type = $item_object->effective_itemtype;
@@ -1516,7 +1515,6 @@ sub AddIssue {
     my $auto_renew = $params && $params->{auto_renew};
     my $cancel_recall = $params && $params->{cancel_recall};
     my $recall_id = $params && $params->{recall_id};
-    my $dbh          = C4::Context->dbh;
     my $barcodecheck = CheckValidBarcode($barcode);
 
     my $issue;
@@ -3327,8 +3325,6 @@ cannot be found.
 sub GetSoonestRenewDate {
     my ( $borrowernumber, $itemnumber ) = @_;
 
-    my $dbh = C4::Context->dbh;
-
     my $item      = Koha::Items->find($itemnumber)      or return;
     my $itemissue = $item->checkout or return;
 
@@ -3397,8 +3393,6 @@ or item cannot be found.
 
 sub GetLatestAutoRenewDate {
     my ( $borrowernumber, $itemnumber ) = @_;
-
-    my $dbh = C4::Context->dbh;
 
     my $item      = Koha::Items->find($itemnumber)  or return;
     my $itemissue = $item->checkout                 or return;

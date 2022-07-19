@@ -49,8 +49,6 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user (
 my $bib_list     = $query->param('bib_list') || '';
 my $email_add    = $query->param('email_add');
 
-my $dbh          = C4::Context->dbh;
-
 if ( $email_add ) {
     die "Wrong CSRF token" unless Koha::Token->new->check_csrf({
         session_id => scalar $query->cookie('CGISESSID'),
