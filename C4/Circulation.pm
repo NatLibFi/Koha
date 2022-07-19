@@ -420,7 +420,6 @@ sub TooMany {
     my $onsite_checkout = $params->{onsite_checkout} || 0;
     my $switch_onsite_checkout = $params->{switch_onsite_checkout} || 0;
     my $cat_borrower    = $patron->categorycode;
-    my $dbh             = C4::Context->dbh;
     # Get which branchcode we need
     my $branch = _GetCircControlBranch($item, $patron);
     my $type = $item->effective_itemtype;
@@ -1556,7 +1555,6 @@ sub AddIssue {
     my $auto_renew = $params && $params->{auto_renew};
     my $cancel_recall = $params && $params->{cancel_recall};
     my $recall_id = $params && $params->{recall_id};
-    my $dbh          = C4::Context->dbh;
     my $barcodecheck = CheckValidBarcode($barcode);
 
     my $issue;
