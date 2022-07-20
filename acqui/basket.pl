@@ -304,7 +304,7 @@ if ( $op eq 'list' ) {
 
     # if the basket is closed, calculate estimated delivery date
     my $estimateddeliverydate;
-    if( $basket->{closedate} ) {
+    if( $basket->{closedate} and defined $bookseller->deliverytime ) {
         my ($year, $month, $day) = ($basket->{closedate} =~ /(\d+)-(\d+)-(\d+)/);
         ($year, $month, $day) = Add_Delta_Days($year, $month, $day, $bookseller->deliverytime);
         $estimateddeliverydate = sprintf( "%04d-%02d-%02d", $year, $month, $day );
