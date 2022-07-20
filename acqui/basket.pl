@@ -91,6 +91,10 @@ our ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
 my $logged_in_patron = Koha::Patrons->find($loggedinuser);
 
 our $basket = GetBasket($basketno);
+
+output_and_exit( $query, $cookie, $template, 'unknown_basket')
+    unless $basket;
+
 $booksellerid = $basket->{booksellerid} unless $booksellerid;
 my $bookseller = Koha::Acquisition::Booksellers->find($booksellerid);
 my $schema     = Koha::Database->new()->schema();
