@@ -106,12 +106,15 @@ sub FindDuplicate {
         my $authorindex = 'au,ext';
         my $op          = 'AND';
 
-        $result->{title} =~ s /\\//g;
-        $result->{title} =~ s /\"//g;
-        $result->{title} =~ s /\(//g;
-        $result->{title} =~ s /\)//g;
+        if   ( $result->{title} ) {
+            $result->{title} =~ s /\\//g;
+            $result->{title} =~ s /\"//g;
+            $result->{title} =~ s /\(//g;
+            $result->{title} =~ s /\)//g;
 
-        $query = "$titleindex:\"$result->{title}\"";
+            $query = "$titleindex:\"$result->{title}\"";
+        }
+
         if ( $result->{author} ) {
             $result->{author} =~ s /\\//g;
             $result->{author} =~ s /\"//g;
