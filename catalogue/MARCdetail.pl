@@ -169,7 +169,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
         # if tag <10, there's no subfield, use the "@" trick
         if ( $fields[$x_i]->tag() < 10 ) {
             next
-                if ( $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} ne $tabloop );
+                if ( not defined $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} or
+                     $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} ne $tabloop );
             next if ( $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
             my %subfield_data;
             $subfield_data{marc_lib} =
@@ -185,7 +186,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
             for my $i ( 0 .. $#subf ) {
                 $subf[$i][0] = "@" unless defined $subf[$i][0];
                 next
-                    if ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{tab} // q{} ) ne
+                    if ( defined $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{hidden} and
+                        $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{tab} // q{} ) ne
                     $tabloop;    # Note: defaulting to '0' changes behavior!
                 next
                     if ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
@@ -200,7 +202,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
                 if ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{isurl} ) {
                     $subfield_data{marc_value} = $subf[$i][1];
                     $subfield_data{is_url}     = 1;
-                } elsif ( $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{kohafield} eq "biblioitems.isbn" ) {
+                } elsif ( defined $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{kohafield} and
+                          $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{kohafield} eq "biblioitems.isbn" ) {
 
                     #                    warn " tag : ".$tagslib->{$fields[$x_i]->tag()}." subfield :".$tagslib->{$fields[$x_i]->tag()}->{$subf[$i][0]}. "ISBN : ".$subf[$i][1]."PosttraitementISBN :".DisplayISBN($subf[$i][1]);
                     $subfield_data{marc_value} = $subf[$i][1];
@@ -265,8 +268,10 @@ foreach my $field (@fields) {
 
     # loop through each subfield
     for my $i ( 0 .. $#subf ) {
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
 
         push @item_subfield_codes, $subf[$i][0];
         $witness{ $subf[$i][0] } =
