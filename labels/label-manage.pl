@@ -63,14 +63,14 @@ my $display_columns = { layout =>   [  # db column       => {col label          
                                         {printer_name    => {label => 'Printer Name',   link_field      => 0}},
                                         {paper_bin       => {label => 'Paper Bin',      link_field      => 0}},
                                         {_template_code  => {label => 'Template Name',  link_field      => 0}},     # this display column does not have a corresponding db column in the profile table, hence the underscore
-                                        {select          => {label => 'Actions',         value           => 'profile_id'}},
+                                        {select          => {label => 'Actions',        value           => 'profile_id'}},
                                     ],
                         batch =>    [
                                         {batch_id        => {label => 'Batch ID',       link_field      => 0}},
                                         {description     => {label => 'Description',    link_field      => 0}},
                                         {_item_count     => {label => 'Item Count',     link_field      => 0}},
-                                        {select          => {label => 'Actions',         value           => 'batch_id'}},
-                                        {select1         => {label => ' ',           link_field       => 'batch_id'}},
+                                        {select          => {label => 'Actions',        value           => 'batch_id'}},
+                                        {select1         => {label => ' ',              link_field      => 0}},
                                     ],
 };
 
