@@ -10,6 +10,7 @@ use Plack::Util::Accessor qw( logger );
 use Plack::Request;
 use Scalar::Util ();
 use Time::HiRes;
+use Mojo::UserAgent;
 
 our %STAT_CONFIG = (
     alert_long_load_time => 45,
@@ -17,6 +18,8 @@ our %STAT_CONFIG = (
     alert_maxmemsize     => undef,
     restart_maxmemsize   => 400 * 1024,
     log_startstops       => undef,
+    log_slack_sent_oks   => undef,
+    slack_hash           => undef,
 );
 our %STATS = (
     child_requests    => 0,
@@ -25,6 +28,8 @@ our %STATS = (
 );
 
 my $hostname = `hostname`;
+
+# $STAT_CONFIG{slack_hash} = '';
 
 if ( $STAT_CONFIG{log_startstops} ) {
     warn "Child $$ started at " . POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime )
@@ -36,6 +41,100 @@ END {
           . ". Lifetime: " . sprintf( "%.2f days", ( Time::HiRes::time() - $STATS{child_start} ) / 86400 )
           . ". Reqs: $STATS{child_requests}. Reason: $STATS{child_quit_reason}.\n";
     }
+}
+
+my @slack_messages;
+
+sub _push_slack_message {
+    my $mode    = shift;
+    my $message = shift;
+    push @slack_messages,
+      { mode    => $mode,
+        message => $message,
+      };
+    return;
+}
+
+sub _send_slack_messages {
+
+    my @blocks      = ();
+    my @attachments = ();
+    my @fields      = ();
+
+    return unless @slack_messages;
+
+    my $icon_emoji  = ':gear:';
+    my $status_name = 'STAT';
+    foreach my $m (@slack_messages) {
+        if ( $m->{mode} eq 'die' ) {
+            $icon_emoji  = ':bangbang:';
+            $status_name = 'ERROR';
+        } elsif ( $m->{mode} eq 'warn' ) {
+            $icon_emoji  = ':warning:';
+            $status_name = 'WARN';
+        }
+
+        # push @blocks, { type => "divider" } if @blocks;
+        $m->{message} =~ s/^\n+|\n+$//g;
+
+        if ( length( $m->{message} ) > 1536 ) {
+            $m->{message} =~ s/\A(.{0,1024}).+( +POST: \S+\s+pid:\d+ [\d.\[\]]+s .+| +pid:\d+ [\d.\[\]]+s CALLERS:.+)\Z/$1\n\n...\n\n$2/ms
+              or $m->{message} = substr( $m->{message}, 0, 1536 ) . ' ...';
+        }
+
+        push @blocks,
+          { type => "section",
+            text => {
+                type => "mrkdwn",
+                text => "```\n" . $m->{message} . "\n```",
+            }
+          };
+    }
+
+    my $ua = Mojo::UserAgent->new;
+    $ua->connect_timeout(6);
+    $ua->inactivity_timeout(15);
+    my $res = $ua->post(
+        'https://hooks.slack.com/services/' . $STAT_CONFIG{slack_hash} => { Accept => 'application/json' },
+        json                                                     => {
+
+            # channel    => '@nugged',
+            username   => $status_name . ': ' . $hostname,
+            icon_emoji => $icon_emoji,
+            text       => $slack_messages[$#slack_messages]->{message},
+            blocks     => [
+                {   type => "header",
+                    text => {
+                        type => "plain_text",
+                        text => POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime )
+                    },
+                },
+                @blocks,
+            ],
+        }
+    )->result;
+
+    @slack_messages = ();
+
+    return unless $STATS{log_slack_sent_oks};
+
+    if ( $res->is_success ) {
+        my $body = $res->body;
+        chomp $body;
+        if ( $body eq 'ok' ) {
+            say STDERR "... Slack message sent.";
+        } else {
+            say STDERR "MESSAGE NOT SENT: $body";
+        }
+    } elsif ( $res->is_error ) {
+        say STDERR $res->message;
+    } elsif ( $res->code == 301 ) {
+        say STDERR $res->headers->location;
+    } else {
+        say STDERR 'Whatever...';
+    }
+
+    return;
 }
 
 sub __isa_coderef {
@@ -107,6 +206,9 @@ sub _make_message {
     } elsif ( !$stats->{ignore_warning} ) {
         $message .= "  pid:$$ $timings" . _get_callers( 4, 6 );
     }
+
+    _push_slack_message( $mode, $message ) if $STAT_CONFIG{slack_hash} and !$stats->{ignore_warning};
+
     return $message;
 }
 
@@ -272,6 +374,7 @@ sub call {
         kill 1, $$;
     }
 
+    _send_slack_messages() if $STAT_CONFIG{slack_hash};
     return $res;
 }
 
@@ -292,6 +395,7 @@ sub print {
             message => Koha::Middleware::NugDebugLogWarnDie::_make_message( 'die', $self->{_stats}, $message ),
         }
     );
+    Koha::Middleware::NugDebugLogWarnDie::_send_slack_messages() if $Koha::Middleware::NugDebugLogWarnDie::STAT_CONFIG{slack_hash};
 }
 
 1;
