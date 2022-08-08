@@ -295,12 +295,16 @@ if ( $op =~ /cud-save/ ) {
     $suggestion_ref = &GetSuggestion( $$suggestion_ref{'suggestionid'} );
     $suggestion_ref->{reasonsloop} = $reasonsloop;
     my $other_reason = 1;
-    foreach my $reason ( @{$reasonsloop} ) {
-        if ( $suggestion_ref->{reason} eq $reason->{lib} ) {
-            $other_reason = 0;
+    unless ( $suggestion_ref->{reason} ) {
+        $other_reason = 0;
+    }
+    else {
+        foreach my $reason ( @{$reasonsloop} ) {
+            if ( $suggestion_ref->{reason} eq $reason->{lib} ) {
+                $other_reason = 0;
+            }
         }
     }
-    $other_reason = 0 unless $suggestion_ref->{reason};
     $template->param( other_reason => $other_reason );
     Init($suggestion_ref);
     $op = 'save';
