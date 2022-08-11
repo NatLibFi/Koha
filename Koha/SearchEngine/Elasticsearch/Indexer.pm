@@ -274,7 +274,7 @@ sub update_mappings {
         );
     } catch {
         $self->set_index_status_recreate_required();
-        my $reason = $_[0]->{vars}->{body}->{error}->{reason};
+        my $reason = $_[0]->{vars}->{body}->{error}->{reason} // $_[0]->{text};
         my $index_name = $self->index_name;
         Koha::Exception->throw(
             error => "Unable to update mappings for index \"$index_name\". Reason was: \"$reason\". Index needs to be recreated and reindexed",
