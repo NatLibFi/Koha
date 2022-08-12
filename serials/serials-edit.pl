@@ -141,7 +141,7 @@ foreach my $serialid (@serialids) {
         my $serinfo = GetSerialInformation($serialid); #TODO duplicates work done by GetSerials2 above
 
         for my $d ( qw( publisheddate planneddate )){
-            if ( $serinfo->{$d} =~m/^00/ ) {
+            if ( $serinfo->{$d} && $serinfo->{$d} =~m/^00/ ) {
                 $serinfo->{$d} = q{};
             }
             else {
