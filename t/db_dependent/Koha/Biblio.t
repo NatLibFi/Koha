@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 21; # +1
+use Test::More tests => 22; # +1
 use Test::Warn;
 
 use C4::Biblio qw( AddBiblio ModBiblio ModBiblioMarc );
@@ -563,6 +563,45 @@ subtest 'get_marc_components() tests' => sub {
 
 subtest 'get_components_query' => sub {
     plan tests => 6;
+
+    my $biblio = $builder->build_sample_biblio();
+    my $biblionumber = $biblio->biblionumber;
+    my $record = $biblio->metadata->record;
+
+    t::lib::Mocks::mock_preference( 'UseControlNumber', '0' );
+    t::lib::Mocks::mock_preference( 'ComponentSortField', 'author' );
+    t::lib::Mocks::mock_preference( 'ComponentSortOrder', 'za' );
+    my ( $comp_q, $comp_s ) = $biblio->get_components_query;
+    is($comp_q, 'Host-item:("Some boring read")', "UseControlNumber disabled");
+    is($comp_s, "author_za", "UseControlNumber disabled sort is correct");
+
+    t::lib::Mocks::mock_preference( 'UseControlNumber', '1' );
+    t::lib::Mocks::mock_preference( 'ComponentSortOrder', 'az' );
+    my $marc_001_field = MARC::Field->new('001', $biblionumber);
+    $record->append_fields($marc_001_field);
+    C4::Biblio::ModBiblio( $record, $biblio->biblionumber );
+    $biblio = Koha::Biblios->find( $biblio->biblionumber);
+
+    ( $comp_q, $comp_s ) = $biblio->get_components_query;
+    is($comp_q, "(rcn:$biblionumber AND (bib-level:a OR bib-level:b))", "UseControlNumber enabled without MarcOrgCode");
+    is($comp_s, "author_az", "UseControlNumber enabled without MarcOrgCode sort is correct");
+
+    my $marc_003_field = MARC::Field->new('003', 'OSt');
+    $record->append_fields($marc_003_field);
+    C4::Biblio::ModBiblio( $record, $biblio->biblionumber );
+    $biblio = Koha::Biblios->find( $biblio->biblionumber);
+
+    t::lib::Mocks::mock_preference( 'ComponentSortField', 'title' );
+    t::lib::Mocks::mock_preference( 'ComponentSortOrder', 'asc' );
+    ( $comp_q, $comp_s ) = $biblio->get_components_query;
+    is($comp_q, "(((rcn:$biblionumber AND cni:OSt) OR rcn:\"OSt $biblionumber\") AND (bib-level:a OR bib-level:b))", "UseControlNumber enabled with MarcOrgCode");
+    is($comp_s, "title_asc", "UseControlNumber enabled with MarcOrgCode sort if correct");
+};
+
+subtest 'get_components_query_es' => sub {
+    plan tests => 6;
+
+    t::lib::Mocks::mock_preference('SearchEngine', 'Elasticsearch');
 
     my $biblio = $builder->build_sample_biblio();
     my $biblionumber = $biblio->biblionumber;
