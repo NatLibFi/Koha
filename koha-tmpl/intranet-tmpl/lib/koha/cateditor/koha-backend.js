@@ -112,6 +112,9 @@ define( [ '/cgi-bin/koha/svc/cataloguing/framework?frameworkcode=&callback=defin
                 ).done( function( frameworkcode ) {
                     var record = new MARC.Record();
                     record.loadMARCXML(metadata);
+
+                    console.log("remove_control_num as: " + (remove_control_num ? 'True' : 'False') + ": ", remove_control_num);
+
                     if( remove_control_num ) { record.removeField("001"); }
                     record.frameworkcode = $(frameworkcode).find('frameworkcode').text();
                     initFramework( record.frameworkcode, function( error ) {
