@@ -221,6 +221,10 @@ if ($do_it) {
 
         # Used modules
         foreach my $module (@modules) {
+            if ( ! defined $module ) {
+                warn "Undefined \$module. \@modules count: ".(scalar @modules)."\n";
+                next;
+            }
             $template->param( $module => 1 );
         }
         output_html_with_http_headers $input, $cookie, $template->output;
