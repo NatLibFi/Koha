@@ -8,7 +8,7 @@ return {
         my ($dbh, $out) = @$args{qw(dbh out)};
         # Do you stuffs here
         $dbh->do(q{
-            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type) VALUES ('autoControlNumber','OFF','biblionumber|OFF',
+            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type) VALUES ('autoControlNumber','biblionumber','biblionumber|OFF',
             'Used to autogenerate a Control Number: biblionumber will be as biblionumber; OFF will leave it as is','Choice');
         });
         # Print useful stuff here
