@@ -35,6 +35,7 @@ use Koha::Libraries;
 my $query = CGI->new;
 
 my $dont_export_items = $query->param("dont_export_item") || 0;
+my $export_holdings   = $query->param("export_holdings") || 0;
 my $record_type       = $query->param("record_type");
 my $op                = $query->param("op")     || '';
 my $output_format     = $query->param("format") || $query->param("output_format") || 'iso2709';
@@ -234,6 +235,7 @@ if ( $op eq "cud-export" ) {
                 dont_export_fields             => $export_remove_fields,
                 csv_profile_id                 => $csv_profile_id,
                 export_items                   => ( not $dont_export_items ),
+                export_holdings                => $export_holdings,
                 only_export_items_for_branches => $only_export_items_for_branches,
             }
         );
