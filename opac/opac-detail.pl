@@ -651,8 +651,8 @@ if ( $showcomp eq 'both' || $showcomp eq 'opac' ) {
         }
         $template->param( ComponentParts => $parts );
         my ( $comp_query, $comp_sort ) = $biblio->get_components_query;
-        my $cpq = $comp_query . "&sort_by=" . $comp_sort;
-        $template->param( ComponentPartsQuery => $cpq );
+        $template->param( ComponentPartsQuery => $comp_query );
+        $template->param( ComponentPartsQuerySort => $comp_sort );
     }
 } else { # check if we should show analytics anyway
     $show_analytics = 1 if @{$biblio->get_marc_components(1)}; # count matters here, results does not
