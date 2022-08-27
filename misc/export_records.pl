@@ -54,6 +54,7 @@ my (
     $start_accession,
     $end_accession,
     $marc_conditions,
+    $export_holdings,
     $help
 );
 
@@ -78,6 +79,7 @@ GetOptions(
     'start_accession=s'       => \$start_accession,
     'end_accession=s'         => \$end_accession,
     'marc_conditions=s'       => \$marc_conditions,
+    'holdings'                => \$export_holdings,
     'h|help|?'                => \$help
 ) || pod2usage(1);
 
@@ -107,6 +109,11 @@ if ( $record_type ne 'bibs' and $record_type ne 'auths' ) {
 
 if ( $deleted_barcodes and $record_type ne 'bibs' ) {
     pod2usage(q|--deleted_barcodes can only be used with biblios|);
+}
+
+my $marcFlavour = C4::Context->preference('marcflavour') || 'MARC21';
+if ( $export_holdings and ( $record_type ne 'bibs' or $marcFlavour ne 'MARC21' ) ) {
+    pod2usage(q|--holdings can only be used with MARC 21 biblios|);
 }
 
 $start_accession = dt_from_string( $start_accession ) if $start_accession;
@@ -265,6 +272,7 @@ else {
             format             => $output_format,
             csv_profile_id     => $csv_profile_id,
             export_items       => (not $dont_export_items),
+            export_holdings    => $export_holdings,
             clean              => $clean || 0,
         }
     );
@@ -278,7 +286,7 @@ export records - This script exports record (biblios or authorities)
 
 =head1 SYNOPSIS
 
-export_records.pl [-h|--help] [--format=format] [--date=datetime] [--record-type=TYPE] [--dont_export_items] [--deleted_barcodes] [--clean] [--id_list_file=PATH] --filename=outputfile
+export_records.pl [-h|--help] [--format=format] [--date=datetime] [--record-type=TYPE] [--holdings] [--dont_export_items] [--deleted_barcodes] [--clean] [--id_list_file=PATH] --filename=outputfile
 
 =head1 OPTIONS
 
@@ -302,6 +310,11 @@ Print a brief help message.
 =item B<--record-type>
 
  --record-type=TYPE     TYPE is 'bibs' or 'auths'.
+
+=item B<--holdings>
+
+ --holdings             Export MARC 21 holdings records interleaved with bibs. Used only if TYPE
+                        is 'bibs' and FORMAT is 'xml' or 'marc'.
 
 =item B<--dont_export_items>
 
