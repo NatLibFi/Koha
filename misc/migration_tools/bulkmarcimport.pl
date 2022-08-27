@@ -43,7 +43,7 @@ use open qw( :std :encoding(UTF-8) );
 binmode( STDOUT, ":encoding(UTF-8)" );
 my ( $input_marc_file, $number, $offset) = ('',0,0);
 my ($version, $delete, $test_parameter, $skip_marc8_conversion, $char_encoding, $verbose, $commit, $fk_off,$format,$biblios,$authorities,$keepids,$match, $isbn_check, $logfile);
-my ( $insert, $filters, $update, $all, $yamlfile, $authtypes, $append );
+my ( $insert, $filters, $update, $all, $yamlfile, $authtypes, $append, $import_holdings );
 my $cleanisbn = 1;
 my ($sourcetag,$sourcesubfield,$idmapfl, $dedup_barcode);
 my $framework = '';
@@ -87,12 +87,16 @@ GetOptions(
     'framework=s' => \$framework,
     'custom:s'    => \$localcust,
     'marcmodtemplate:s' => \$marc_mod_template,
+    'holdings' => \$import_holdings,
 );
 $biblios ||= !$authorities;
 $insert  ||= !$update;
 my $writemode = ($append) ? "a" : "w";
+my $marcFlavour = C4::Context->preference('marcflavour') || 'MARC21';
 
 pod2usage( -msg => "\nYou must specify either --biblios or --authorities, not both.\n", -exitval ) if $biblios && $authorities;
+
+pod2usage( -msg => "\nHoldings only supported for MARC 21 biblios.\n", -exitval ) if $import_holdings && (!$biblios || $marcFlavour ne 'MARC21');
 
 if ($all) {
     $insert = 1;
@@ -171,12 +175,14 @@ if ($fk_off) {
 
 
 if ($delete) {
-	if ($biblios){
-    	print "deleting biblios\n";
+    if ($biblios) {
+        print "deleting biblios\n";
         $dbh->do("DELETE FROM biblio");
         $dbh->do("ALTER TABLE biblio AUTO_INCREMENT = 1");
         $dbh->do("DELETE FROM biblioitems");
         $dbh->do("ALTER TABLE biblioitems AUTO_INCREMENT = 1");
+        $dbh->do("DELETE FROM holdings");
+        $dbh->do("ALTER TABLE holdings AUTO_INCREMENT = 1");
         $dbh->do("DELETE FROM items");
         $dbh->do("ALTER TABLE items AUTO_INCREMENT = 1");
 	}
@@ -192,8 +198,6 @@ if ($delete) {
 if ($test_parameter) {
     print "TESTING MODE ONLY\n    DOING NOTHING\n===============\n";
 }
-
-my $marcFlavour = C4::Context->preference('marcflavour') || 'MARC21';
 
 # The definition of $searcher must be before MARC::Batch->new
 my $searcher = Koha::SearchEngine::Search->new(
@@ -232,6 +236,7 @@ if (defined $format && $format =~ /XML/i) {
 $batch->warnings_off();
 $batch->strict_off();
 my $i=0;
+my $holdings_count = 0;
 my $commitnum = $commit ? $commit : 50;
 my $yamlhash;
 
@@ -261,6 +266,7 @@ if ($logfile){
 }
 
 my $logger = Koha::Logger->get;
+my $biblionumber;
 my $schema = Koha::Database->schema;
 $schema->txn_begin;
 RECORD: while (  ) {
@@ -311,11 +317,19 @@ RECORD: while (  ) {
             $field->update('a' => $isbn);
         }
     }
+
+    # check for holdings records
+    my $holdings_record = 0;
+    if ($biblios && $marcFlavour eq 'MARC21') {
+        my $leader = $record->leader();
+        $holdings_record = $leader =~ /^.{6}[uvxy]/;
+    }
+
     my $id;
     # search for duplicates (based on Local-number)
     my $originalid;
     $originalid = GetRecordId( $record, $tagid, $subfieldid );
-    if ($match) {
+    if ($match && !$holdings_record) {
         require C4::Search;
         my $query = build_query( $match, $record );
         my $server = ( $authorities ? 'authorityserver' : 'biblioserver' );
@@ -419,8 +433,30 @@ RECORD: while (  ) {
             $yamlhash->{$originalid}->{'updated'} = 1;
             }
         }
+        elsif ($holdings_record) {
+            if ($import_holdings) {
+                if (!defined $biblionumber) {
+                    warn "ERROR: Encountered holdings record without preceding biblio record\n";
+                } else {
+                    if ($insert) {
+                        my $holding = Koha::Holding->new({ biblionumber => $biblionumber });
+                        $holding->set_marc({ record => $record });
+                        my $branchcode = $holding->holdingbranch();
+                        if (defined $branchcode && !Koha::Libraries->find({ branchcode => $branchcode})) {
+                            printlog( { id => 0, op => 'insert', status => "warning : library $branchcode not defined, holdings record skipped" } ) if ($logfile);
+                        } else {
+                            $holding->store();
+                            ++$holdings_count;
+                            printlog( { id => $holding->holding_id(), op => 'insert', status => 'ok' } ) if ($logfile);
+                        }
+                    } else {
+                        printlog( { id => 0, op => 'update', status => 'warning : not in database' } ) if ($logfile);
+                    }
+                }
+            }
+        }
         else {
-            my ( $biblionumber, $biblioitemnumber, $itemnumbers_ref, $errors_ref );
+            my ( $biblioitemnumber, $itemnumbers_ref, $errors_ref );
             $biblionumber = $id;
             # check for duplicate, based on ISBN (skip it if we already have found a duplicate with match parameter
             if (!$biblionumber && $isbn_check && $isbn) {
@@ -557,7 +593,11 @@ delete $ENV{OVERRIDE_SYSPREF_CataloguingLog};
 delete $ENV{OVERRIDE_SYSPREF_AuthoritiesLog};
 
 my $timeneeded = gettimeofday - $starttime;
-print "\n$i MARC records done in $timeneeded seconds\n";
+if ($import_holdings) {
+    printf("\n%i MARC bibliographic records and %i holdings records done in %0.3f seconds\n", $i, $holdings_count, $timeneeded);
+} else {
+    printf("\n%i MARC records done in %0.3f seconds\n", $i, $timeneeded);
+}
 if ($logfile){
   print $loghandle "file : $input_marc_file\n";
   print $loghandle "$i MARC records done in $timeneeded seconds\n";
@@ -678,6 +718,11 @@ Type of import: authority records
 
 The I<FILE> to import
 
+=item B<-holdings>
+
+Import MARC 21 holdings records when interleaved with bibliographic records
+(insert only, update not supported). Used only with -biblios.
+
 =item  B<-v>
 
 Verbose mode. 1 means "some infos", 2 means "MARC dumping"
@@ -723,7 +768,7 @@ I<UNIMARC> are supported. MARC21 by default.
 =item B<-d>
 
 Delete EVERYTHING related to biblio in koha-DB before import. Tables: biblio,
-biblioitems, items
+biblioitems, items, holdings
 
 =item B<-m>=I<FORMAT>
 
