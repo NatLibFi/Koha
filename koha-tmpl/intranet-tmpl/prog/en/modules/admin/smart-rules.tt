@@ -335,7 +335,7 @@
                                                   [% END %]
                                                 </td>
                                                 <td>[% decreaseloanholds | html %]</td>
-                                                <td>[% fine | html %]</td>
+                                                <td>[% fine | $Price %]</td>
                                                 <td>[% chargeperiod | html %]</td>
                                                 <td>[% IF chargeperiod_charge_at %]Start of interval[% ELSE %]End of interval[% END %]</td>
                                                 <td>[% firstremind | html %]</td>
@@ -430,7 +430,7 @@
                                                     [% END %]
                                                 </td>
                                                 [% END %]
-                                                <td>[% rentaldiscount | html %]</td>
+                                                <td>[% rentaldiscount | $Price %]</td>
                                                 [% IF Koha.Preference('UseRecalls') %]
                                                     <td>[% recalls_allowed | html %]</td>
                                                     <td>[% recalls_per_record | html %]</td>

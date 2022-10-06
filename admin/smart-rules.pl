@@ -261,7 +261,7 @@ elsif ($op eq 'add') {
     my $itemtype  = $input->param('itemtype');     # item type
     my $ccode             = $input->param('ccode');
     my $shelving_location = $input->param('shelving_location');
-    my $fine = $input->param('fine');
+    my $fine = Koha::Number::Price->new( $input->param('fine') )->unformat();
     my $finedays     = $input->param('finedays');
     my $maxsuspensiondays = $input->param('maxsuspensiondays') || q{};
     my $suspension_chargeperiod = $input->param('suspension_chargeperiod') || 1;
@@ -288,10 +288,14 @@ elsif ($op eq 'add') {
     my $lengthunit  = $input->param('lengthunit');
     my $hardduedate = $input->param('hardduedate') || q{};
     my $hardduedatecompare = $input->param('hardduedatecompare');
-    my $rentaldiscount = $input->param('rentaldiscount') || 0;
+    my $rentaldiscount = $input->param('rentaldiscount')
+        && Koha::Number::Price->new( $input->param('rentaldiscount') )->unformat()
+        || 0;
     my $opacitemholds = $input->param('opacitemholds') || 0;
     my $article_requests = $input->param('article_requests') || 'no';
-    my $overduefinescap = $input->param('overduefinescap') || q{};
+    my $overduefinescap = $input->param('overduefinescap')
+        && Koha::Number::Price->new( $input->param('overduefinescap') )->unformat()
+        || q{};
     my $cap_fine_to_replacement_price = ($input->param('cap_fine_to_replacement_price') || q{}) eq 'on';
     my $expire_reserves_charge = $input->param('expire_reserves_charge') // q{};
     my $note = $input->param('note');
@@ -300,7 +304,7 @@ elsif ($op eq 'add') {
     my $recalls_per_record = $input->param('recalls_per_record');
     my $on_shelf_recalls = $input->param('on_shelf_recalls');
     my $recall_due_date_interval = $input->param('recall_due_date_interval');
-    my $recall_overdue_fine = $input->param('recall_overdue_fine');
+    my $recall_overdue_fine = Koha::Number::Price->new( $input->param('recall_overdue_fine') )->unformat();
     my $recall_shelf_time = $input->param('recall_shelf_time');
 
     my $rules = {
