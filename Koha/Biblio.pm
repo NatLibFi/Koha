@@ -527,14 +527,14 @@ sub get_marc_components {
 
     return [] if (C4::Context->preference('marcflavour') ne 'MARC21');
 
-    my ( $searchstr, $sort ) = $self->get_components_query;
+    my ( $searchstr, $sort, $searchhash ) = $self->get_components_query;
 
     my $components;
-    if (defined($searchstr)) {
+    if (defined($searchhash)) {
         my $searcher = Koha::SearchEngine::Search->new({index => $Koha::SearchEngine::BIBLIOS_INDEX});
         my ( $error, $results, $facets );
         eval {
-            ( $error, $results, $facets ) = $searcher->search_compat( $searchstr, undef, [$sort], ['biblioserver'], $max_results, 0, undef, undef, 'ccl', 0 );
+            ( $error, $results, $facets ) = $searcher->search_compat( $searchhash, undef, [$sort], ['biblioserver'], $max_results, 0, undef, undef, 'ccl', 0 );
         };
         if( $error || $@ ) {
             $error //= q{};
@@ -594,6 +594,11 @@ sub get_components_query {
             $searchstr .= " AND (bib-level:a OR bib-level:b)";
             $searchstr .= ")";
         }
+
+        unless($searchstr) {
+            warn "MARC field 001 unexpectedly undefined: data corrupted? For biblio ".$self->biblionumber."\n";
+            return;
+        }
     }
     else {
         my $cleaned_title = $marc->subfield('245', "a");
@@ -601,13 +606,13 @@ sub get_components_query {
         $cleaned_title = $builder->clean_search_term($cleaned_title);
         $searchstr = qq#Host-item:("$cleaned_title")#;
     }
-    my ($error, $query_str) = $builder->build_query_compat( undef, [$searchstr], undef, undef, [$sort], 0 );
+    my ($error, $query, $query_str) = $builder->build_query_compat( undef, [$searchstr], undef, undef, [$sort], 0 );
     if( $error ){
         warn $error;
         return;
     }
 
-    return ($query_str, $sort);
+    return ($query_str, $sort, $query);
 }
 
 =head3 subscriptions
