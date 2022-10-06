@@ -152,6 +152,7 @@
 
       <hr />
 
+        [% total_adj = 0 %]
         <h3>Adjustments</h3>
 
           <form action="/cgi-bin/koha/acqui/invoice.pl" method="post" class="validated">
@@ -168,7 +169,6 @@
                              <th>Encumber while invoice open</th>
                              [% UNLESS readonly %]<th>&nbsp</th>[% END %]
                           </tr>
-                          [% total_adj = 0 %]
                           [% FOREACH adjustment IN adjustments %]
                               [% total_adj = total_adj + adjustment.adjustment %]
                               <tr>

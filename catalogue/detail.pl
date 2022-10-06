@@ -84,8 +84,10 @@ if ( C4::Context->config('enable_plugins') ) {
 
 my $biblionumber = $query->param('biblionumber');
 $biblionumber = HTML::Entities::encode($biblionumber);
-my $record       = GetMarcBiblio({ biblionumber => $biblionumber });
-my $biblio = Koha::Biblios->find( $biblionumber );
+
+my $record = $biblionumber ? GetMarcBiblio({ biblionumber => $biblionumber }) : undef;
+my $biblio = $biblionumber ? Koha::Biblios->find( $biblionumber ) : undef;
+
 $template->param( 'biblio', $biblio );
 
 if ( not defined $record ) {
@@ -153,8 +155,6 @@ $template->param(
 
 my $itemtypes = { map { $_->{itemtype} => $_ } @{ Koha::ItemTypes->search->unblessed } };
 
-my $dbh = C4::Context->dbh;
-
 my @all_items = GetItemsInfo( $biblionumber );
 my @items;
 my $patron = Koha::Patrons->find( $borrowernumber );
@@ -201,7 +201,7 @@ foreach my $subscription (@subscriptions) {
 
 # Get component parts details
 my $showcomp = C4::Context->preference('ShowComponentRecords');
-my $show_analytics;
+my $show_analytics = 0;
 if ( $showcomp eq 'both' || $showcomp eq 'staff' ) {
     if ( my $components = $marc_record ? $biblio->get_marc_components(C4::Context->preference('MaxComponentRecords')) : undef ) {
         $show_analytics = 1 if @{$components}; # just show link when having results
@@ -349,6 +349,19 @@ foreach my $item (@items) {
 
     # checking for holds
     my $item_object = Koha::Items->find( $item->{itemnumber} );
+
+    # HOTFIX: we had dies on prods with item not found (sic!)
+    unless ( $item_object ) {
+        # DEBUG: ... add [NTWIP] to warn later?
+        warn "UNEXPECTEDLY. Item id $item->{itemnumber} not found in DB in loop. $ENV{REQUEST_METHOD}"
+            . "\n\t$ENV{REQUEST_URI}"
+            . ($ENV{HTTP_REFERER} ? "\n\tRef: $ENV{HTTP_REFERER}":'')
+            . ($query->request_method eq 'POST'
+                ? " Form parameters:\n\t" . join("\n\t", map { "$_=[".$query->params()."]" } $query->params ) : '')
+        ."\n"; # [NTWIP] ?
+        next;
+    }
+
     my $holds = $item_object->current_holds;
     if ( my $first_hold = $holds->next ) {
         $item->{first_hold} = $first_hold;

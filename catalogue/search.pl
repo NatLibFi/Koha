@@ -277,7 +277,8 @@ if ( $template_type eq 'advsearch' ) {
         $template->param( limits => \%limit_hash );
         $template->param(
            indexes   => \@indexes,
-           sort      => $cgi->param('sort_by'),
+           sort      => scalar $cgi->param('sort_by'),
+           # sort      => [$cgi->multi_param('sort_by')],
         );
     }
     # load the servers (used for searching -- to do federated searching, etc.)

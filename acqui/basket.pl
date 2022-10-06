@@ -88,6 +88,10 @@ our ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
 my $logged_in_patron = Koha::Patrons->find( $loggedinuser );
 
 our $basket = GetBasket($basketno);
+
+output_and_exit( $query, $cookie, $template, 'unknown_basket')
+    unless $basket;
+
 $booksellerid = $basket->{booksellerid} unless $booksellerid;
 my $bookseller = Koha::Acquisition::Booksellers->find( $booksellerid );
 my $schema = Koha::Database->new()->schema();
@@ -301,7 +305,7 @@ if ( $op eq 'list' ) {
 
     # if the basket is closed, calculate estimated delivery date
     my $estimateddeliverydate;
-    if( $basket->{closedate} ) {
+    if( $basket->{closedate} and defined $bookseller->deliverytime ) {
         my ($year, $month, $day) = ($basket->{closedate} =~ /(\d+)-(\d+)-(\d+)/);
         ($year, $month, $day) = Add_Delta_Days($year, $month, $day, $bookseller->deliverytime);
         $estimateddeliverydate = sprintf( "%04d-%02d-%02d", $year, $month, $day );
@@ -535,6 +539,8 @@ sub edi_close_and_order {
         if ( create_edi_order($edi_params) ) {
             #$template->param( edifile => 1 );
         }
+        # FIXME: uncaught exception 'Koha::Exceptions::Acquisition::Basket::AlreadyClosed'
+        # makes site 500 error and logs only  'Basket is already closed'
         Koha::Acquisition::Baskets->find($basketno)->close;
 
         # if requested, create basket group, close it and attach the basket

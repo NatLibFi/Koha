@@ -54,7 +54,6 @@ my $builder = sub {
 my $launcher = sub {
     my ( $params ) = @_;
     my $query = $params->{cgi};
-    my $dbh       = C4::Context->dbh;
     my $op        = $query->param('op');
     # -- op could be equal to
     # * fillinput

@@ -75,6 +75,8 @@ my $biblionumber;
 my $itemnumber;
 if( $query->param('itemnumber') && !$query->param('biblionumber') ){
     $itemnumber = $query->param('itemnumber');
+    # TODO: prevent DIEs,
+    # Can't call method "biblionumber" on an undefined value at /usr/share/koha/intranet/cgi-bin/catalogue/moredetail.pl line 79.
     my $item = Koha::Items->find( $itemnumber );
 
     # bring global error if no $item record exists:
@@ -217,7 +219,20 @@ foreach my $item (@items){
                 {
                     credit_id => { '!=' => undef }, # it is not the debit itself
                     'credit.credit_type_code' =>
-                      { '!=' => [ 'Writeoff', 'Forgiven' ] },
+                      # yes, this odd pseudo-hash is what DBIc expects (http://lists.scsys.co.uk/pipermail/dbix-class/2014-December/011837.html):
+                      { '!=' => [ -and => 'Writeoff', 'Forgiven' ] },
+
+                      # this is second option:
+                      # [ -and => {'!=' => 'Writeoff' }, {'!=' => 'Forgiven'}]
+
+                      # this is wrong (http://lists.scsys.co.uk/pipermail/dbix-class/2014-December/011837.html):
+                      # { '!=' => [ -and => [ 'Writeoff', 'Forgiven' ] ] },
+
+                      # this is now it was:
+                      # { '!=' => [ 'Writeoff', 'Forgiven' ] },
+                      # hence the warning:
+                      #     A multi-element arrayref as an argument to the inequality op '!=' is technically equivalent to an always-true 1=1
+                      #     (you probably wanted to say ...{ $inequality_op => [ -and => @values ] }... instead)
                 },
                 { join => 'credit', order_by => { '-desc' => 'created_on' } }
             );

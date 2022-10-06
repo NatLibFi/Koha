@@ -328,7 +328,7 @@ if ($op eq 'save' || $op eq 'insert'){
         });
 
     # If the cardnumber is blank, treat it as null.
-    $newdata{'cardnumber'} = undef if $newdata{'cardnumber'} =~ /^\s*$/;
+    $newdata{'cardnumber'} = undef if defined $newdata{'cardnumber'} and $newdata{'cardnumber'} =~ /^\s*$/;
 
     my $new_barcode = $newdata{'cardnumber'};
     Koha::Plugins->call( 'patron_barcode_transform', \$new_barcode );
@@ -356,7 +356,7 @@ if ($op eq 'save' || $op eq 'insert'){
         my $age = $patron->get_age;
         my $borrowercategory = Koha::Patron::Categories->find($categorycode);
         my ($low,$high) = ($borrowercategory->dateofbirthrequired, $borrowercategory->upperagelimit);
-        if (($high && ($age > $high)) or ($age < $low)) {
+        if (($high && ($age > $high)) or $low && ($age < $low)) {
             push @errors, 'ERROR_age_limitations';
             $template->param( age_low => $low);
             $template->param( age_high => $high);
@@ -380,8 +380,8 @@ if ($op eq 'save' || $op eq 'insert'){
     push @errors, "ERROR_login_exist";
   }
 
-  my $password = $input->param('password');
-  my $password2 = $input->param('password2');
+  my $password = $input->param('password') // '';
+  my $password2 = $input->param('password2') // '';
   push @errors, "ERROR_password_mismatch" if ( $password ne $password2 );
 
   if ( $password and $password ne '****' ) {

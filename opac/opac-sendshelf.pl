@@ -56,8 +56,6 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user (
 my $shelfid = $query->param('shelfid');
 my $email   = $query->param('email');
 
-my $dbh          = C4::Context->dbh;
-
 my $shelf = Koha::Virtualshelves->find( $shelfid );
 if ( $shelf and $shelf->can_be_viewed( $borrowernumber ) ) {
   if ( $email ) {

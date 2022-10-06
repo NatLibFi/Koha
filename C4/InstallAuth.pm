@@ -230,7 +230,6 @@ sub checkauth {
     my $type            = shift;
     $type = 'intranet' unless $type;
 
-    my $dbh = C4::Context->dbh();
     my $template_name;
     $template_name = "installer/auth.tt";
     my $sessdir = File::Spec->catdir( C4::Context::temporary_directory, 'cgisess_' . C4::Context->config('database') ); # same construction as in C4/Auth
