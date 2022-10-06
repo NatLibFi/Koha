@@ -16,7 +16,6 @@ package Koha::BackgroundJob::BatchCancelHold;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use JSON qw( encode_json decode_json );
 
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Holds;
@@ -109,11 +108,12 @@ sub process {
         $self->progress( ++$job_progress )->store;
     }
 
-    my $job_data = decode_json $self->data;
+    my $json = $self->json;
+    my $job_data = $json->decode($self->data);
     $job_data->{messages} = \@messages;
     $job_data->{report}   = $report;
 
-    $self->ended_on(dt_from_string)->data( encode_json $job_data);
+    $self->ended_on(dt_from_string)->data($json->encode($job_data));
     $self->status('finished') if $self->status ne 'cancelled';
     $self->store;
 
