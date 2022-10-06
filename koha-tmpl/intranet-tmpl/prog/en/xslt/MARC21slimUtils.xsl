@@ -147,6 +147,21 @@
 	    </xsl:choose>
 	</xsl:template>
 
+	<!-- Function extractCNI is used to extract the control number identifier (OrgCode) from MARC tags 773/80/85 [etc.] subfield $w.
+	     Parameter: control number string.
+	     Assumes LOC convention: (OrgCode)recordNumber.
+	     If OrgCode is not present, return empty string.
+         Returns the value URI-encoded.
+	-->
+	<xsl:template name="extractCNI">
+	    <xsl:param name="subfieldW"/>
+	    <xsl:choose>
+	      <xsl:when test="contains($subfieldW,'(') and contains($subfieldW,')')">
+	        <xsl:value-of select="str:encode-uri(substring-before(substring-after($subfieldW,'('), ')'), true())"/>
+	      </xsl:when>
+	    </xsl:choose>
+	</xsl:template>
+
     <!-- Function m880Select:  Display Alternate Graphic Representation (MARC 880) for selected latin "base"tags
         - should be called immediately before the corresonding latin tags are processed 
         - tags in right-to-left languages are displayed floating right
