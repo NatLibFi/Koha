@@ -103,6 +103,8 @@ my $fa_branch             = $input->param('branch');
 my $fa_stickyduedate      = $input->param('stickyduedate');
 my $fa_duedatespec        = $input->param('duedatespec');
 
+my $holding_id = $input->param('holding_id') // '';
+
 our $frameworkcode = &GetFrameworkCode($biblionumber);
 
 # Defining which userflag is needing according to the framework currently used
@@ -605,6 +607,7 @@ my $subfields =
             ? ( ignore_invisible_subfields => 1 )
             : ()
         ),
+        holding_id => $holding_id,
     }
 );
 

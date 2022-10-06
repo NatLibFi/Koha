@@ -244,6 +244,12 @@ $template->param(
     }),
 );
 
+# Summary holdings
+my $summary_holdings;
+if (C4::Context->preference('SummaryHoldings')) {
+    $summary_holdings = $biblio->holdings;
+}
+
 # Get acquisition details
 if ( C4::Context->preference('AcquisitionDetails') ) {
     my $orders = Koha::Acquisition::Orders->search(
@@ -481,6 +487,7 @@ $template->param(
     analytics_flag          => $analytics_flag,
     C4::Search::enabled_staff_search_views,
     materials => $materials_flag,
+    summary_holdings => $summary_holdings,
 );
 
 if (C4::Context->preference("AlternateHoldingsField") && scalar @items == 0) {
