@@ -1416,13 +1416,18 @@
                         }else {
                             input_value = itm.split(' ')[1];
                         }
-                        $(current_column).find("input[type='text']").val(input_value);
+                        const fp = $(current_column).find("input.flatpickr").get(0)._flatpickr;
+                        fp.setDate(input_value, true, '[% IF ( dateformat == "us" ) %]m/d/Y[% ELSIF ( dateformat == "metric" ) %]d/m/Y[% ELSIF ( dateformat == "dmydot" ) %]d.m.Y[% ELSE %]Y-m-d[% END %]');
                         $(current_column).find("select").val(select_value);
                     } else if ( i == 16 ) {
                         // specific processing for cap_fine_to_replacement_price
                         var cap_fine_to_replacement_price = $(this).find("input[type='checkbox']");
                         $('#cap_fine_to_replacement_price').prop('checked', cap_fine_to_replacement_price.is(':checked') );
                         $('#overduefinescap').prop('disabled', cap_fine_to_replacement_price.is(':checked') );
+                    } else if ( i == 25 ) {
+                        // specific processing for the hard limit for the automatic renewal after
+                        const fp = $(current_column).find("input.flatpickr").get(0)._flatpickr;
+                        fp.setDate(itm, true, '[% IF ( dateformat == "us" ) %]m/d/Y[% ELSIF ( dateformat == "metric" ) %]d/m/Y[% ELSIF ( dateformat == "dmydot" ) %]d.m.Y[% ELSE %]Y-m-d[% END %]');
                     } else {
                         $(current_column).find("input[type='text']").val(itm);
                         // select the corresponding option
