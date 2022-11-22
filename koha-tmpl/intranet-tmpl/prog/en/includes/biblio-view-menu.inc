@@ -76,7 +76,7 @@
         [%- ELSE -%]
         <li>
         [%- END -%]
-            <a href="/cgi-bin/koha/circ/request-article.pl?biblionumber=[% IF ( object ) %][% object | uri %][% ELSE %][% biblionumber | uri %][% END %]">Article requests ([% Biblio.ArticleRequestsActiveCount( biblio_object_id ) | html %])</a>
+            <a href="/cgi-bin/koha/circ/request-article.pl?biblionumber=[% biblio_object_id | url %]">Article requests ([% Biblio.ArticleRequestsActiveCount( biblio_object_id ) | html %])</a>
         </li>
         [%- END -%]
 
