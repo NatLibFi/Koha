@@ -12,6 +12,7 @@ steps:
     commands:
       - apt-get -qq update
       - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get install -y -qq docbook-xsl docbook-xsl-ns
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
@@ -140,6 +141,7 @@ steps:
     commands:
       - apt-get -qq update
       - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get install -y -qq docbook-xsl docbook-xsl-ns
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
@@ -266,6 +268,7 @@ steps:
     commands:
       - apt-get -qq update
       - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get install -y -qq docbook-xsl docbook-xsl-ns
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
