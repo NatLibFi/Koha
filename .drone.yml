@@ -11,7 +11,9 @@ steps:
     image: debian:10
     commands:
       - apt-get -qq update
-      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install docbook-xsl docbook-xsl-ns
+      - apt-get -y -qq install inetutils-ping openssh-client
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
@@ -138,7 +140,9 @@ steps:
     image: debian:10
     commands:
       - apt-get -qq update
-      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install docbook-xsl docbook-xsl-ns
+      - apt-get -y -qq install inetutils-ping openssh-client
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
@@ -265,7 +269,9 @@ steps:
     image: debian:10
     commands:
       - apt-get -qq update
-      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
+      - apt-get -y -qq install docbook-xsl docbook-xsl-ns
+      - apt-get -y -qq install inetutils-ping openssh-client
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
