@@ -904,7 +904,7 @@ sub _set_default_expirationdate {
       C4::Context->preference('DefaultHoldExpirationdateUnitOfTime') || 'days';
 
     $self->expirationdate(
-        dt_from_string( $self->reservedate )->add( $timeunit => $period ) );
+        dt_from_string( $self->reservedate )->clone->add( $timeunit => $period ) );
 }
 
 =head3 _move_to_old
