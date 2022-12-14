@@ -1048,7 +1048,7 @@ sub _set_default_expirationdate {
     if ( defined C4::Context->preference('DefaultHoldExpirationdatePeriod')
         && C4::Context->preference('DefaultHoldExpirationdatePeriod') ne '' )
     {
-        $self->expirationdate( dt_from_string( $self->reservedate )->add( $timeunit => $period ) );
+        $self->expirationdate( dt_from_string( $self->reservedate )->clone->add( $timeunit => $period ) );
     }
 }
 
