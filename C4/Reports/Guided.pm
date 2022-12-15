@@ -607,6 +607,8 @@ sub execute_query {
 
     my $dbh = C4::Context->dbh;
 
+    $dbh->do("SET SESSION group_concat_max_len = 8192");
+
     $dbh->do( 'UPDATE saved_sql SET last_run = NOW() WHERE id = ?', undef, $report_id ) if $report_id;
 
     my $sth = $dbh->prepare($sql);
