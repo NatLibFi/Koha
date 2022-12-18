@@ -1535,10 +1535,10 @@
          $(document).ready(function() {
             KohaTable("default-circulation-rules", {
                 "columnDefs": [
-                    { "visible": false, "targets": [ 0,2 ] },
+                    { "visible": false, "targets": [ 0,2,4,6 ] },
                     { "orderable": false, "targets": ["_all"] }
                 ],
-                "orderFixed": [ [0,'asc'], [1,'asc'], [2,'asc'], [3,'asc'] ],
+                "orderFixed": [ [0,'asc'], [1,'asc'], [2,'asc'], [3,'asc'], [4,'asc'], [5,'asc'], [6,'asc'], [7,'asc'] ],
                 "paginate": false,
                 "autoWidth": false
             });
