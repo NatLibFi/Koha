@@ -1467,10 +1467,10 @@
          $(document).ready(function() {
             KohaTable("default-circulation-rules", {
                 "aoColumnDefs": [
-                    { "bVisible": false, "aTargets": [ 0,2 ] },
+                    { "bVisible": false, "aTargets": [ 0,2,4,6 ] },
                     { "bSortable": false, "aTargets": ["_all"] }
                 ],
-                "aaSortingFixed": [ [0,'asc'], [1,'asc'], [2,'asc'], [3,'asc'] ],
+                "aaSortingFixed": [ [0,'asc'], [1,'asc'], [2,'asc'], [3,'asc'], [4,'asc'], [5,'asc'], [6,'asc'], [7,'asc'] ],
                 "bPaginate": false,
                 "bAutoWidth": false
             });
