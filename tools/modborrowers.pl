@@ -498,6 +498,9 @@ if ( $op eq 'cud-do' ) {
     }
     my @patron_attributes_option;
     for my $borrower (@borrowers) {
+        if( ! defined $_->{code} ) {
+            warn "DEBUG: we have undefined ->{code} for borrower: $borrower";
+        }
         push @patron_attributes_option, { value => "$_->{code}", lib => $_->{code} }
             for @{ $borrower->{patron_attributes} };
         my $length = scalar( @{ $borrower->{patron_attributes} } );
