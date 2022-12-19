@@ -124,12 +124,12 @@ foreach my $key ( keys %$suggestion_ref ) {
     delete $suggestion_ref->{$key} if ( !$suggestion_ref->{$key} && ( $op eq 'else' ) );
     delete $suggestion_ref->{$key} if $key =~ m{^DataTables_acqui_suggestions_suggestions};
 }
-delete $suggestion_only->{branchcode} if $suggestion_only->{branchcode} eq '__ANY__';
-delete $suggestion_only->{budgetid}   if $suggestion_only->{budgetid} eq '__ANY__';
+delete $suggestion_only->{branchcode} if defined $suggestion_only->{branchcode} and $suggestion_only->{branchcode} eq '__ANY__';
+delete $suggestion_only->{budgetid}   if defined $suggestion_only->{budgetid}   and $suggestion_only->{budgetid} eq '__ANY__';
 
 unless ( $op eq 'cud-save' ) {
     while ( my ( $k, $v ) = each %$suggestion_only ) {
-        delete $suggestion_only->{$k} if $v eq '';
+        delete $suggestion_only->{$k} if ! defined $v or $v eq '';
     }
 }
 
@@ -458,7 +458,8 @@ if ( $op eq 'else' ) {
     }
     for my $f (qw (branchcode budgetid)) {
         delete $search_params->{$f}
-            if $search_params->{$f} eq '__ANY__'
+            if ! defined $search_params->{$f}
+            || $search_params->{$f} eq '__ANY__'
             || $search_params->{$f} eq '';
     }
     for my $bi (qw (title author isbn publishercode copyrightdate collectiontitle)) {
