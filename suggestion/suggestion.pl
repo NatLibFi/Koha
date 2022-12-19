@@ -116,10 +116,10 @@ delete $$suggestion_ref{$_}
 foreach (keys %$suggestion_ref){
     delete $$suggestion_ref{$_} if (!$$suggestion_ref{$_} && ($op eq 'else' ));
 }
-delete $suggestion_only->{branchcode} if $suggestion_only->{branchcode} eq '__ANY__';
-delete $suggestion_only->{budgetid}   if $suggestion_only->{budgetid}   eq '__ANY__';
+delete $suggestion_only->{branchcode} if defined $suggestion_only->{branchcode} and $suggestion_only->{branchcode} eq '__ANY__';
+delete $suggestion_only->{budgetid}   if defined $suggestion_only->{budgetid}   and $suggestion_only->{budgetid}   eq '__ANY__';
 while ( my ( $k, $v ) = each %$suggestion_only ) {
-    delete $suggestion_only->{$k} if $v eq '';
+    delete $suggestion_only->{$k} if ! defined $v or $v eq '';
 }
 
 my ( $template, $borrowernumber, $cookie, $userflags ) = get_template_and_user(
@@ -427,7 +427,8 @@ if ($op=~/else/) {
         }
         for my $f (qw (branchcode budgetid)) {
             delete $search_params->{$f}
-              if $search_params->{$f} eq '__ANY__'
+              if ! defined $search_params->{$f}
+              || $search_params->{$f} eq '__ANY__'
               || $search_params->{$f} eq '';
         }
 
