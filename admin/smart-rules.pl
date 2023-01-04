@@ -691,6 +691,8 @@ elsif ( $op eq 'mod-refund-lost-item-fee-rule' ) {
 
     my $category = $input->param('waiting_hold_cancellation_category');
     my $itemtype = $input->param('waiting_hold_cancellation_itemtype');
+    my $ccode    = $input->param('waiting_hold_cancellation_ccode');
+    my $location = $input->param('waiting_hold_cancellation_shelving_location');
     my $policy   = strip_non_numeric( scalar $input->param('waiting_hold_cancellation_policy') )
                     ? 1
                     : 0;
@@ -703,6 +705,8 @@ elsif ( $op eq 'mod-refund-lost-item-fee-rule' ) {
         {   categorycode => ( $category eq '*' ) ? undef : $category,
             itemtype     => ( $itemtype eq '*' ) ? undef : $itemtype,
             branchcode   => ( $branch   eq '*' ) ? undef : $branch,
+            ccode             => ( $ccode   eq '*' ) ? undef : $ccode,
+            shelving_location => ( $location   eq '*' ) ? undef : $location,
             rules        => { waiting_hold_cancellation => $policy },
         }
     );
@@ -711,11 +715,16 @@ elsif ( $op eq 'mod-refund-lost-item-fee-rule' ) {
 
     my $category = $input->param('waiting_hold_cancellation_category');
     my $itemtype = $input->param('waiting_hold_cancellation_itemtype');
+    my $ccode    = $input->param('waiting_hold_cancellation_ccode');
+    my $location = $input->param('waiting_hold_cancellation_shelving_location');
+
 
     Koha::CirculationRules->set_rules(
         {   categorycode => ( $category eq '*' ) ? undef : $category,
             itemtype     => ( $itemtype eq '*' ) ? undef : $itemtype,
             branchcode   => ( $branch   eq '*' ) ? undef : $branch,
+            ccode             => ( $ccode   eq '*' ) ? undef : $ccode,
+            shelving_location => ( $location   eq '*' ) ? undef : $location,
             rules        => { waiting_hold_cancellation => undef },
         }
     );
