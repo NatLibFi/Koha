@@ -944,6 +944,8 @@
                             <tr>
                                 <th>Patron category</th>
                                 <th>Item type</th>
+                                <th>Collection code</th>
+                                <th>Shelving location</th>
                                 <th>Cancellation allowed</th>
                                 <th>&nbsp;</th>
                             </tr>
@@ -951,8 +953,12 @@
                                 [% SET c = '*' UNLESS c.defined AND c != '' %]
                                 [% FOREACH i IN itemtypes %]
                                     [% SET i = '*' UNLESS i.defined AND i != '' %]
+                                    [% FOREACH cc IN ccodes %]
+                                        [% SET cc = '*' UNLESS cc.defined AND cc != '' %]
+                                        [% FOREACH sh IN locs %]
+                                            [% SET sh = '*' UNLESS sh.defined AND sh != '' %]
 
-                                    [% SET waiting_hold_cancellation = CirculationRules.Search( current_branch, c, i, 'waiting_hold_cancellation' ) %]
+                                    [% SET waiting_hold_cancellation = CirculationRules.Search( current_branch, c, i, 'waiting_hold_cancellation', {}, cc, sh ) %]
 
                                     [% IF ( waiting_hold_cancellation.defined && waiting_hold_cancellation != '' ) %]
                                         <tr>
@@ -971,6 +977,20 @@
                                                 [% END %]
                                             </td>
                                             <td>
+                                                [% IF cc == '*' %]
+                                                    <em>All</em>
+                                                [% ELSE %]
+                                                    [% AuthorisedValues.GetByCode( 'CCODE', cc ) | html %]
+                                                [% END %]
+                                            </td>
+                                            <td>
+                                                [% IF sh == '*' %]
+                                                    <em>All</em>
+                                                [% ELSE %]
+                                                    [% AuthorisedValues.GetByCode( 'LOC', sh ) | html %]
+                                                [% END %]
+                                            </td>
+                                            <td>
                                                 [% IF waiting_hold_cancellation %]
                                                     <span>Yes</span>
                                                 [% ELSE %]
@@ -978,9 +998,11 @@
                                                 [% END %]
                                             </td>
                                             <td class="actions">
-                                                <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/admin/smart-rules.pl?op=del-waiting-hold-cancellation&amp;waiting_hold_cancellation_category=[% c | uri %]&amp;waiting_hold_cancellation_itemtype=[% i | uri %]&amp;branch=[% current_branch | uri %]"><i class="fa fa-trash"></i> Delete</a>
+                                                <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/admin/smart-rules.pl?op=del-waiting-hold-cancellation&amp;waiting_hold_cancellation_category=[% c | uri %]&amp;waiting_hold_cancellation_itemtype=[% i | uri %]&amp;waiting_hold_cancellation_ccode=[% cc | uri %]&amp;waiting_hold_cancellation_shelving_location=[% sh | uri %]&amp;branch=[% current_branch | uri %]"><i class="fa fa-trash"></i> Delete</a>
                                             </td>
                                         </tr>
+                                            [% END %]
+                                        [% END %]
                                     [% END %]
                                 [% END %]
                             [% END %]
@@ -998,6 +1020,22 @@
                                         <option value="*">All</option>
                                     [% FOREACH itemtype IN itemtypeloop %]
                                         <option value="[% itemtype.itemtype | html %]">[% ItemTypes.GetDescription(itemtype.itemtype) | html %]</option>
+                                    [% END %]
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="waiting_hold_cancellation_ccode" id="waiting_hold_cancellation_ccode">
+                                        <option value="*">All</option>
+                                    [% FOREACH ccode IN ccodesloop %]
+                                        <option value="[% ccode.authorised_value | html %]">[% ccode.lib | html %]</option>
+                                    [% END %]
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="waiting_hold_cancellation_shelving_location" id="waiting_hold_cancellation_shelving_location">
+                                        <option value="*">All</option>
+                                    [% FOREACH loc IN locsloop %]
+                                        <option value="[% loc.authorised_value | html %]">[% loc.lib | html %]</option>
                                     [% END %]
                                     </select>
                                 </td>
