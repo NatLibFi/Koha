@@ -521,8 +521,9 @@ sub to_api {
 
     my $json = $self->SUPER::to_api($params);
 
-    $json->{context} = $self->json->decode( $self->context )
-        if defined $self->context;
+    $json->{context} = defined $self->context
+        ? $self->json->decode($self->context)
+        : {};
     $json->{data} = $self->decoded_data;
 
     return $json;
