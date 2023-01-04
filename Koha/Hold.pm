@@ -493,6 +493,8 @@ sub cancellation_requestable_from_opac {
             categorycode => $patron->categorycode,
             itemtype     => $item->itype,
             branchcode   => $controlbranch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'waiting_hold_cancellation',
         }
     ) ? 1 : 0;

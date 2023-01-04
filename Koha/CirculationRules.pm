@@ -290,6 +290,8 @@ sub get_effective_rule {
         rule_name    => $name,
         categorycode => $categorycode,
         itemtype     => $itemtype,
+        ccode             => $ccode,
+        shelving_location => $shelving_location,
         branchcode   => $branchcode
     }
   );
@@ -308,10 +310,12 @@ sub get_effective_rule_value {
     my $categorycode = $params->{categorycode};
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     my $memory_cache = Koha::Cache::Memory::Lite->get_instance;
-    my $cache_key = sprintf "CircRules:%s:%s:%s:%s", $rule_name // q{},
-      $categorycode // q{}, $branchcode // q{}, $itemtype // q{};
+    my $cache_key = sprintf "CircRules:%s:%s:%s:%s:%s:%s", $rule_name // q{},
+      $branchcode // q{}, $categorycode // q{}, $itemtype // q{}, $ccode // q{}, $shelving_location // q{};
 
     my $cached       = $memory_cache->get_from_cache($cache_key);
     return $cached if $cached;
