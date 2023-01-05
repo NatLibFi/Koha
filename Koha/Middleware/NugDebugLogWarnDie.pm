@@ -301,6 +301,7 @@ sub call {
 
         my $ignore_warning = $_[0]
           && ( $_[0] =~ /C4::Reports::Guided::execute_query/
+            or $_[0] =~ /Use of uninitialized value \$PDF::Reuse::objekt/
             or $_[0] =~ /\[NTWIP\]/ );
 
         ++$warns unless $ignore_warning;
