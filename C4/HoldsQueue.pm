@@ -326,13 +326,19 @@ sub GetItemsAvailableToFillHoldRequestsForBib {
         $items_query .=   "JOIN biblioitems USING (biblioitemnumber)
                            LEFT JOIN itemtypes USING (itemtype) ";
     }
-    $items_query .=  " LEFT JOIN branchtransfers ON (items.itemnumber = branchtransfers.itemnumber)";
+    $items_query .= "
+            LEFT JOIN branchtransfers ON branchtransfers.branchtransfer_id = (
+                SELECT branchtransfer_id FROM branchtransfers b1
+                WHERE b1.itemnumber = items.itemnumber
+                ORDER BY b1.daterequested DESC
+                LIMIT 1
+            )";
     $items_query .=  " WHERE items.notforloan = 0
                        AND holdingbranch IS NOT NULL
                        AND itemlost = 0
                        AND withdrawn = 0";
-    $items_query .= "  AND branchtransfers.datearrived IS NULL
-                       AND branchtransfers.datecancelled IS NULL";
+    $items_query .= "  AND (branchtransfers.itemnumber IS NULL OR
+                            branchtransfers.datearrived IS NOT NULL AND branchtransfers.datecancelled IS NULL)";
     $items_query .= "  AND damaged = 0" unless C4::Context->preference('AllowHoldsOnDamagedItems');
     $items_query .= "  AND items.onloan IS NULL
                        AND (itemtypes.notforloan IS NULL OR itemtypes.notforloan = 0)
