@@ -46,6 +46,7 @@ sub store {
 
     $self->check_repeatables;
     $self->check_unique_ids;
+    $self->check_untrimmed_values;
 
     return $self->SUPER::store();
 }
@@ -108,6 +109,28 @@ sub check_unique_ids {
 
     Koha::Exceptions::Patron::Attribute::Type::CannotChangeProperty->throw( property => 'unique_id' )
         if $count;
+
+    return $self;
+}
+
+=head3 check_untrimmed_values
+
+=cut
+
+sub check_untrimmed_values {
+    my ($self) = @_;
+
+    return $self unless $self->trim_value;
+
+    my $count = $self->attributes->search(
+        {
+            attribute => { -regexp => '^\s+|\s+$' }
+        }
+    )->count;
+
+    Koha::Exceptions::Patron::Attribute::Type::CannotChangeProperty->throw(
+        property => 'trim_value' )
+      if $count;
 
     return $self;
 }
