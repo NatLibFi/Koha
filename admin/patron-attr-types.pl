@@ -114,6 +114,7 @@ sub add_update_attribute_type {
     my $description               = $input->param('description');
     my $repeatable                = $input->param('repeatable') ? 1 : 0;
     my $unique_id                 = $input->param('unique_id') ? 1 : 0;
+    my $trim_value                = $input->param('trim_value') ? 1 : 0;
     my $opac_display              = $input->param('opac_display') ? 1 : 0;
     my $opac_editable             = $input->param('opac_editable') ? 1 : 0;
     my $staff_searchable          = $input->param('staff_searchable') ? 1 : 0;
@@ -150,6 +151,7 @@ sub add_update_attribute_type {
         {
             repeatable                => $repeatable,
             unique_id                 => $unique_id,
+            trim_value                => $trim_value,
             opac_display              => $opac_display,
             opac_editable             => $opac_editable,
             staff_searchable          => $staff_searchable,
@@ -238,12 +240,20 @@ sub edit_attribute_type_form {
         $can_be_set_to_unique = 0 if $@;
         $attr_type->unique_id(0);
     }
+    my $can_be_trimmed = 1;
+    if ( $attr_type->trim_value == 0 ) {
+        $attr_type->trim_value(1);
+        eval {$attr_type->check_untrimmed_values};
+        $can_be_trimmed = 0 if $@;
+        $attr_type->trim_value(0);
+    }
     $template->param(
         attribute_type => $attr_type,
         attribute_type_form => 1,
         edit_attribute_type => 1,
         can_be_set_to_nonrepeatable => $can_be_set_to_nonrepeatable,
         can_be_set_to_unique => $can_be_set_to_unique,
+        can_be_trimmed => $can_be_trimmed,
         confirm_op => 'edit_attribute_type_confirmed',
         categories => $patron_categories,
     );
