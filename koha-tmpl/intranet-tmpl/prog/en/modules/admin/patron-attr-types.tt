@@ -139,6 +139,25 @@
                         [% END %]
                         <span class="hint">If checked, attribute will be a unique identifier. If a value is given to a patron record, the same value cannot be given to a different record.</span>
                     </li>
+
+                    <li [% IF attribute_type AND attribute_type.trim_value %]aria-disabled="true"[% END %]>
+                        <label for="trim_value">Trim identifier: </label>
+                        [% IF attribute_type %]
+                            [% IF NOT can_be_trimmed %]
+                                <input type="checkbox" id="trim_value" name="trim_value" disabled="disabled" title="At least one patron has attribute with whitespaces at the start or/end of it." />
+                                <input type="hidden" name="trim_value" value="0" />
+                                <span class="hint">At least one patron has attribute with whitespaces at the start or/end of it. Please fix that.</span>
+                            [% ELSIF attribute_type.trim_value %]
+                                <input type="checkbox" id="trim_value" name="trim_value" checked="checked" />
+                            [% ELSE %]
+                                <input type="checkbox" id="trim_value" name="trim_value" />
+                            [% END %]
+                        [% ELSE %]
+                            <input type="checkbox" id="trim_value" name="trim_value" />
+                        [% END %]
+                        <span class="hint">Check to always trim whitespaces around the identifier to avoid creating duplicates.</span>
+                    </li>
+
                     <li
                         ><label for="is_date">Is a date: </label>
                         [% IF attribute_type AND attribute_type.is_date %]
