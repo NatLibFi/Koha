@@ -71,6 +71,8 @@ sub store {
     Koha::Exceptions::Patron::Attribute::NonRepeatable->throw( attribute => $self )
         unless $self->repeatable_ok();
 
+    $self->do_trim_value_if_needed();
+
     Koha::Exceptions::Patron::Attribute::UniqueIDConstraint->throw( attribute => $self )
         unless $self->unique_ok();
 
@@ -233,6 +235,23 @@ sub value_ok {
     }
 
     return $ok;
+}
+
+=head3 do_trim_value_if_needed
+
+---
+
+=cut
+
+sub do_trim_value_if_needed {
+
+    my ( $self ) = @_;
+
+    if( $self->type->trim_value) {
+        my $value_to_trim = $self->attribute;
+        $value_to_trim =~ s/^\s+|\s+$//g;
+        $self->attribute($value_to_trim);
+    }
 }
 
 =head2 Internal methods
