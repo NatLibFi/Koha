@@ -550,6 +550,11 @@
                                 "searchable": true,
                                 "orderable": true,
                                 "render": function( data, type, row, meta ) {
+                                    if ( ! categories_map[data.toLowerCase()] ) {
+                                        console.error('Uknown category:', data);
+                                        // console.log('Known categories:', categories_map);
+                                        return 'Unknown category: <b class="text-danger">'+data+'</b>';
+                                    }
                                     return escape_str(categories_map[data.toLowerCase()].description);
                                 }
                             }
