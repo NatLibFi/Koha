@@ -497,6 +497,7 @@ sub get_template_and_user {
         marcflavour                  => C4::Context->preference("marcflavour"),
         OPACBaseURL                  => C4::Context->preference('OPACBaseURL'),
         minPasswordLength            => $minPasswordLength,
+        ($in->{'query'}->request_method && $in->{'query'}->request_method eq 'POST' ? (prepost_referer => $in->{'query'}->referer) : ()),
     );
     if ( $in->{'type'} eq "intranet" ) {
 
