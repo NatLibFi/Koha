@@ -210,7 +210,7 @@ if ( $op =~ /cud-save/ ) {
         }
 
         my $otherreason = $input->param('other_reason');
-        if ( $suggestion_only->{reason} eq 'other' && $otherreason ) {
+        if ( $suggestion_only->{reason} && $suggestion_only->{reason} eq 'other' && $otherreason ) {
             $suggestion_only->{reason} = $otherreason;
         }
 
