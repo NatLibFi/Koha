@@ -49,7 +49,7 @@
                                                         </li>
                                                     [% ELSE %]
                                                         <li>
-                                                            <a class="dropdown-item" href="/cgi-bin/koha/changelanguage.pl?language=[% sublanguages_loo.rfc4646_subtag | uri %]">
+                                                            <a class="dropdown-item" href="/cgi-bin/koha/changelanguage.pl?language=[% sublanguages_loo.rfc4646_subtag | uri %][% IF prepost_referer %]&amp;prepost_referer=[% prepost_referer | uri %][% END %]">
                                                                 [% sublanguages_loo.native_description | html %] [% sublanguages_loo.script_description | html %] [% sublanguages_loo.region_description | html %]
                                                                 [% sublanguages_loo.variant_description | html %]
                                                                 ([% sublanguages_loo.rfc4646_subtag | html %])
@@ -74,7 +74,7 @@
                                             </li>
                                         [% ELSE %]
                                             <li class="nav-item">
-                                                <a class="nav-link" href="/cgi-bin/koha/changelanguage.pl?language=[% languages_loo.rfc4646_subtag | uri %]">
+                                                <a class="nav-link" href="/cgi-bin/koha/changelanguage.pl?language=[% languages_loo.rfc4646_subtag | uri %][% IF prepost_referer %]&amp;prepost_referer=[% prepost_referer | uri %][% END %]">
                                                     [% IF ( languages_loo.native_description ) %]
                                                         [% languages_loo.native_description | html %]
                                                     [% ELSE %]
