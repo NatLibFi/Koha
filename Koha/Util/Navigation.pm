@@ -49,7 +49,7 @@ Utility class
 
 sub local_referer {
     my ( $cgi, $params ) = @_;
-    my $referer  = $cgi->referer;
+    my $referer  = $params->{force_referer} || $cgi->referer;
     my $fallback = $params->{fallback} // '/';
     my $staff    = $params->{staff};             # no staff means OPAC
     return $fallback if !$referer;
