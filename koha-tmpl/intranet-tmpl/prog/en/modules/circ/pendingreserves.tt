@@ -358,6 +358,10 @@
               }
               return r+'</select>';
           }
+          function regExp_escape(text) {
+              return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+          }
+
           $("#homebranchfilter").each( function () {
               $(this).html( createSelect( holdst.fnGetColumnData(5) ) );
               $('select', this).change( function () {
@@ -379,7 +383,7 @@
           $("#pickup-location").each( function () {
               $(this).html( createSelect( holdst.fnGetColumnData(14) ) );
               $('select', this).change( function () {
-                  holdst.fnFilter( $(this).val() ? '^' + $(this).val() + '$' : '', 14, true, false );
+                  holdst.fnFilter( $(this).val() ? '^' + regExp_escape($(this).val()) + '$' : '', 14, true, false );
               });
           });
         });
