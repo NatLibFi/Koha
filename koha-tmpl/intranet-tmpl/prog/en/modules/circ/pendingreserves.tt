@@ -319,12 +319,16 @@
                     return {_id: e, _str: e}
                 });
         }
+        // function regExp_escape(text) {
+        //   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        // }
+
         $(document).ready(function() {
             let filters_options = {
                 [5] : (table_dt) => get_options(table_dt.column(5)),   // #homebranchfilter '<li>' + val + '</li>'
                 [10] : (table_dt) => get_options(table_dt.column(10)), // #itemtype-filter '<li>' + val + '</li>'
                 [11] : (table_dt) => get_options(table_dt.column(11)), // #locationfilter '<li>' + val + '</li>'
-                [15] : (table_dt) => get_options(table_dt.column(15)), // #pickup-location '^' + $(this).val() + '$'
+                [15] : (table_dt) => get_options(table_dt.column(15)), // #pickup-location '^' + regExp_escape($(this).val()) + '$'
             };
 
 
