@@ -96,10 +96,11 @@ builder {
         enable "HTTPExceptions";
         if ( Log::Log4perl->get_logger('plack-opac')->has_appenders ){
             enable 'Log4perl', category => 'plack-opac';
-            enable 'LogWarn';
-            enable 'LogErrors';
+            # enable 'LogWarn';
+            # enable 'LogErrors';
         }
         enable "+Koha::Middleware::CSRF";
+        enable "+Koha::Middleware::NugDebugLogWarnDie";
         $opac;
     };
     mount '/intranet'      => builder {
@@ -117,10 +118,11 @@ builder {
         enable "HTTPExceptions";
         if ( Log::Log4perl->get_logger('plack-intranet')->has_appenders ){
             enable 'Log4perl', category => 'plack-intranet';
-            enable 'LogWarn';
-            enable 'LogErrors';
+            # enable 'LogWarn';
+            # enable 'LogErrors';
         }
         enable "+Koha::Middleware::CSRF";
+        enable "+Koha::Middleware::NugDebugLogWarnDie";
         $intranet;
     };
     mount '/intranet_svc'      => builder {
@@ -134,9 +136,10 @@ builder {
     mount '/api/v1/app.pl' => builder {
         if ( Log::Log4perl->get_logger('plack-api')->has_appenders ){
             enable 'Log4perl', category => 'plack-api';
-            enable 'LogWarn';
-            enable 'LogErrors';
+            # enable 'LogWarn';
+            # enable 'LogErrors';
         }
+        enable "+Koha::Middleware::NugDebugLogWarnDie";
         $apiv1;
     };
 };
