@@ -20,6 +20,7 @@ our %STAT_CONFIG = (
     log_startstops       => undef,
     log_slack_sent_oks   => undef,
     slack_hash           => undef,
+    dump_code            => undef,
 );
 our %STATS = (
     child_requests    => 0,
@@ -159,6 +160,10 @@ sub _make_message {
 
     my $message = '';
 
+    if( $STAT_CONFIG{dump_code} ) {
+        push @_, quote_dump_code($_[$#@]);
+    }
+
     foreach my $m (@_) {
         if ( ref $m ) {
             $message .= Data::Dumper->new( [$m], [ __PACKAGE__ . ":" . __LINE__ ] )->Sortkeys(
@@ -265,6 +270,36 @@ sub _get_callers {
         $i++;
     }
     return $l;
+}
+
+sub quote_dump_code {
+    my $error_line = shift;
+    if( $error_line =~ / at (\S+) line (\d+).$/ ) {
+        my $src_file     = $1;
+        my $line_no      = $2;
+        my $lines_before = $STAT_CONFIG{dump_code}{lines_before};
+        my $lines_after  = $STAT_CONFIG{dump_code}{lines_after};
+        if ( open my $fh, '<', $src_file ) {
+            my @lines_from_file;
+            while (<$fh>) {
+                if ( $. >= $line_no - $lines_before and $. <= $line_no + $lines_after ) {
+                    chomp $_;
+                    push @lines_from_file, sprintf("  %4d:  %s", $., $_);
+                }
+                last if $. == $line_no + $lines_after;
+            }
+            close $fh;
+            if (@lines_from_file) {
+                local $" = "\n";
+               return "<perl>\n@lines_from_file\n</perl>\n\n";
+            } else {
+               return "EXTRA: Line $line_no in source file $src_file not found.";
+            }
+        } else {
+           return "EXTRA: Can't open file $src_file: $!";
+        }
+    }
+    return ();
 }
 
 sub call {
