@@ -163,7 +163,8 @@ sub filter_by_active {
     my $source_alias = $self->_resultset->current_source_alias;
     return $self->search(
         {
-            '-or' => [
+            'datecancellationprinted' => undef,
+            '-or'                     => [
                 {
                     'basket.is_standing' => 1,
                     'orderstatus'        => [ 'new', 'ordered', 'partial' ]
