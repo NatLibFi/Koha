@@ -162,7 +162,8 @@ sub filter_by_active {
     my ($self) = @_;
     return $self->search(
         {
-            '-or' => [
+            'datecancellationprinted' => undef,
+            '-or'                     => [
                 {
                     'basket.is_standing' => 1,
                     'orderstatus'        => [ 'new', 'ordered', 'partial' ]
