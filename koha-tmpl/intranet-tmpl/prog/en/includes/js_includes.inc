@@ -67,6 +67,15 @@
         });
     </script>
 [% END %]
+[% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+    <script>
+        $( document ).ready(function() {
+            $( document ).on( 'change', '#quick-branch', function() { 
+                $( '#select_braches_form' ).submit();
+            });
+        });
+    </script>
+[% END %]
 
 [% IF ( PatronAutoComplete ) %]
     <script>
