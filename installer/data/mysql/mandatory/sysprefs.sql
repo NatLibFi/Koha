@@ -811,6 +811,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('SpineLabelAutoPrint','0'),
 ('SpineLabelFormat','<itemcallnumber><copynumber>'),
 ('staffClientBaseURL',''),
+('ShowQuickBranchSelector', '1'),
 ('StaffHighlightedWords','1'),
 ('StaffInterfaceLanguages','en'),
 ('StaffLangSelectorMode','footer'),
