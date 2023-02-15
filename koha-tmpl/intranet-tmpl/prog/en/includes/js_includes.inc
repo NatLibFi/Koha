@@ -68,6 +68,16 @@
         });
     </script>
 [% END %]
+[% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+    <script>
+        $( document ).ready(function() {
+            $( document ).on( 'change', '#quick-branch', function() {
+                $( '#select_braches_form' ).submit();
+            });
+        });
+    </script>
+[% END %]
+
 <script>
     var defaultPatronSearchFields = "[% Koha.Preference('DefaultPatronSearchFields') || 'firstname|preferred_name|middle_name|surname|othernames|cardnumber|userid' | html %]";
     var defaultPatronSearchMethod = "[% Koha.Preference('DefaultPatronSearchMethod') || 'contains' | html %]";
