@@ -85,6 +85,15 @@
         });
     </script>
 [% END %]
+[% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        $( document ).ready(function() {
+            $( document ).on( 'change', '#quick-branch', function() {
+                $( '#select_braches_form' ).submit();
+            });
+        });
+    </script>
+[% END %]
 [% IF ( PatronAutoComplete ) %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         // PatronAutoComplete
