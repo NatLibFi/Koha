@@ -7,6 +7,6 @@ return {
         my ($args) = @_;
         my ($dbh, $out) = @$args{qw(dbh out)};
 
-        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type) VALUES ('ShowQuickBranchSelector', '1', NULL, 'Quick dropdown branches selector', 'YesNo') });
+        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type) VALUES ('ShowQuickBranchSelector', '0', NULL, 'Quick dropdown branches selector', 'YesNo') });
     },
 };
