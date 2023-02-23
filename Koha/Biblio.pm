@@ -943,7 +943,7 @@ sub get_components_query {
             }
 
             # limit to monograph and serial component part records
-            $searchstr .= " AND (bib-level:a OR bib-level:b)";
+            $searchstr .= " AND (bib-level:a OR bib-level:b OR bib-level:m OR bib-level:s)";
             $searchstr .= ")";
         }
     } else {
