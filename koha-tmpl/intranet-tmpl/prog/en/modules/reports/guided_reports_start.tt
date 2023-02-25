@@ -1981,6 +1981,10 @@
             }
         }
 
+        function utf8_to_b64( str ) {
+            return window.btoa(unescape(encodeURIComponent( str )));
+        }
+
         $(document).ready(function(){
 
             var activeTab = localStorage.getItem("sql_reports_activetab");
@@ -2021,7 +2025,7 @@
               });
 
               $(this).attr({
-                href: `data:image/svg+xml;base64,${btoa(chartSvg.prop('outerHTML'))}`,
+                href: `data:image/svg+xml;base64,${utf8_to_b64(chartSvg.prop('outerHTML'))}`,
                 download: 'chart.svg'
               });
             });
