@@ -3,6 +3,7 @@
 [% USE Desks %]
 [% USE Registers %]
 [% USE Koha %]
+
 <nav class="navbar">
     <div class="navbar-header">
         <a href="#" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#header" aria-expanded="false" aria-controls="header">
@@ -76,6 +77,20 @@
             </li>
             [% END %]
         </ul>
+        
+
+                [% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+                <span class="separator">|</span>
+                    <form id="select_braches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
+                        [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) %]
+                        <b style="color:white">Library:</b> 
+                            <select class="selectpicker show-tick" name="branch" id="quick-branch">
+                                [% PROCESS options_for_libraries libraries => Branches.all() %]"
+                            </select>
+                        [% END %]
+                    </form>
+                [% END %]
+
 
         <ul id="user-menu" class="nav navbar-nav navbar-right">
             [% IF ( loggedinusername ) %]
