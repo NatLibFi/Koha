@@ -5,6 +5,7 @@ use Modern::Perl;
 use Getopt::Long qw( GetOptions );
 use File::Slurp  qw( read_file );
 use XML::LibXML;
+use Term::ANSIColor;
 
 # Koha modules used
 use Koha::Biblios;
@@ -17,11 +18,13 @@ if ( !$filePath ) {
     die "Usage: $0 -f [file_name]";
 }
 
-say "Trying to open a file: $filePath";
+say colored( "Trying to open a file: $filePath", 'yellow' );
 
-open( my $fileHandle, '<', $filePath ) or die "Can't open file $filePath: $!\n";
+my $error_message = colored( "Can't open file $filePath: ", 'red' );
 
-say "Working with got file";
+open( my $fileHandle, '<', $filePath ) or die $error_message, $!, "\n";
+
+say colored( "In process...", 'green bold' );
 
 my @biblionumber = read_file($fileHandle);
 
