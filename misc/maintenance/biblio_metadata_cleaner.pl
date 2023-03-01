@@ -36,7 +36,7 @@ foreach my $num (@biblionumber) {
 sub xml_cleaner {
     my $biblionumber = shift;
     say 'Take the: ', $biblionumber;
-    my $biblio = Koha::Biblios->find($biblionumber) or return;
+    my $biblio = Koha::Biblios->find($biblionumber) or say colored( "Not found biblio #$biblionumber. Skipped", 'yellow' ) and return;
     my $record = $biblio->metadata->record->as_xml();
 
     # Load the XML
@@ -97,8 +97,7 @@ sub xml_cleaner {
     #Update and save date in Metadata
     $biblio->metadata->metadata($content);
     $biblio->update;
-    say $biblionumber, ' is updated.';
+    say colored("$biblionumber, is updated.", "green");
 }
 
-say 'DONE !!!'
-
+say colored ("All IS DONE.", "green bold")
