@@ -36,7 +36,7 @@ foreach my $num (@biblionumber) {
 sub xml_cleaner {
     my $biblionumber = shift;
     say 'Take the: ', $biblionumber;
-    my $biblio = Koha::Biblios->find($biblionumber);
+    my $biblio = Koha::Biblios->find($biblionumber) or return;
     my $record = $biblio->metadata->record->as_xml();
 
     # Load the XML
