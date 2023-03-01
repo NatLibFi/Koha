@@ -1,14 +1,30 @@
 #!/usr/bin/perl
 use Modern::Perl;
 
-# standard or CPAN modules used
+# Standard or CPAN modules used
+use Getopt::Long qw( GetOptions );
+use File::Slurp  qw( read_file );
 use XML::LibXML;
-use File::Slurp qw( read_file );
 
 # Koha modules used
 use Koha::Biblios;
 
-my @biblionumber = read_file('test.txt');
+my $filePath;
+
+GetOptions( 'f=s' => \$filePath );
+
+if ( !$filePath ) {
+    die "Usage: $0 -f [file_name]";
+}
+
+say "Trying to open a file: $filePath";
+
+open( my $fileHandle, '<', $filePath ) or die "Can't open file $filePath: $!\n";
+
+say "Working with got file";
+
+my @biblionumber = read_file($fileHandle);
+
 foreach my $num (@biblionumber) {
     chomp($num);
     xml_cleaner($num);
