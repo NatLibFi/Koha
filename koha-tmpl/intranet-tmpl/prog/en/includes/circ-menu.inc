@@ -116,6 +116,11 @@
     <li class="patronlibrary">Home library: [% Branches.GetName( patron.branchcode ) | html %]</li>
     <li class="patronborrowernumber">Borrowernumber: [% patron.borrowernumber | html %]</li>
     <li><span class="patronupdatedon">Updated on [% patron.updated_on | $KohaDates with_hours => 1 %]</span></li>
+    
+    [% IF patron.date_renewed %]
+        <li><span class="patronrenewed">Renewed on [% patron.date_renewed | $KohaDates with_hours => 1 %]</span></li>
+    [% END %]
+    
     [% IF patron.account_locked %]
         [% IF patron.login_attempts < 0 %]
             <li class="blocker account_admin_locked">Account has been administratively locked</li>
