@@ -11,8 +11,11 @@ use Term::ANSIColor;
 use Koha::Biblios;
 
 my $filePath;
+my $verbose = 0;
 
-GetOptions( 'f=s' => \$filePath );
+GetOptions( 'file|f=s' => \$filePath,
+            'verbose|v' => \$verbose,
+ );
 
 if ( !$filePath ) {
     die "Usage: $0 -f [file_name]";
@@ -38,7 +41,7 @@ my $done;
 
 sub xml_cleaner {
     my $biblionumber = shift;
-    say 'Take the: ', $biblionumber;
+    say 'Take the: ', $biblionumber if $verbose;
 
     if ( my $biblio = Koha::Biblios->find($biblionumber) ) {
 
@@ -103,10 +106,10 @@ sub xml_cleaner {
         $biblio->metadata->metadata($content);
         $biblio->update;
         $done++;
-        say colored( "$biblionumber, is updated.", "green" );
+        say colored( "$biblionumber, is updated.", "green" ) if $verbose;
     } else {
         $skipped++;
-        say colored( "Not found biblio #$biblionumber. Skipped", 'yellow' );
+        say colored( "Not found biblio #$biblionumber. Skipped", 'yellow' ) if $verbose;
         return;
     }
 }
