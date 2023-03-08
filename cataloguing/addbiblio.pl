@@ -746,7 +746,7 @@ if ( $op eq "addbiblio" ) {
     }
     elsif ($redirect eq "just_save"){
         my $tab = $input->param('current_tab');
-        print $input->redirect("/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=$biblionumber&framework=$frameworkcode&tab=$tab&searchid=$searchid");
+        print $input->redirect("/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=$biblionumber&frameworkcode=$frameworkcode&tab=$tab&searchid=$searchid");
     }
     else {
           $template->param(
