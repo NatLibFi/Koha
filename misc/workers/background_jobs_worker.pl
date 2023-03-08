@@ -48,6 +48,11 @@ The different values available are:
     default
     long_tasks
 
+=item B<--process_and_quit>
+
+Make this worker to process stuck records (old but 'new') and quit.
+Not intercommunicates with RabbitMQ dispatcher at all.
+
 =back
 
 =cut
@@ -64,7 +69,7 @@ use Koha::Logger;
 use Koha::BackgroundJobs;
 use C4::Context;
 
-my ( $help, @queues );
+my ( $help, $process_and_quit, @queues );
 
 my $max_processes = $ENV{MAX_PROCESSES};
 $max_processes ||= C4::Context->config('background_jobs_worker')->{max_processes} if C4::Context->config('background_jobs_worker');
@@ -74,6 +79,7 @@ GetOptions(
     'm|max-processes=i' => \$max_processes,
     'h|help' => \$help,
     'queue=s' => \@queues,
+    'process_and_quit' => \$process_and_quit,
 ) || pod2usage(1);
 
 
@@ -81,6 +87,20 @@ pod2usage(0) if $help;
 
 unless (@queues) {
     push @queues, 'default';
+}
+
+if ( $process_and_quit ) {
+    # check for extra lost jobs:
+    my $jobs = Koha::BackgroundJobs->search({ status => 'new', queue => \@queues });
+    if($jobs->count()) {
+        warn "Found unprocessed jobs in DB: " . $jobs->count() . ", processing...\n";
+        while ( my $j = $jobs->next ) {
+            warn " - processing job " . $j->id . ", " . $j->type() . ".\n";
+            my $args = $j->json->decode($j->data);
+            process_job( $j, { job_id => $j->id, %$args } );
+        }
+    }
+    exit;
 }
 
 my $conn;
