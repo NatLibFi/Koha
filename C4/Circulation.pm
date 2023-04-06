@@ -3089,14 +3089,21 @@ sub CanBookBeRenewed {
                 notforloan   => 0,
                 -not         => { itemnumber => $item->itemnumber } })->as_list;
 
-            return ( 0, "on_reserve" ) if @possible_holds && (scalar @other_items < scalar @possible_holds);
-
             my %matched_items;
             foreach my $possible_hold (@possible_holds) {
                 my $fillable = 0;
                 my $patron_with_reserve = Koha::Patrons->find($possible_hold->borrowernumber);
 
                 # FIXME: We are not checking whether the item we are renewing can fill the hold
+                if ( C4::Context->preference("UseBranchTransferLimits") == 1 ) {
+                    if ( C4::Context->preference("item-level_itypes") && C4::Context->preference("BranchTransferLimitsType") eq 'itemtype' ) {
+                        if ( ! IsBranchTransferAllowed( $possible_hold->branchcode, $item->homebranch, $item->itype ) ) {
+                            next;
+                        }
+                    } elsif ( ! IsBranchTransferAllowed( $possible_hold->branchcode, $item->homebranch, $item->ccode ) ) {
+                        next;
+                    }
+                }
 
                 foreach my $other_item (@other_items) {
                   next if defined $matched_items{$other_item->itemnumber};
