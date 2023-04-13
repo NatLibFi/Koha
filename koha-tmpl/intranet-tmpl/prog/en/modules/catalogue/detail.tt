@@ -2521,6 +2521,7 @@
             [% IF Koha.Preference('LocalCoverImages') && ( tab == 'holdings' && itemloop_has_images || tab == 'otherholdings' && otheritemloop_has_images ) %]
             {
                 data: "",
+                className: "cover",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2531,6 +2532,7 @@
             [% IF ( item_level_itypes ) %]
             {
                 data: "me.effective_item_type_id",
+                className: "itype",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2549,6 +2551,7 @@
             [% END %]
             {
                 data: "me.holding_library_id",
+                className: "location",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2557,6 +2560,7 @@
             },
             {
                 data: "me.home_library_id",
+                className: "homebranch",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2577,6 +2581,7 @@
             [% IF Koha.Preference('EnableItemGroups') %]
             {
                 data: "",
+                className: "item_group",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2586,6 +2591,7 @@
             [% END %]
             {
                 data: "me.callnumber",
+                className: "itemcallnumber",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2596,6 +2602,7 @@
             [% IF volinfo %]
             {
                 data: "",
+                className: "enumchron",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2605,6 +2612,7 @@
             [% END %]
             {
                 data: "",
+                className: "status",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2613,6 +2621,7 @@
             },
             {
                 data: "me.last_seen_date",
+                className: "datelastseen",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2621,6 +2630,7 @@
             },
             {
                 data: "me.checkouts_count",
+                className: "issues",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2629,6 +2639,7 @@
             },
             {
                 data: "me.renewals_count",
+                className: "renewals",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2637,6 +2648,7 @@
             },
             {
                 data: "me.acquisition_date",
+                className: "dateaccessioned",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2645,6 +2657,7 @@
             },
             {
                 data: "me.last_checkout_date",
+                className: "datelastborrowed",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2653,6 +2666,7 @@
             },
             {
                 data: "me.external_id",
+                className: "",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2662,6 +2676,7 @@
             [% IF itemdata_uri %]
             {
                 data: "me.uri",
+                className: "uri",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2672,6 +2687,7 @@
             [% IF ( itemdata_copynumber ) %]
             {
                 data: "me.copy_number",
+                className: "copynumber",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2682,6 +2698,7 @@
             [% IF ( itemdata_stocknumber ) %]
             {
                 data: "me.inventory_number",
+                className: "stocknumber",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2692,6 +2709,7 @@
             [% IF materials %]
             {
                 data: "me.materials_notes",
+                className: "materials",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2702,6 +2720,7 @@
             [% IF ( itemdata_itemnotes ) %]
             {
                 data: "me.public_notes",
+                className: "itemnotes",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2712,6 +2731,7 @@
             [% IF itemdata_nonpublicnotes %]
             {
                 data: "me.internal_notes",
+                className: "nonpublicnote",
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
@@ -2765,6 +2785,7 @@
                     let result = 'Edit + Delete'; // FIXME Add links
                     return result;
                 },
+                className: "actions",
                 searchable: false,
                 orderable: false
             }
