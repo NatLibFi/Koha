@@ -2851,7 +2851,7 @@
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
-                    return row.copy_number; // FIXME Display str version
+                    return row._strings.copy_number ? row._strings.copy_number.str : row.copy_number;
                 }
             },
             {
