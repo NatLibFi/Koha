@@ -18,12 +18,13 @@
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Getopt::Long qw( GetOptions :config no_ignore_case );
+use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
 use Pod::Usage qw( pod2usage );
 use Time::HiRes;
 
 use Koha::Script;
 use C4::Context;
+use C4::Log qw( cronlogaction );
 use Koha::Items;
 
 sub usage {
@@ -87,7 +88,7 @@ $sth_fetch->execute();
 
 $startime = Time::HiRes::time();
 my $time_step_mark = $startime;
-my $notification_step = 100;
+my $notification_step = $verbose > 3 ? 10 : $verbose > 2 ? 100 : 1000;
 
 # fetch info from the search
 while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchrow_array ) {
@@ -95,19 +96,24 @@ while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchro
     my $item = Koha::Items->find($itemnumber);
     next unless $item;
 
-    for my $c (qw( itemcallnumber cn_source )) {
-        $item->make_column_dirty($c);
-    }
-
-    eval { $item->store };
-    my $modok = $@ ? 0 : 1;
-
-    if ($modok) {
-        $goodcount++;
-        print $fh "Touched item $itemnumber\n" if $verbose && $verbose > 2;
+    if ( $dry_run ) {
+        print $fh "Would have touched item $itemnumber\n" if $verbose && $verbose > 4;
     } else {
-        $badcount++;
-        print $fh "ERROR WITH ITEM $itemnumber !!!!\n";
+
+        for my $c (qw( itemcallnumber cn_source )) {
+            $item->make_column_dirty($c);
+        }
+
+        eval { $item->store };
+        my $modok = $@ ? 0 : 1;
+
+        if ($modok) {
+            $goodcount++;
+            print $fh "Touched item $itemnumber\n" if $verbose && $verbose > 2;
+        } else {
+            $badcount++;
+            print $fh "ERROR WITH ITEM $itemnumber !!!!\n";
+        }
     }
 
     if ( $verbose && $totalcount && !( $totalcount % $notification_step ) ) {
@@ -115,7 +121,7 @@ while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchro
         my $step_timedelta  = Time::HiRes::time() - $time_step_mark;
         my $recs_left       = $records_to_process - $totalcount;
         if ( $verbose > 1 ) {
-            printf $fh "Processed: %d. Rps speed, %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
+            printf $fh "Processed: %d. Rps speed, per %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
               $totalcount,
               $notification_step,
               $step_timedelta / $notification_step,
