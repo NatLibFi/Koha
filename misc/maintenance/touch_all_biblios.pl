@@ -18,13 +18,14 @@
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Getopt::Long qw( GetOptions :config no_ignore_case );
+use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
 use Pod::Usage qw( pod2usage );
 use Time::HiRes;
 
 use Koha::Script;
 use C4::Context;
 use C4::Biblio qw( ModBiblio );
+use C4::Log qw( cronlogaction );
 use Koha::Biblios;
 use Pod::Usage qw( pod2usage );
 
@@ -89,7 +90,7 @@ $sth_fetch->execute();
 
 $startime = Time::HiRes::time();
 my $time_step_mark = $startime;
-my $notification_step = 1000;
+my $notification_step = $verbose > 3 ? 10 : $verbose > 2 ? 100 : 1000;
 # fetch info from the search
 while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $biblio = Koha::Biblios->find($biblionumber);
@@ -98,23 +99,33 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $modok;
     my $retry_count = 3;
     while (1) {
-        eval { $modok = ModBiblio( $record, $biblionumber, $frameworkcode ); };
-        if ($@) {
-            if ( $@ =~ /Timed out while waiting for socket/ && $retry_count-- ) {
-                print $fh "Timed out to connect to ES. Retrying. Reties left: $retry_count.\n";
-                sleep 5;
-                next;
+        if ( !$dry_run ) {
+            eval { $modok = ModBiblio( $record, $biblionumber, $frameworkcode ); };
+            if ($@) {
+                warn "ERROR: $@";
+                if ( $@ =~ /Timed out while waiting for socket/ && $retry_count-- ) {
+                    print $fh "Timed out to connect to ES. Retrying. Reties left: $retry_count.\n";
+                    sleep 5;
+                    next;
+                }
+                die "UNEXPECTED ERROR in ModBiblio: $@\n";
             }
-            die "UNEXPECTED ERROR in ModBiblio: $@\n";
+            $dbh->do( q|UPDATE biblio SET timestamp=NOW() WHERE biblionumber=?|,
+                undef, $biblionumber );
         }
+        last;
     }
 
-    if ($modok) {
-        $goodcount++;
-        print $fh "Touched biblio $biblionumber\n" if $verbose && $verbose > 2;
+    if ( $dry_run ) {
+        print $fh "Would have updated biblio $biblionumber\n" if $verbose && $verbose > 4;
     } else {
-        $badcount++;
-        print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        if ($modok) {
+            $goodcount++;
+            print $fh "Touched biblio $biblionumber\n" if $verbose && $verbose > 4;
+        } else {
+            $badcount++;
+            print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        }
     }
 
     if ( $verbose && $totalcount && !( $totalcount % $notification_step ) ) {
@@ -122,8 +133,9 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
         my $step_timedelta  = Time::HiRes::time() - $time_step_mark;
         my $recs_left       = $records_to_process - $totalcount;
         if ( $verbose > 1 ) {
-            printf $fh "Processed: %d. Rps speed, 1000: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
+            printf $fh "Processed: %d. Rps speed, per %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
               $totalcount,
+              $notification_step,
               $step_timedelta / $notification_step,
               $total_timedelta / $totalcount,
               $recs_left,
