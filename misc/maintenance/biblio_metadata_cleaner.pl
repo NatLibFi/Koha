@@ -10,30 +10,34 @@ use Term::ANSIColor;
 # Koha modules used
 use Koha::Biblios;
 
-my $filePath;
-my $verbose = 0;
 
-GetOptions( 'file|f=s' => \$filePath,
-            'verbose|v' => \$verbose,
+# Options
+my $biblist_file;
+my $verbose = 0;
+my $dry_run;
+
+GetOptions( 'file|f=s' => \$biblist_file,
+            'v|verbose+' => \$verbose,
+            'n|dry-run'  => \$dry_run,
  );
 
-if ( !$filePath ) {
+if ( !$biblist_file ) {
     die "Usage: $0 -f [file_name]";
 }
 
-say colored( "Trying to open a file: $filePath", 'yellow' );
+# say colored( "Trying to open a file: $biblist_file", 'yellow' );
 
-my $error_message = colored( "Can't open file $filePath: ", 'red' );
+# my $error_message = colored( "Can't open file $biblist_file: ", 'red' );
 
-open( my $fileHandle, '<', $filePath ) or die $error_message, $!, "\n";
+# open( my $fileHandle, '<', $biblist_file ) or die $error_message, $!, "\n";
 
-say colored( "In process...", 'green bold' );
+# say colored( "In process...", 'green bold' );
 
-my @biblionumber = read_file($fileHandle);
+my @biblionumber = read_file($biblist_file);
 
 foreach my $num (@biblionumber) {
     chomp($num);
-    xml_cleaner($num);
+    xml_cleaner($num, { dry_run => $dry_run, verbose => $verbose });
 }
 
 my $skipped;
@@ -41,11 +45,16 @@ my $done;
 
 sub xml_cleaner {
     my $biblionumber = shift;
+    my $params       = shift;
+
     say 'Take the: ', $biblionumber if $verbose;
 
     if ( my $biblio = Koha::Biblios->find($biblionumber) ) {
 
         my $record = $biblio->metadata->record->as_xml();
+
+        my $lines_in = scalar split /\n/, $record;
+
 
         # Load the XML
         my $parser = XML::LibXML->new();
@@ -102,9 +111,16 @@ sub xml_cleaner {
         my $content = $doc->toString();
         $content =~ s/^\s*\n//mg;
 
-        #Update and save date in Metadata
-        $biblio->metadata->metadata($content);
-        $biblio->update;
+        my $lines_out = scalar split /\n/, $content;
+
+        if( ! $params->{dry_run} ) {
+            #Update and save date in Metadata
+            $biblio->metadata->metadata($content);
+            $biblio->update;
+        } else {
+            say "Record processed: $lines_in -> $lines_out lines.";
+            say "FULL CONTENT DUMP:\n$content\n" if $params->{verbose} && $params->{verbose} > 3;
+        }
         $done++;
         say colored( "$biblionumber, is updated.", "green" ) if $verbose;
     } else {
