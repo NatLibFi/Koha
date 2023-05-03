@@ -1,137 +1,253 @@
 #!/usr/bin/perl
-use Modern::Perl;
 
-# Standard or CPAN modules used
-use Getopt::Long qw( GetOptions );
+use Modern::Perl;
+use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
+use Pod::Usage qw( pod2usage );
+use Time::HiRes;
 use File::Slurp  qw( read_file );
 use XML::LibXML;
-use Term::ANSIColor;
-
-# Koha modules used
+use Koha::Script;
+use C4::Context;
+use C4::Log qw( cronlogaction );
 use Koha::Biblios;
 
+sub usage {
+    pod2usage( -verbose => 2 );
+    exit;
+}
+
+# STARTING DATA:
+my $xmlpaths_elements_to_remove = [
+    '//*[@tag="010"]',               '//*[@tag="015"]',               '//*[@tag="019"]',               '//*[@tag="020"]',
+    '//*[@tag="022"]',               '//*[@tag="031"]',               '//*[@tag="035"]',               '//*[@tag="041"]',
+    '//*[@tag="050"]',               '//*[@tag="060"]',               '//*[@tag="066"]',               '//*[@tag="072"]',
+    '//*[@tag="080"]',               '//*[@tag="082"]',               '//*[@tag="100"]',               '//*[@tag="110"]',
+    '//*[@tag="111"]',               '//*[@tag="130"]',               '//*[@tag="240"]',               '//*[@tag="245"]//*[@code="6"]',
+    '//*[@tag="245"]//*[@code="n"]', '//*[@tag="245"]//*[@code="p"]', '//*[@tag="245"]//*[@code="c"]', '//*[@tag="246"]',
+    '//*[@tag="250"]',               '//*[@tag="260"]',               '//*[@tag="264"]',               '//*[@tag="300"]',
+    '//*[@tag="310"]',               '//*[@tag="362"]',               '//*[@tag="490"]',               '//*[@tag="500"]',
+    '//*[@tag="501"]',               '//*[@tag="502"]',               '//*[@tag="504"]',               '//*[@tag="505"]',
+    '//*[@tag="506"]',               '//*[@tag="510"]',               '//*[@tag="520"]',               '//*[@tag="530"]',
+    '//*[@tag="534"]',               '//*[@tag="546"]',               '//*[@tag="561"]',               '//*[@tag="562"]',
+    '//*[@tag="563"]',               '//*[@tag="588"]',               '//*[@tag="593"]',               '//*[@tag="594"]',
+    '//*[@tag="597"]',               '//*[@tag="599"]',               '//*[@tag="600"]',               '//*[@tag="610"]',
+    '//*[@tag="630"]',               '//*[@tag="648"]',               '//*[@tag="650"]',               '//*[@tag="651"]',
+    '//*[@tag="653"]',               '//*[@tag="655"]',               '//*[@tag="700"]',               '//*[@tag="710"]',
+    '//*[@tag="711"]',               '//*[@tag="720"]',               '//*[@tag="730"]',               '//*[@tag="740"]',
+    '//*[@tag="752"]',               '//*[@tag="765"]',               '//*[@tag="767"]',               '//*[@tag="770"]',
+    '//*[@tag="772"]',               '//*[@tag="775"]',               '//*[@tag="776"]',               '//*[@tag="780"]',
+    '//*[@tag="785"]',               '//*[@tag="800"]',               '//*[@tag="810"]',               '//*[@tag="830"]',
+    '//*[@tag="850"]',               '//*[@tag="856"]',               '//*[@tag="880"]',               '//*[@tag="990"]'
+];
+
+sub callback_xmldoc_expander {
+    my $xml_doc_modified = shift;
+
+    # Create a new element for field 520
+    my $new_field = XML::LibXML::Element->new("datafield");
+    $new_field->setAttribute( 'tag',  '520' );
+    $new_field->setAttribute( 'ind1', ' ' );
+    $new_field->setAttribute( 'ind2', ' ' );
+
+    # Create a new subfield with a default notice for all collections
+    my $new_subfield = XML::LibXML::Element->new("subfield");
+    $new_subfield->setAttribute( 'code', 'a' );
+    $new_subfield->appendText("Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.");
+    $new_field->appendChild($new_subfield);
+
+    #Add new field 520 after field 999
+    my $target_field = $xml_doc_modified->findnodes('//*[@tag="999"]')->[0];
+    $target_field->parentNode->insertBefore( $new_field, $target_field );
+
+    return;
+}
+
+
+# Database handle
+my $dbh = C4::Context->dbh;
+
+# Benchmarking variables
+my $startime;
+my $goodcount  = 0;
+my $badcount   = 0;
+my $totalcount = 0;
 
 # Options
 my $biblist_file;
-my $verbose = 0;
+my $help = 0;
 my $dry_run;
+my $verbose;
+my $whereclause = '';
+my $outfile;
 
-GetOptions( 'file|f=s' => \$biblist_file,
-            'v|verbose+' => \$verbose,
-            'n|dry-run'  => \$dry_run,
- );
+GetOptions(
+    'h|?|help'   => \$help,
+    'v|verbose+' => \$verbose,
+    'n|dry-run'  => \$dry_run,
+    'o|output:s' => \$outfile,
+    'w|where:s'  => \$whereclause,
+    'f|file=s'   => \$biblist_file,
+) or usage();
+usage() if $help;
 
-if ( !$biblist_file ) {
-    die "Usage: $0 -f [file_name]";
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
 }
 
-# say colored( "Trying to open a file: $biblist_file", 'yellow' );
-
-# my $error_message = colored( "Can't open file $biblist_file: ", 'red' );
-
-# open( my $fileHandle, '<', $biblist_file ) or die $error_message, $!, "\n";
-
-# say colored( "In process...", 'green bold' );
-
-my @biblionumber = read_file($biblist_file);
-
-foreach my $num (@biblionumber) {
-    chomp($num);
-    xml_cleaner($num, { dry_run => $dry_run, verbose => $verbose });
+if ($whereclause && $biblist_file) {
+    die "Can't use both where clause and file";
 }
 
-my $skipped;
-my $done;
+# output log or STDOUT
+my $out_fh;
+if ( defined $outfile ) {
+    open( $out_fh, '>', $outfile ) || die("Cannot open output file");
+} else {
+    open( $out_fh, '>&', \*STDOUT ) || die("Couldn't duplicate STDOUT: $!");
+}
 
-sub xml_cleaner {
-    my $biblionumber = shift;
-    my $params       = shift;
-
-    say 'Take the: ', $biblionumber if $verbose;
-
-    if ( my $biblio = Koha::Biblios->find($biblionumber) ) {
-
-        my $record = $biblio->metadata->record->as_xml();
-
-        my $lines_in = scalar split /\n/, $record;
-
-
-        # Load the XML
-        my $parser = XML::LibXML->new();
-        my $doc    = $parser->load_xml( string => $record );
-
-        my @deletable_elements = (
-            '//*[@tag="010"]',               '//*[@tag="015"]',               '//*[@tag="019"]',               '//*[@tag="020"]',
-            '//*[@tag="022"]',               '//*[@tag="031"]',               '//*[@tag="035"]',               '//*[@tag="041"]',
-            '//*[@tag="050"]',               '//*[@tag="060"]',               '//*[@tag="066"]',               '//*[@tag="072"]',
-            '//*[@tag="080"]',               '//*[@tag="082"]',               '//*[@tag="100"]',               '//*[@tag="110"]',
-            '//*[@tag="111"]',               '//*[@tag="130"]',               '//*[@tag="240"]',               '//*[@tag="245"]//*[@code="6"]',
-            '//*[@tag="245"]//*[@code="n"]', '//*[@tag="245"]//*[@code="p"]', '//*[@tag="245"]//*[@code="c"]', '//*[@tag="246"]',
-            '//*[@tag="250"]',               '//*[@tag="260"]',               '//*[@tag="264"]',               '//*[@tag="300"]',
-            '//*[@tag="310"]',               '//*[@tag="362"]',               '//*[@tag="490"]',               '//*[@tag="500"]',
-            '//*[@tag="501"]',               '//*[@tag="502"]',               '//*[@tag="504"]',               '//*[@tag="505"]',
-            '//*[@tag="506"]',               '//*[@tag="510"]',               '//*[@tag="520"]',               '//*[@tag="530"]',
-            '//*[@tag="534"]',               '//*[@tag="546"]',               '//*[@tag="561"]',               '//*[@tag="562"]',
-            '//*[@tag="563"]',               '//*[@tag="588"]',               '//*[@tag="593"]',               '//*[@tag="594"]',
-            '//*[@tag="597"]',               '//*[@tag="599"]',               '//*[@tag="600"]',               '//*[@tag="610"]',
-            '//*[@tag="630"]',               '//*[@tag="648"]',               '//*[@tag="650"]',               '//*[@tag="651"]',
-            '//*[@tag="653"]',               '//*[@tag="655"]',               '//*[@tag="700"]',               '//*[@tag="710"]',
-            '//*[@tag="711"]',               '//*[@tag="720"]',               '//*[@tag="730"]',               '//*[@tag="740"]',
-            '//*[@tag="752"]',               '//*[@tag="765"]',               '//*[@tag="767"]',               '//*[@tag="770"]',
-            '//*[@tag="772"]',               '//*[@tag="775"]',               '//*[@tag="776"]',               '//*[@tag="780"]',
-            '//*[@tag="785"]',               '//*[@tag="800"]',               '//*[@tag="810"]',               '//*[@tag="830"]',
-            '//*[@tag="850"]',               '//*[@tag="856"]',               '//*[@tag="880"]',               '//*[@tag="990"]'
-        );
-
-        # Remove the datafield elements from the document
-        foreach my $element (@deletable_elements) {
-            my @datafields = $doc->findnodes($element);
-            foreach my $datafield (@datafields) {
-                $datafield->unbindNode();
-            }
+if ($whereclause) {
+    $whereclause = "WHERE $whereclause";
+} elsif ($biblist_file) {
+    my @biblist = read_file($biblist_file);
+    for (my $i = 0; $i < @biblist; $i++) {
+        chomp $biblist[$i];
+        if ( $biblist[$i] !~ /^\d+$/) {
+            print $out_fh "Warning: ignoring non-integer in biblionumber list: '$biblist[$i]'.\n";
+            splice @biblist, $i, 1;
+            $i--;
         }
+    }
+    $whereclause = "WHERE biblionumber IN (" . join( ',', @biblist ) . ")";
+}
 
-        # Create a new element for field 520
-        my $new_field = XML::LibXML::Element->new("datafield");
-        $new_field->setAttribute( 'tag',  '520' );
-        $new_field->setAttribute( 'ind1', ' ' );
-        $new_field->setAttribute( 'ind2', ' ' );
+# Let's estimate how big the task is:
+my $sth_ctr = $dbh->prepare("SELECT COUNT(1) AS total FROM biblio $whereclause");
+$sth_ctr->execute();
+my $res                = $sth_ctr->fetchrow_hashref;
+my $records_to_process = $res->{'total'};
+print $out_fh "$records_to_process records will be processed ...\n" if $verbose;
 
-        # Create a new subfield with a default notice for all collections
-        my $new_subfield = XML::LibXML::Element->new("subfield");
-        $new_subfield->setAttribute( 'code', 'a' );
-        $new_subfield->appendText("Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.");
-        $new_field->appendChild($new_subfield);
+my $sth_fetch = $dbh->prepare("SELECT biblionumber FROM biblio $whereclause");
+$sth_fetch->execute();
 
-        #Add new field 520 after field 999
-        my $target_field = $doc->findnodes('//*[@tag="999"]')->[0];
-        $target_field->parentNode->insertBefore( $new_field, $target_field );
+$startime = Time::HiRes::time();
+my $time_step_mark = $startime;
+my $notification_step = $verbose > 2 ? 10 : $verbose > 1 ? 100 : 1000;
+# fetch info from the search
+while ( my ( $biblionumber ) = $sth_fetch->fetchrow_array ) {
+    my $modok;
+    $modok = xml_updater( $biblionumber, $xmlpaths_elements_to_remove, $out_fh,
+        { dry_run => $dry_run, verbose => $verbose }, \&callback_xmldoc_expander
+    );
 
-        #Remove blank lines after deleted datafields
-        my $content = $doc->toString();
-        $content =~ s/^\s*\n//mg;
-
-        my $lines_out = scalar split /\n/, $content;
-
-        if( ! $params->{dry_run} ) {
-            #Update and save date in Metadata
-            $biblio->metadata->metadata($content);
-            $biblio->update;
-        } else {
-            say "Record processed: $lines_in -> $lines_out lines.";
-            say "FULL CONTENT DUMP:\n$content\n" if $params->{verbose} && $params->{verbose} > 3;
-        }
-        $done++;
-        say colored( "$biblionumber, is updated.", "green" ) if $verbose;
+    if ( $dry_run ) {
+        print $out_fh "Dry-run: expected to update biblio $biblionumber\n" if $verbose && $verbose > 3;
     } else {
-        $skipped++;
-        say colored( "Not found biblio #$biblionumber. Skipped", 'yellow' ) if $verbose;
+        if ($modok) {
+            $goodcount++;
+            print $out_fh "Modified biblio $biblionumber\n" if $verbose && $verbose > 3;
+        } else {
+            $badcount++;
+            print $out_fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        }
+    }
+
+    if ( $verbose && $totalcount && !( $totalcount % $notification_step ) ) {
+        my $total_timedelta = Time::HiRes::time() - $startime;
+        my $step_timedelta  = Time::HiRes::time() - $time_step_mark;
+        my $recs_left       = $records_to_process - $totalcount;
+        if ( $verbose > 1 ) {
+            printf $out_fh "Processed: %d. Rps speed, per %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
+              $totalcount,
+              $notification_step,
+              $step_timedelta / $notification_step,
+              $total_timedelta / $totalcount,
+              $recs_left,
+              $recs_left * $total_timedelta / $totalcount / 3600;
+        } else {
+            printf $out_fh "Processed: %d. Time left: %.2f hours.\n", $totalcount, $recs_left * $total_timedelta / $totalcount / 3600;
+        }
+        $time_step_mark = Time::HiRes::time();
+    }
+
+    $totalcount++;
+
+}
+close($out_fh);
+
+# Benchmarking
+my $endtime     = Time::HiRes::time();
+my $time        = int( $endtime - $startime );
+my $accuracy    = $totalcount ? ( $goodcount / $totalcount ) * 100 : 0; # this is a percentage
+my $averagetime = 0;
+$averagetime    = $time / $totalcount if $totalcount;
+print "Good: $goodcount, Bad: $badcount (of $totalcount) in $time seconds\n";
+printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if $verbose;
+
+#########
+# SUBS:
+#########
+
+sub xml_updater {
+    my $biblionumber = shift;
+    my $xmlpaths_elements_to_remove = shift;
+    my $out_fh       = shift;
+    my $params       = shift;
+    my $custom_callback = shift;
+
+    # print $out_fh 'Take the: ', $biblionumber, "\n" if $verbose;
+
+    my $biblio = Koha::Biblios->find($biblionumber);
+    if ( ! $biblio ) {
+        print $out_fh "Not found biblio [$biblionumber]. Skipped.\n";
         return;
     }
+
+
+
+
+    # Load the XML
+    my $record = $biblio->metadata->record->as_xml();
+    my $parser  = XML::LibXML->new();
+    my $xml_doc = $parser->load_xml( string => $record );
+    my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
+    my $lines_in_ctr = scalar split /\n/, $record;
+
+    # Remove the datafield elements from the document
+    foreach my $element (@$xmlpaths_elements_to_remove) {
+        my @datafields = $xml_doc->findnodes($element);
+        foreach my $datafield (@datafields) {
+            $datafield->unbindNode();
+        }
+    }
+
+    # TODO: not cloned so modifications done in-place, but better to make clone later
+    $custom_callback->($xml_doc);
+
+    my $nodes_out_ctr = $xml_doc->findnodes('//*')->size();
+
+    # # get list of node names:
+    # foreach my $node ( $xml_doc->findnodes('//*') ) {
+    #     print $out_fh " - ", $node->nodeName, ": [", $node->nodePath, "] [", $node->parentNode->nodeName, "] [", $node->parentNode->nodePath, "]\n";
+    # }
+
+    #Remove blank lines after deleted datafields
+    my $content = $xml_doc->toString();
+    $content =~ s/^\s*\n//mg;
+    my $lines_out_ctr = scalar split /\n/, $content;
+
+    if( ! $params->{dry_run} ) {
+        #Update and save date in Metadata
+        $biblio->metadata->metadata($content);
+        $biblio->update;
+    } else {
+        print $out_fh "Record $biblionumber processed: $lines_in_ctr -> $lines_out_ctr lines, $nodes_in_ctr -> $nodes_out_ctr nodes.\n";
+        print $out_fh "FULL CONTENT DUMP:\n$content\n\n" if $params->{verbose} && $params->{verbose} > 4;
+    }
+    # print $out_fh "$biblionumber, is updated." if $verbose;
+
+    return 1;
 }
-
-my $updated = $done <= 1 ? "Updated $done item." : "Updated $done items.";
-
-say colored ( "\n=================\n   All IS DONE. \n=================", "green bold" );
-say colored( $skipped <= 1 ? "Skipped $skipped item." : "Skipped $skipped items.", "yellow bold" );
-say colored( "$updated", "green bold" );
