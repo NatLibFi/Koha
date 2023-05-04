@@ -1,15 +1,19 @@
 #!/usr/bin/perl
 
 use Modern::Perl;
+use utf8;
+
 use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
 use Pod::Usage qw( pod2usage );
 use Time::HiRes;
-use File::Slurp  qw( read_file );
+use File::Slurp  qw( read_file write_file );
 use XML::LibXML;
 use Koha::Script;
 use C4::Context;
+use C4::Biblio qw( ModBiblio );
 use C4::Log qw( cronlogaction );
 use Koha::Biblios;
+use MARC::Field;
 
 sub usage {
     pod2usage( -verbose => 2 );
@@ -40,26 +44,89 @@ my $xmlpaths_elements_to_remove = [
     '//*[@tag="850"]',               '//*[@tag="856"]',               '//*[@tag="880"]',               '//*[@tag="990"]'
 ];
 
-sub callback_xmldoc_expander {
-    my $xml_doc_modified = shift;
+# STARTING DATA:
+my $tags_to_be_deleted = [
+         { t => '010' },           { t => '015' },           { t => '019' },           { t => '020' },
+         { t => '022' },           { t => '031' },           { t => '035' },           { t => '041' },
+         { t => '050' },           { t => '060' },           { t => '066' },           { t => '072' },
+         { t => '080' },           { t => '082' },           { t => '100' },           { t => '110' },
+         { t => '111' },           { t => '130' },           { t => '240' },           { t => '245', s => '6' },
+         { t => '245', s => 'n' }, { t => '245', s => 'p' }, { t => '245', s => 'c' }, { t => '246' },
+         { t => '250' },           { t => '260' },           { t => '264' },           { t => '300' },
+         { t => '310' },           { t => '362' },           { t => '490' },           { t => '500' },
+         { t => '501' },           { t => '502' },           { t => '504' },           { t => '505' },
+         { t => '506' },           { t => '510' },           { t => '520' },           { t => '530' },
+         { t => '534' },           { t => '546' },           { t => '561' },           { t => '562' },
+         { t => '563' },           { t => '588' },           { t => '593' },           { t => '594' },
+         { t => '597' },           { t => '599' },           { t => '600' },           { t => '610' },
+         { t => '630' },           { t => '648' },           { t => '650' },           { t => '651' },
+         { t => '653' },           { t => '655' },           { t => '700' },           { t => '710' },
+         { t => '711' },           { t => '720' },           { t => '730' },           { t => '740' },
+         { t => '752' },           { t => '765' },           { t => '767' },           { t => '770' },
+         { t => '772' },           { t => '775' },           { t => '776' },           { t => '780' },
+         { t => '785' },           { t => '800' },           { t => '810' },           { t => '830' },
+         { t => '850' },           { t => '856' },           { t => '880' },           { t => '990' }
+];
 
-    # Create a new element for field 520
-    my $new_field = XML::LibXML::Element->new("datafield");
-    $new_field->setAttribute( 'tag',  '520' );
-    $new_field->setAttribute( 'ind1', ' ' );
-    $new_field->setAttribute( 'ind2', ' ' );
+sub record_changer {
+    my $record = shift;
 
-    # Create a new subfield with a default notice for all collections
-    my $new_subfield = XML::LibXML::Element->new("subfield");
-    $new_subfield->setAttribute( 'code', 'a' );
-    $new_subfield->appendText("Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.");
-    $new_field->appendChild($new_subfield);
+    # use Data::Dumper (); warn Data::Dumper->new( [{
+    #     field => \[map $field],
+    # }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})
+    #     ->Maxdepth(2)->Indent(1)->Purity(0)->Deepcopy(1)->Dump. "\n";
 
-    #Add new field 520 after field 999
-    my $target_field = $xml_doc_modified->findnodes('//*[@tag="999"]')->[0];
-    $target_field->parentNode->insertBefore( $new_field, $target_field );
+    foreach(@$tags_to_be_deleted) {
+        my $tag = $_->{t};
+        my $subfield = $_->{s};
 
-    return;
+        foreach my $field ($record->field($tag)) {
+            if ($subfield) {
+                if ($field->subfield($subfield)) {
+                    $field->delete_subfield(code => $subfield);
+                    warn "Field " . $field->tag() ." subfield $subfield DELETED.\n" if $ENV{DEBUG};
+                }
+            } else {
+                $record->delete_field($field);
+                warn "Field " . $field->tag() ." DELETED.\n" if $ENV{DEBUG};
+            }
+        }
+    }
+
+    # add needed fields:
+    my $field = MARC::Field->new('520',' ',' ',
+        'a' => ' Привет! Я Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.');
+    $record->insert_fields_before( $record->field('999'), $field );
+
+    return $record;
+
+    # my $xml_doc_modified = shift;
+
+    # # Remove the datafield elements from the document
+    # foreach my $element (@$xmlpaths_elements_to_remove) {
+    #     my @datafields = $xml_doc->findnodes($element);
+    #     foreach my $datafield (@datafields) {
+    #         $datafield->unbindNode();
+    #     }
+    # }
+
+    # # Create a new element for field 520
+    # my $new_field = XML::LibXML::Element->new("datafield");
+    # $new_field->setAttribute( 'tag',  '520' );
+    # $new_field->setAttribute( 'ind1', ' ' );
+    # $new_field->setAttribute( 'ind2', ' ' );
+
+    # # Create a new subfield with a default notice for all collections
+    # my $new_subfield = XML::LibXML::Element->new("subfield");
+    # $new_subfield->setAttribute( 'code', 'a' );
+    # $new_subfield->appendText("Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.");
+    # $new_field->appendChild($new_subfield);
+
+    # #Add new field 520 after field 999
+    # my $target_field = $xml_doc_modified->findnodes('//*[@tag="999"]')->[0];
+    # $target_field->parentNode->insertBefore( $new_field, $target_field );
+
+    # return;
 }
 
 
@@ -79,6 +146,8 @@ my $dry_run;
 my $verbose;
 my $whereclause = '';
 my $outfile;
+my $touch_records;
+my $records_backup_path;
 
 GetOptions(
     'h|?|help'   => \$help,
@@ -87,6 +156,8 @@ GetOptions(
     'o|output:s' => \$outfile,
     'w|where:s'  => \$whereclause,
     'f|file=s'   => \$biblist_file,
+    't|touch'    => \$touch_records,
+    'b|backup:s' => \$records_backup_path,
 ) or usage();
 usage() if $help;
 
@@ -94,6 +165,10 @@ if ( $dry_run && $verbose ) {
     print "Dry run!\n";
 } else {
     cronlogaction();
+}
+
+if ($records_backup_path && ! -d $records_backup_path) {
+    die "Backup path '$records_backup_path' does not exist";
 }
 
 if ($whereclause && $biblist_file) {
@@ -130,28 +205,60 @@ my $res                = $sth_ctr->fetchrow_hashref;
 my $records_to_process = $res->{'total'};
 print $out_fh "$records_to_process records will be processed ...\n" if $verbose;
 
-my $sth_fetch = $dbh->prepare("SELECT biblionumber FROM biblio $whereclause");
+my $sth_fetch = $dbh->prepare("SELECT biblionumber, frameworkcode FROM biblio $whereclause");
 $sth_fetch->execute();
 
 $startime = Time::HiRes::time();
 my $time_step_mark = $startime;
 my $notification_step = $verbose > 2 ? 10 : $verbose > 1 ? 100 : 1000;
-# fetch info from the search
-while ( my ( $biblionumber ) = $sth_fetch->fetchrow_array ) {
-    my $modok;
-    $modok = xml_updater( $biblionumber, $xmlpaths_elements_to_remove, $out_fh,
-        { dry_run => $dry_run, verbose => $verbose }, \&callback_xmldoc_expander
-    );
+
+my $timestamp = POSIX::strftime("%Y%m%d%H%M%S", localtime);
+
+while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
+    my $biblio = Koha::Biblios->find($biblionumber);
+    my $record = $biblio->metadata->record;
+
+    my $str_record_in = $record->as_xml();
+    my $parser  = XML::LibXML->new();
+    my $xml_doc = $parser->load_xml( string => $str_record_in );
+    my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
+    my $lines_in_ctr = scalar split /\n/, $str_record_in;
+    if($records_backup_path) {
+        my $backup_file = "$records_backup_path/$timestamp-$biblionumber-in.xml";
+        write_file($backup_file, $str_record_in);
+    }
+
+    $record = record_changer($record->clone());
+
+    my $str_record_out = $xml_doc->toString();
+    $str_record_out =~ s/^\s*\n//mg;
+    my $nodes_out_ctr = $xml_doc->findnodes('//*')->size();
+    my $lines_out_ctr = scalar split /\n/, $str_record_out;
+
+
+    if($records_backup_path) {
+        my $backup_file = "$records_backup_path/$timestamp-$biblionumber-out.xml";
+        write_file($backup_file, $str_record_out);
+    }
+
+    print $out_fh "Record $biblionumber processed: $lines_in_ctr -> $lines_out_ctr lines, $nodes_in_ctr -> $nodes_out_ctr nodes.\n"
+        if $verbose && $verbose > 3;
 
     if ( $dry_run ) {
         print $out_fh "Dry-run: expected to update biblio $biblionumber\n" if $verbose && $verbose > 3;
     } else {
-        if ($modok) {
+        if (ModBiblio( $record, $biblionumber, $frameworkcode )) {
             $goodcount++;
             print $out_fh "Modified biblio $biblionumber\n" if $verbose && $verbose > 3;
         } else {
             $badcount++;
             print $out_fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        }
+
+        if( $touch_records ) {
+            $dbh->do( q|UPDATE biblio SET timestamp=NOW() WHERE biblionumber=?|,
+                undef, $biblionumber );
+            print $out_fh "Touched biblio $biblionumber\n" if $verbose && $verbose > 4;
         }
     }
 
@@ -210,9 +317,10 @@ sub xml_updater {
 
 
     # Load the XML
-    my $record = $biblio->metadata->record->as_xml();
+    my $record = $biblio->metadata->record;
+    my $str_record = $record->as_xml();
     my $parser  = XML::LibXML->new();
-    my $xml_doc = $parser->load_xml( string => $record );
+    my $xml_doc = $parser->load_xml( string => $str_record );
     my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
     my $lines_in_ctr = scalar split /\n/, $record;
 
@@ -233,6 +341,7 @@ sub xml_updater {
     # foreach my $node ( $xml_doc->findnodes('//*') ) {
     #     print $out_fh " - ", $node->nodeName, ": [", $node->nodePath, "] [", $node->parentNode->nodeName, "] [", $node->parentNode->nodePath, "]\n";
     # }
+
 
     #Remove blank lines after deleted datafields
     my $content = $xml_doc->toString();
