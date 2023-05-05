@@ -6,7 +6,7 @@ use utf8;
 use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
 use Pod::Usage qw( pod2usage );
 use Time::HiRes;
-use File::Slurp  qw( read_file write_file );
+use File::Slurp  qw( read_file );
 use XML::LibXML;
 use Koha::Script;
 use C4::Context;
@@ -67,6 +67,16 @@ my $tags_to_be_deleted = [
          { t => '785' },           { t => '800' },           { t => '810' },           { t => '830' },
          { t => '850' },           { t => '856' },           { t => '880' },           { t => '990' }
 ];
+
+sub write_file {
+    my ($backup_file, $str_record_in) = @_;
+
+    open(my $fh, '>:encoding(UTF-8)', $backup_file) or die "Could not open file '$backup_file' $!";
+    print $fh $str_record_in;
+    close $fh;
+
+    return;
+}
 
 sub record_changer {
     my $record = shift;
