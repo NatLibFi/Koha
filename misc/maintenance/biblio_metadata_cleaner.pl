@@ -95,7 +95,7 @@ sub record_changer {
 
     # add needed fields:
     my $field = MARC::Field->new('520',' ',' ',
-        'a' => ' Привет! Я Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.');
+        'a' => 'Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.');
     $record->insert_fields_before( $record->field('999'), $field );
 
     return $record;
