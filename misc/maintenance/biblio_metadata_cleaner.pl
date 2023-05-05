@@ -231,8 +231,8 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $record = $biblio->metadata->record;
 
     my $str_record_in = $record->as_xml();
-    my $xml_doc = $parser->load_xml( string => $str_record_in );
-    my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
+    my $xml_doc_in = $parser->load_xml( string => $str_record_in );
+    my $nodes_in_ctr = $xml_doc_in->findnodes('//*')->size();
     my $lines_in_ctr = scalar split /\n/, $str_record_in;
     if($records_backup_path) {
         my $backup_file = "$records_backup_path/$timestamp-$biblionumber-in.xml";
@@ -241,9 +241,10 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
 
     $record = record_changer($record->clone());
 
-    my $str_record_out = $xml_doc->toString();
+    my $str_record_out = $record->as_xml();
+    my $xml_doc_out = $parser->load_xml( string => $str_record_out );
+    my $nodes_out_ctr = $xml_doc_out->findnodes('//*')->size();
     $str_record_out =~ s/^\s*\n//mg;
-    my $nodes_out_ctr = $xml_doc->findnodes('//*')->size();
     my $lines_out_ctr = scalar split /\n/, $str_record_out;
 
 
