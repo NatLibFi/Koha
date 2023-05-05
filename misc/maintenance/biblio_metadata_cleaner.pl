@@ -224,12 +224,13 @@ my $notification_step = $verbose > 2 ? 10 : $verbose > 1 ? 100 : 1000;
 
 my $timestamp = POSIX::strftime("%Y%m%d%H%M%S", localtime);
 
+my $parser  = XML::LibXML->new();
+
 while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $biblio = Koha::Biblios->find($biblionumber);
     my $record = $biblio->metadata->record;
 
     my $str_record_in = $record->as_xml();
-    my $parser  = XML::LibXML->new();
     my $xml_doc = $parser->load_xml( string => $str_record_in );
     my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
     my $lines_in_ctr = scalar split /\n/, $str_record_in;
