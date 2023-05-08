@@ -1644,8 +1644,15 @@ sub _send_message_by_email {
                 failure_code => 'SENDMAIL'
             }
         );
-        carp "$_";
-        carp "$Mail::Sendmail::error";
+
+        my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
+            ? $email->email->header('To') : $message->{to_address};
+        my $tmp_id = $message->{message_id};
+
+        carp scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to\n"
+            . ($Mail::Sendmail::error ? "Mail::Sendmail::error = " . $Mail::Sendmail::error . "\n" : '')
+            . ($_ ? "Mailer Issue: " . $_ . "\n" : '');
+
         return;
     };
 }
