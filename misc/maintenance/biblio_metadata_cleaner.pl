@@ -57,6 +57,9 @@ sub write_file {
 
 sub record_changer {
     my $record = shift;
+    my $biblionumber = shift;
+    my $out_fh = shift;
+
 
     # use Data::Dumper (); warn Data::Dumper->new( [{
     #     field => \[map $field],
@@ -85,6 +88,14 @@ sub record_changer {
         'a' => 'Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.');
     $record->insert_fields_before( $record->field('999'), $field );
 
+    # update subfields:
+    $record->field('245')->update('a' => 'Yhteissidos =');
+
+    if ($record->field('245', 'b')->as_string =~ /(\S+)$/) {
+        $record->field('245')->update('b' => 'Samlingsband = Bound volume '.$1);
+    } else {
+        print $out_fh "Unexpected 245 b format in $biblionumber \n";
+    }
 
     return $record;
 }
@@ -183,13 +194,14 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $str_record_in = $record->as_xml();
     my $xml_doc_in = $parser->load_xml( string => $str_record_in );
     my $nodes_in_ctr = $xml_doc_in->findnodes('//*')->size();
+    $str_record_in =~ s/^\s*\n//mg;
     my $lines_in_ctr = scalar split /\n/, $str_record_in;
     if($records_backup_path) {
         my $backup_file = "$records_backup_path/$timestamp-$biblionumber-in.xml";
         write_file($backup_file, $str_record_in);
     }
 
-    $record = record_changer($record->clone());
+    $record = record_changer($record->clone(), $biblionumber, $out_fh);
 
     my $str_record_out = $record->as_xml();
     my $xml_doc_out = $parser->load_xml( string => $str_record_out );
