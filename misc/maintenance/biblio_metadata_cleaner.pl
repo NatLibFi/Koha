@@ -20,29 +20,6 @@ sub usage {
     exit;
 }
 
-# STARTING DATA:
-my $xmlpaths_elements_to_remove = [
-    '//*[@tag="010"]',               '//*[@tag="015"]',               '//*[@tag="019"]',               '//*[@tag="020"]',
-    '//*[@tag="022"]',               '//*[@tag="031"]',               '//*[@tag="035"]',               '//*[@tag="041"]',
-    '//*[@tag="050"]',               '//*[@tag="060"]',               '//*[@tag="066"]',               '//*[@tag="072"]',
-    '//*[@tag="080"]',               '//*[@tag="082"]',               '//*[@tag="100"]',               '//*[@tag="110"]',
-    '//*[@tag="111"]',               '//*[@tag="130"]',               '//*[@tag="240"]',               '//*[@tag="245"]//*[@code="6"]',
-    '//*[@tag="245"]//*[@code="n"]', '//*[@tag="245"]//*[@code="p"]', '//*[@tag="245"]//*[@code="c"]', '//*[@tag="246"]',
-    '//*[@tag="250"]',               '//*[@tag="260"]',               '//*[@tag="264"]',               '//*[@tag="300"]',
-    '//*[@tag="310"]',               '//*[@tag="362"]',               '//*[@tag="490"]',               '//*[@tag="500"]',
-    '//*[@tag="501"]',               '//*[@tag="502"]',               '//*[@tag="504"]',               '//*[@tag="505"]',
-    '//*[@tag="506"]',               '//*[@tag="510"]',               '//*[@tag="520"]',               '//*[@tag="530"]',
-    '//*[@tag="534"]',               '//*[@tag="546"]',               '//*[@tag="561"]',               '//*[@tag="562"]',
-    '//*[@tag="563"]',               '//*[@tag="588"]',               '//*[@tag="593"]',               '//*[@tag="594"]',
-    '//*[@tag="597"]',               '//*[@tag="599"]',               '//*[@tag="600"]',               '//*[@tag="610"]',
-    '//*[@tag="630"]',               '//*[@tag="648"]',               '//*[@tag="650"]',               '//*[@tag="651"]',
-    '//*[@tag="653"]',               '//*[@tag="655"]',               '//*[@tag="700"]',               '//*[@tag="710"]',
-    '//*[@tag="711"]',               '//*[@tag="720"]',               '//*[@tag="730"]',               '//*[@tag="740"]',
-    '//*[@tag="752"]',               '//*[@tag="765"]',               '//*[@tag="767"]',               '//*[@tag="770"]',
-    '//*[@tag="772"]',               '//*[@tag="775"]',               '//*[@tag="776"]',               '//*[@tag="780"]',
-    '//*[@tag="785"]',               '//*[@tag="800"]',               '//*[@tag="810"]',               '//*[@tag="830"]',
-    '//*[@tag="850"]',               '//*[@tag="856"]',               '//*[@tag="880"]',               '//*[@tag="990"]'
-];
 
 # STARTING DATA:
 my $tags_to_be_deleted = [
@@ -108,35 +85,8 @@ sub record_changer {
         'a' => 'Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.');
     $record->insert_fields_before( $record->field('999'), $field );
 
+
     return $record;
-
-    # my $xml_doc_modified = shift;
-
-    # # Remove the datafield elements from the document
-    # foreach my $element (@$xmlpaths_elements_to_remove) {
-    #     my @datafields = $xml_doc->findnodes($element);
-    #     foreach my $datafield (@datafields) {
-    #         $datafield->unbindNode();
-    #     }
-    # }
-
-    # # Create a new element for field 520
-    # my $new_field = XML::LibXML::Element->new("datafield");
-    # $new_field->setAttribute( 'tag',  '520' );
-    # $new_field->setAttribute( 'ind1', ' ' );
-    # $new_field->setAttribute( 'ind2', ' ' );
-
-    # # Create a new subfield with a default notice for all collections
-    # my $new_subfield = XML::LibXML::Element->new("subfield");
-    # $new_subfield->setAttribute( 'code', 'a' );
-    # $new_subfield->appendText("Yhteensidottu nide sisältää useita julkaisuja : Samlingsbandet innehåller flera publikationer : Bound volume contains multiple items.");
-    # $new_field->appendChild($new_subfield);
-
-    # #Add new field 520 after field 999
-    # my $target_field = $xml_doc_modified->findnodes('//*[@tag="999"]')->[0];
-    # $target_field->parentNode->insertBefore( $new_field, $target_field );
-
-    # return;
 }
 
 
@@ -246,8 +196,6 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $nodes_out_ctr = $xml_doc_out->findnodes('//*')->size();
     $str_record_out =~ s/^\s*\n//mg;
     my $lines_out_ctr = scalar split /\n/, $str_record_out;
-
-
     if($records_backup_path) {
         my $backup_file = "$records_backup_path/$timestamp-$biblionumber-out.xml";
         write_file($backup_file, $str_record_out);
@@ -305,70 +253,3 @@ my $averagetime = 0;
 $averagetime    = $time / $totalcount if $totalcount;
 print "Good: $goodcount, Bad: $badcount (of $totalcount) in $time seconds\n";
 printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if $verbose;
-
-#########
-# SUBS:
-#########
-
-sub xml_updater {
-    my $biblionumber = shift;
-    my $xmlpaths_elements_to_remove = shift;
-    my $out_fh       = shift;
-    my $params       = shift;
-    my $custom_callback = shift;
-
-    # print $out_fh 'Take the: ', $biblionumber, "\n" if $verbose;
-
-    my $biblio = Koha::Biblios->find($biblionumber);
-    if ( ! $biblio ) {
-        print $out_fh "Not found biblio [$biblionumber]. Skipped.\n";
-        return;
-    }
-
-
-
-
-    # Load the XML
-    my $record = $biblio->metadata->record;
-    my $str_record = $record->as_xml();
-    my $parser  = XML::LibXML->new();
-    my $xml_doc = $parser->load_xml( string => $str_record );
-    my $nodes_in_ctr = $xml_doc->findnodes('//*')->size();
-    my $lines_in_ctr = scalar split /\n/, $record;
-
-    # Remove the datafield elements from the document
-    foreach my $element (@$xmlpaths_elements_to_remove) {
-        my @datafields = $xml_doc->findnodes($element);
-        foreach my $datafield (@datafields) {
-            $datafield->unbindNode();
-        }
-    }
-
-    # TODO: not cloned so modifications done in-place, but better to make clone later
-    $custom_callback->($xml_doc);
-
-    my $nodes_out_ctr = $xml_doc->findnodes('//*')->size();
-
-    # # get list of node names:
-    # foreach my $node ( $xml_doc->findnodes('//*') ) {
-    #     print $out_fh " - ", $node->nodeName, ": [", $node->nodePath, "] [", $node->parentNode->nodeName, "] [", $node->parentNode->nodePath, "]\n";
-    # }
-
-
-    #Remove blank lines after deleted datafields
-    my $content = $xml_doc->toString();
-    $content =~ s/^\s*\n//mg;
-    my $lines_out_ctr = scalar split /\n/, $content;
-
-    if( ! $params->{dry_run} ) {
-        #Update and save date in Metadata
-        $biblio->metadata->metadata($content);
-        $biblio->update;
-    } else {
-        print $out_fh "Record $biblionumber processed: $lines_in_ctr -> $lines_out_ctr lines, $nodes_in_ctr -> $nodes_out_ctr nodes.\n";
-        print $out_fh "FULL CONTENT DUMP:\n$content\n\n" if $params->{verbose} && $params->{verbose} > 4;
-    }
-    # print $out_fh "$biblionumber, is updated." if $verbose;
-
-    return 1;
-}
