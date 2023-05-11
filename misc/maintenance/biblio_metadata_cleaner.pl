@@ -166,7 +166,12 @@ if ($whereclause) {
             $i--;
         }
     }
-    $whereclause = "WHERE biblionumber IN (" . join( ',', @biblist ) . ")";
+    if(@biblist) {
+        $whereclause = "WHERE biblionumber IN (" . join( ',', @biblist ) . ")";
+    } else {
+        print $out_fh "No valid biblionumbers found in $biblist_file\n";
+        exit 1;
+    }
 }
 
 # Let's estimate how big the task is:
