@@ -317,33 +317,46 @@ sub GetItemsAvailableToFillHoldRequestsForBib {
     my ($biblionumber, $branches_to_use) = @_;
 
     my $dbh = C4::Context->dbh;
-    my $items_query = "SELECT items.itemnumber, homebranch, holdingbranch, itemtypes.itemtype AS itype
-                       FROM items ";
+    my $items_query = "
+        SELECT items.itemnumber, homebranch, holdingbranch, itemtypes.itemtype AS itype
+            FROM items";
 
     if (C4::Context->preference('item-level_itypes')) {
-        $items_query .=   "LEFT JOIN itemtypes ON (itemtypes.itemtype = items.itype) ";
+        $items_query .= "
+            LEFT JOIN itemtypes ON (itemtypes.itemtype = items.itype)";
     } else {
-        $items_query .=   "JOIN biblioitems USING (biblioitemnumber)
-                           LEFT JOIN itemtypes USING (itemtype) ";
+        $items_query .= "
+            JOIN biblioitems USING (biblioitemnumber)
+            LEFT JOIN itemtypes USING (itemtype)";
     }
-    $items_query .=  " LEFT JOIN branchtransfers ON (items.itemnumber = branchtransfers.itemnumber)";
-    $items_query .=  " WHERE items.notforloan = 0
-                       AND holdingbranch IS NOT NULL
-                       AND itemlost = 0
-                       AND withdrawn = 0";
-    $items_query .= "  AND branchtransfers.datearrived IS NULL
-                       AND branchtransfers.datecancelled IS NULL";
-    $items_query .= "  AND damaged = 0" unless C4::Context->preference('AllowHoldsOnDamagedItems');
-    $items_query .= "  AND items.onloan IS NULL
-                       AND (itemtypes.notforloan IS NULL OR itemtypes.notforloan = 0)
-                       AND items.itemnumber NOT IN (
-                           SELECT itemnumber
-                           FROM reserves
-                           WHERE biblionumber = ?
-                           AND itemnumber IS NOT NULL
-                           AND (found IS NOT NULL OR priority = 0)
-                        )
-                       AND items.biblionumber = ?";
+    $items_query .= "
+            LEFT JOIN branchtransfers ON branchtransfers.branchtransfer_id = (
+                SELECT branchtransfer_id FROM branchtransfers b1
+                WHERE b1.itemnumber = items.itemnumber
+                ORDER BY b1.daterequested DESC
+                LIMIT 1
+            )";
+    $items_query .= "
+            WHERE items.notforloan = 0
+                AND holdingbranch IS NOT NULL
+                AND itemlost = 0
+                AND withdrawn = 0";
+    $items_query .= "
+                AND (branchtransfers.itemnumber IS NULL OR
+                     branchtransfers.datearrived IS NOT NULL AND branchtransfers.datecancelled IS NULL)";
+    $items_query .= "
+                AND damaged = 0" unless C4::Context->preference('AllowHoldsOnDamagedItems');
+    $items_query .= "
+                AND items.onloan IS NULL
+                AND (itemtypes.notforloan IS NULL OR itemtypes.notforloan = 0)
+                AND items.itemnumber NOT IN (
+                    SELECT itemnumber
+                    FROM reserves
+                    WHERE biblionumber = ?
+                    AND itemnumber IS NOT NULL
+                    AND (found IS NOT NULL OR priority = 0)
+                )
+                AND items.biblionumber = ?";
 
     my @params = ($biblionumber, $biblionumber);
     if ($branches_to_use && @$branches_to_use) {
