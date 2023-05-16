@@ -229,6 +229,8 @@ if ( $step == 5 ) {
         my $branchcode      = $input->param('branch');
         my $categorycode    = $input->param('categorycode');
         my $itemtype        = $input->param('itemtype');
+        my $ccode             = $input->param('ccode');
+        my $shelving_location = $input->param('shelving_location');
         my $maxissueqty     = $input->param('maxissueqty');
         my $issuelength     = $input->param('issuelength') || 0;
         my $lengthunit      = $input->param('lengthunit');
@@ -245,6 +247,8 @@ if ( $step == 5 ) {
             branchcode      => $branchcode,
             categorycode    => $categorycode,
             itemtype        => $itemtype,
+            ccode              => $ccode,
+            shelving_location => $shelving_location,
             rules => {
                 renewalsallowed                  => $renewalsallowed,
                 renewalperiod                    => $renewalperiod,
@@ -324,6 +328,12 @@ $template_params->{categories} = $categories;
 
 my $itemtypes = Koha::ItemTypes->search();
 $template_params->{itemtypes} = $itemtypes;
+
+my $ccodes = Koha::AuthorisedValues->search({ category => 'CCODE' });
+$template_params->{ccodes} = $ccodes;
+
+my $locs = Koha::AuthorisedValues->search({ category => 'LOC' });
+$template_params->{locs} = $locs;
 
 $template->param(%$template_params);
 

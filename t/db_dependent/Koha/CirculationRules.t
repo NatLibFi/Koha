@@ -205,6 +205,8 @@ subtest 'set_rule' => sub {
                 branchcode => $branchcode,
                 categorycode => $categorycode,
                 itemtype => $itemtype,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name => 'fine',
                 rule_value => '',
             } );
@@ -321,6 +323,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'fine',
             rule_value   => 5,
         })->store;
@@ -329,6 +333,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'lengthunit',
             rule_value   => 'days',
         })->store;
@@ -384,6 +390,8 @@ subtest 'clone' => sub {
             branchcode   => undef,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => 'fine',
             rule_value   => 5,
         })->store;
@@ -440,6 +448,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -450,6 +460,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
             rule_value   => $default_rule_value,
         }
@@ -460,6 +472,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rule_name    => $rule_name,
         }
     );
@@ -469,6 +483,8 @@ subtest 'set_rule + get_effective_rule' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => $rule_name,
         }
     );
@@ -517,6 +533,8 @@ subtest 'set_rule + get_effective_rule' => sub {
                 branchcode   => $branchcode,
                 categorycode => $categorycode,
                 itemtype     => $itemtype,
+                ccode             => undef,
+                shelving_location => undef,
             },
             'maxissueqty'
         );
@@ -535,6 +553,8 @@ subtest 'set_rule + get_effective_rule' => sub {
                     branchcode   => $branchcode,
                     categorycode => $categorycode,
                     itemtype     => $itemtype,
+                    ccode             => undef,
+                    shelving_location => undef,
                     rule_name    => $rule_name,
                 }
             );
@@ -575,6 +595,8 @@ subtest 'get_onshelfholds_policy() tests' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => 'onshelfholds',
             rule_value   => 1,
         }
@@ -619,6 +641,8 @@ subtest 'get_effective_daysmode' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => '*',
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => 'daysmode',
             rule_value   => 'Calendar',
         }
@@ -628,6 +652,8 @@ subtest 'get_effective_daysmode' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => $item_1->effective_itemtype,
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => 'daysmode',
             rule_value   => 'Days',
         }
@@ -638,7 +664,9 @@ subtest 'get_effective_daysmode' => sub {
             {
                 categorycode => undef,
                 itemtype     => $item_1->effective_itemtype,
-                branchcode   => undef
+                branchcode   => undef,
+                ccode             => undef,
+                shelving_location => undef,
             }
         ),
         'Days',
@@ -649,7 +677,9 @@ subtest 'get_effective_daysmode' => sub {
             {
                 categorycode => undef,
                 itemtype     => $item_2->effective_itemtype,
-                branchcode   => undef
+                branchcode   => undef,
+                ccode             => undef,
+                shelving_location => undef,
             }
         ),
         'Calendar',
@@ -661,6 +691,8 @@ subtest 'get_effective_daysmode' => sub {
             branchcode   => '*',
             categorycode => '*',
             itemtype     => $item_2->effective_itemtype,
+            ccode             => '*',
+            shelving_location => '*',
             rule_name    => 'daysmode',
             rule_value   => '',
         }
@@ -671,7 +703,9 @@ subtest 'get_effective_daysmode' => sub {
             {
                 categorycode => undef,
                 itemtype     => $item_2->effective_itemtype,
-                branchcode   => undef
+                branchcode   => undef,
+                ccode             => undef,
+                shelving_location => undef,
             }
         ),
         'Datedue',
@@ -695,6 +729,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => undef,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'processingreturn',
                 rule_value   => 'charge'
             }
@@ -707,6 +743,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => undef,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'lostreturn',
                 rule_value   => 'charge'
             }
@@ -720,6 +758,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'lostreturn',
                 rule_value   => 0
             }
@@ -732,6 +772,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'processingreturn',
                 rule_value   => 0
             }
@@ -745,6 +787,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode2,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'lostreturn',
                 rule_value   => 'refund'
             }
@@ -757,6 +801,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode2,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'processingreturn',
                 rule_value   => 'refund'
             }
@@ -770,6 +816,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode3,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'lostreturn',
                 rule_value   => 'restore'
             }
@@ -782,6 +830,8 @@ subtest 'get_lostreturn_policy() tests' => sub {
                 branchcode   => $branchcode3,
                 categorycode => undef,
                 itemtype     => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rule_name    => 'processingreturn',
                 rule_value   => 'restore'
             }
