@@ -152,6 +152,7 @@ sub cancel {
             )->count == 0
             and $biblio->subscriptions->count == 0
             and $biblio->items->count == 0
+            and (!C4::Context->preference('SummaryHoldings') or $biblio->holdings->count == 0)
             )
         {
 
@@ -175,6 +176,9 @@ sub cancel {
             }
             elsif ( $biblio->subscriptions->count > 0 ) {
                 $message = 'error_delbiblio_subscriptions';
+            }
+            elsif ( C4::Context->preference('SummaryHoldings') && $biblio->holdings->count > 0 ) {
+                $message = 'error_delbiblio_holdings';
             }
             else { # $biblio->items->count > 0
                 $message = 'error_delbiblio_items';
