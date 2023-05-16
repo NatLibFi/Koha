@@ -84,20 +84,33 @@
                     <span id="logged-in-info-brief">
                         <i class="fa fa-user"></i>
                     </span>
+                    [% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+                    <form id="select_braches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
+                        [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) %]
+                        Library: 
+                            <select name="branch" id="quick-branch" style="background: #352c2e; border: hidden; font-weight: bolder;">
+                                [% PROCESS options_for_libraries libraries => Branches.all() %]
+                            </select>
+                        [% END %]
+                    </form>
+                    [% END %]
                     <span id="logged-in-info-full">
                         [% SET is_superlibrarian = CAN_user_superlibrarian ? 'is_superlibrarian' : '' %]
                         <span class="loggedinusername [% is_superlibrarian | html %]">[% logged_in_user.userid | html %]</span>
 
-                        [% IF ( AutoLocation ) %]
-                            <brand>
-                                [% Branches.GetLoggedInBranchname | html %]
-                            </brand>
-                        [% ELSE %]
-                            <strong>
-                                <span class="logged-in-branch-name">[% Branches.GetLoggedInBranchname | html %]</span>
-                                <span class="logged-in-branch-code content_hidden">[% Branches.GetLoggedInBranchcode | html %]</span>
-                            </strong>
+                        [% IF ( !Koha.Preference('ShowQuickBranchSelector') ) %]
+                            [% IF ( AutoLocation ) %]
+                                <brand>
+                                    [% Branches.GetLoggedInBranchname | html %]
+                                </brand>
+                            [% ELSE %]
+                                <strong>
+                                    <span class="logged-in-branch-name">[% Branches.GetLoggedInBranchname | html %]</span>
+                                    <span class="logged-in-branch-code content_hidden">[% Branches.GetLoggedInBranchcode | html %]</span>
+                                </strong>
+                            [% END %]
                         [% END %]
+
                         [% IF Koha.Preference('UseCirculationDesks') && Desks.ListForLibrary.count %]
                             <span class="separator">|</span>
                             <strong>
