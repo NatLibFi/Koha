@@ -143,7 +143,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
             error_over => 1,
             total_due => $total_due
         );
-    } elsif ( $total_collected < $total_paid && !( $writeoff_individual || $type eq 'WRITEOFF' ) ) {
+    } elsif ( $total_collected && $total_collected < $total_paid && !( $writeoff_individual || $type eq 'WRITEOFF' ) ) {
         $template->param(
             error_under => 1,
             total_paid => $total_paid

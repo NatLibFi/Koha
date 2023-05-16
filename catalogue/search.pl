@@ -271,7 +271,8 @@ if ( $template_type eq 'advsearch' ) {
         @operators = $cgi->multi_param('op');
         @indexes   = $cgi->multi_param('idx');
         $template->param(
-           sort      => $cgi->param('sort_by'),
+           sort      => scalar $cgi->param('sort_by'),
+           # sort      => [$cgi->multi_param('sort_by')],
         );
         # determine what to display next to the search boxes
     } elsif ( $cgi->param('edit_filter') ){
@@ -471,7 +472,7 @@ my $searcher = Koha::SearchEngine::Search->new(
 
 # If index indicates the value is a barocode, we need to preproccess it before searching
 for ( my $i = 0; $i < @operands; $i++ ) {
-    $operands[$i] = barcodedecode($operands[$i]) if $indexes[$i] eq 'bc';
+    $operands[$i] = barcodedecode($operands[$i]) if $indexes[$i] and $indexes[$i] eq 'bc';
 }
 
 ## I. BUILD THE QUERY
