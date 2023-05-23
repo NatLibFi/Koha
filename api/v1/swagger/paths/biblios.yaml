@@ -427,6 +427,7 @@
             - transfer
             - transfer+strings
             - first_hold
+            - first_hold+strings
             - first_hold.patron
             - recall
             - recall.patron
