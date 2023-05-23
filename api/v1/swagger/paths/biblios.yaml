@@ -425,6 +425,7 @@
             - checkout
             - checkout.patron
             - transfer
+            - transfer+strings
             - first_hold
             - first_hold.patron
             - recall
