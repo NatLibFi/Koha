@@ -40,6 +40,18 @@ steps:
       - git config --global user.name "Builder"
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
+
+      - |
+        # ping github.com in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 github.com; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
+
       - git fetch --depth=1 origin +refs/heads/master
       - COMMIT_COMMUNITYMASTER="[hash unknown]";
       # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
@@ -122,6 +134,17 @@ steps:
      # - echo 'mkdir pool' >> ../sftp-cmds
       - echo 'put -r *' >> ../sftp-cmds
 
+      - |
+        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 repo.lib.helsinki.fi; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
+
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
     environment:
@@ -177,6 +200,18 @@ steps:
       - git config --global user.name "Builder"
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
+
+      - |
+        # ping github.com in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 github.com; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
+
       - git fetch --depth=1 origin +refs/heads/master
       - COMMIT_COMMUNITYMASTER="[hash unknown]";
       # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
@@ -259,6 +294,17 @@ steps:
      # - echo 'mkdir pool' >> ../sftp-cmds
       - echo 'put -r *' >> ../sftp-cmds
 
+      - |
+        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 repo.lib.helsinki.fi; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
+
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
     environment:
@@ -314,6 +360,18 @@ steps:
       - git config --global user.name "Builder"
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
+
+      - |
+        # ping github.com in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 github.com; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
+
       - git fetch --depth=1 origin +refs/heads/master
       - COMMIT_COMMUNITYMASTER="[hash unknown]";
       # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
@@ -398,6 +456,17 @@ steps:
      # - echo 'mkdir dists' >> ../sftp-cmds
      # - echo 'mkdir pool' >> ../sftp-cmds
       - echo 'put -r *' >> ../sftp-cmds
+
+      - |
+        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
+        for i in {1..7}
+        do
+          if ping -c 1 repo.lib.helsinki.fi; then
+            echo "Pinged repo from $i try. Proceeding further."
+            break
+          fi
+          /etc/init.d/dns-clean restart
+        done
 
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
