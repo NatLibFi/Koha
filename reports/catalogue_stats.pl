@@ -42,14 +42,14 @@ our $debug = 0;
 my $input          = CGI->new;
 my $fullreportname = "reports/catalogue_stats.tt";
 my $do_it          = $input->param('do_it');
-my $line           = $input->param("Line");
-my $column         = $input->param("Column");
+my $line           = $input->param("Line") // '';
+my $column         = $input->param("Column") // '';
 my $cellvalue      = $input->param("Cellvalue");      # one of 'items', 'biblios', 'deleteditems'
 my @filters        = $input->multi_param("Filter");
 my $cotedigits     = $input->param("cotedigits");
 my $output         = $input->param("output");
 my $basename       = $input->param("basename");
-our $sep = C4::Context->csv_delimiter( scalar $input->param("sep") );
+our $sep = C4::Context->csv_delimiter( scalar $input->param("sep") // '' );
 my $item_itype;
 
 if ( C4::Context->preference('item-level_itypes') ) {
