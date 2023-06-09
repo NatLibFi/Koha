@@ -1350,6 +1350,12 @@ Circulation:
                   1: permanent_location
                   0: homebranch
             - for AQ field in SIP protocol.
+        -
+            - Allow loan renewal via SIP
+            - pref: AllowSIPRenewal
+              choices:
+                  1: Yes
+                  0: No
 
     Curbside pickup module:
         -
