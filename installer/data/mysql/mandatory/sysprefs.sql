@@ -873,5 +873,6 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('XSLTResultsDisplay','default','','Enable XSL stylesheet control over results page display on intranet','Free'),
 ('z3950AuthorAuthFields','701,702,700',NULL,'Define the MARC biblio fields for Personal Name Authorities to fill biblio.author','free'),
 ('z3950NormalizeAuthor','0','','If ON, Personal Name Authorities will replace authors in biblio.author','YesNo'),
-('z3950Status','','','This syspref allows to define custom YAML based rules for marking items unavailable in z3950 results.','Textarea')
+('z3950Status','','','This syspref allows to define custom YAML based rules for marking items unavailable in z3950 results.','Textarea'),
+('AllowSIPRenewal', '0', NULL, 'Allow loan renewal via SIP', 'YesNo'),
 ;
