@@ -3362,6 +3362,8 @@ sub CanBookBeRenewed {
         $final_renewal ? 'auto_renew_final' : $final_unseen_renewal ? 'auto_unseen_final' : 'auto_renew';
     return ( 1, $auto_renew_code ) if $auto_renew eq "ok" || $auto_renew eq "auto_too_soon" && !$override_limit;
 
+    return ( 0, 'restriction') if C4::Context->interface eq 'sip' and !C4::Context->preference("AllowSIPRenewal");
+
     return ( 1, undef );
 }
 
