@@ -8,6 +8,11 @@ properties:
     type: integer
     description: Internal identifier for the parent bibliographic record
   biblio: {}
+  holding_id:
+    type:
+      - integer
+      - "null"
+    description: Internal identifier for the parent holdings record
   external_id:
     type:
       - string

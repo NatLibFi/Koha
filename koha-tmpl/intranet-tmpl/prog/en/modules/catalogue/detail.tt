@@ -9,6 +9,7 @@
 [% USE Frameworks %]
 [% USE Price %]
 [% USE TablesSettings %]
+[% USE Holdings %]
 [% PROCESS 'i18n.inc' %]
 [% SET CoverImagePlugins = KohaPlugins.get_plugins_intranet_cover_images %]
 
@@ -32,6 +33,8 @@
 [% END %]
 
 [% SET plugins_intranet_catalog_biblio_tabs = KohaPlugins.get_plugins_intranet_catalog_biblio_tab({ biblio => biblio, biblio_id => biblionumber }) %]
+
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
 
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -285,14 +288,19 @@
 <ul class="nav nav-tabs" role="tablist">
     [% IF (SeparateHoldings) %]
         <li role="presentation">
-            <a href="#holdings" aria-controls="holdings" role="tab" data-toggle="tab">[% Branches.GetLoggedInBranchname | html %] holdings ([% itemloop.size() || 0 | html %])</a>
+            <a href="#holdings" aria-controls="holdings" role="tab" data-toggle="tab">[% Branches.GetLoggedInBranchname | html %] [% IF (ShowSummaryHoldings) %]items[% ELSE %]holdings[% END %] ([% itemloop.size() || 0 | html %])</a>
         </li>
         <li role="presentation">
-            <a href="#otherholdings"  aria-controls="otherholdings" role="tab" data-toggle="tab">Other holdings ([% otheritemloop.size() || 0 | html %])</a>
+            <a href="#otherholdings"  aria-controls="otherholdings" role="tab" data-toggle="tab">[% IF (ShowSummaryHoldings) %]Other items[% ELSE %]Other holdings[% END %] ([% otheritemloop.size() || 0 | html %])</a>
         </li>
     [% ELSE %]
         <li role="presentation">
-            <a href="#holdings" aria-controls="holdings" role="tab" data-toggle="tab">Holdings ([% itemloop.size() || 0 | html %])</a>
+            <a href="#holdings" aria-controls="holdings" role="tab" data-toggle="tab">[% IF (ShowSummaryHoldings) %]Items[% ELSE %]Holdings[% END %] ([% itemloop.size() || 0 | html %])</a>
+        </li>
+    [% END %]
+    [% IF (ShowSummaryHoldings) %]
+        <li role="presentation">
+            <a href="#summaryholdings" aria-controls="summaryholdings" role="tab" data-toggle="tab">Holdings ([% summary_holdings.count() || 0 | html %])</a>
         </li>
     [% END %]
     [% IF Koha.Preference('EnableItemGroups') %]
@@ -354,6 +362,7 @@
                     <th id="[% tab | html %]_cover_image" data-colname="[% tab | html %]_cover_image">Cover image</th>
                 [% END %]
                 [% IF ( item_level_itypes ) %]<th id="[% tab | html %]_itype" data-colname="[% tab | html %]_itype">Item type</th>[% END %]
+                [% IF ( ShowSummaryHoldings ) %]<th>Holdings record</th>[% END %]
                 <th id="[% tab | html %]_holdingbranch" data-colname="[% tab | html %]_holdingbranch">Current library</th>
                 <th id="[% tab | html %]_homebranch" data-colname="[% tab | html %]_homebranch">Home library</th>
                 [% IF ( itemdata_ccode ) %]<th id="[% tab | html %]_ccode" data-colname="[% tab | html %]_ccode">Collection</th>[% END %]
@@ -419,6 +428,9 @@
                             [% END %]
                             <span class="itypedesc itypetext">[% itemtype.translated_description | html %]</span>
                         </td>
+                    [% END %]
+                    [% IF ( ShowSummaryHoldings ) %]
+                        <td class="holding">[% Holdings.GetLocation(item.holding_id) | html %]</td>
                     [% END %]
                     <td class="location">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( item.holdingbranch ) | html %] [% END %]</td>
                     <td class="homebranch">
@@ -662,6 +674,54 @@
     </table>
 
 [% END %][%# end of block items_table %]
+
+[% IF ( ShowSummaryHoldings ) %]
+    <div role="tabpanel" class="tab-pane" id="summaryholdings">
+
+    [% IF ( summary_holdings.count() ) %]
+        <div class="summaryholdings_table_controls">
+        </div>
+        <table class="summaryholdings_table">
+            <thead>
+                <tr>
+                    <th>Library</th>
+                    <th>Location</th>
+                    <th>Collection</th>
+                    <th>Call number</th>
+                    <th>Status</th>
+                    [% IF ( CAN_user_editcatalogue_edit_items ) %]<th class="NoSort">&nbsp;</th>[% END %]
+                </tr>
+            </thead>
+            <tbody>
+                [% FOREACH holding IN summary_holdings %]
+                    <tr>
+                        <td class="branch">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( holding.holdingbranch ) | html %] [% END %]</td>
+                        <td class="location"><span class="shelvingloc">[% holding.location | html %]</span>
+                        <td class="collection">[% holding.ccode | html %]</span>
+                        <td class="itemcallnumber">[% IF ( holding.callnumber ) %] [% holding.callnumber | html %][% END %]</td>
+                        <td class="status">
+                            [% IF ( holding.suppress ) %]
+                                <span class="suppressed">Suppressed in OPAC</span>
+                            [% END %]
+                        </td>
+                    [% IF CAN_user_editcatalogue_edit_items %]
+                        <td class="actions">
+                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&amp;biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]"><i class="fa fa-pencil"></i> Edit</a>
+                            <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/cataloguing/addholding.pl?op=delete&amp;biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]"><i class="fa fa-eraser"></i> Delete</a>
+                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]#additema"><i class="fa fa-plus"></i> Add item</a>
+                            <a class="btn btn-default btn-xs previewMARC" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding.holding_id | uri %]&amp;viewas=html" title="MARC">Show MARC</a>
+                        </td>
+                    [% END %]
+                    </tr>
+                [% END %]
+            </tbody>
+        </table>
+    [% ELSE %]
+        <div id="noitems">No holdings records</div>
+    [% END %]
+
+    </div>
+[% END %]
 
 [% IF Koha.Preference('EnableItemGroups') %]
     <div role="tabpanel" class="tab-pane" id="item_groups">
@@ -1698,13 +1758,19 @@
                     $("input[name='itemnumber'][type='checkbox']", $("#"+tab)).prop('checked', false);
                     itemSelectionBuildActionLinks(tab);
                 });
+
+                $('a.delete').click(function() {
+                    return confirm(_("Are you sure?"));
+                });
             });
         [% END %]
 
         $(document).ready(function() {
-            // Pick details tab to display by default
+            // Pick ShowSummaryHoldings and then details tab to display by default
             [% IF count == 0 %]
-                [% IF ( Koha.Preference('HTML5MediaEnabled') == 'staff' or Koha.Preference('HTML5MediaEnabled') == 'both' ) && HTML5MediaSets.size %]
+                [% IF ShowSummaryHoldings AND (summary_holdings.count() || 0) %]
+                    $(".nav-tabs a[href='#summaryholdings']").tab("show");
+                [% ELSIF ( Koha.Preference('HTML5MediaEnabled') == 'staff' or Koha.Preference('HTML5MediaEnabled') == 'both' ) && HTML5MediaSets.size %]
                     $(".nav-tabs a[href='#html5media']").tab("show");
                 [% ELSIF ComponentParts && ComponentParts.size %]
                     $(".nav-tabs a[href='#components']").tab("show");
