@@ -44,6 +44,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('AllowRenewalOnHoldOverride','0',NULL,'If ON, allow items on hold to be renewed with a specified due date','YesNo'),
 ('AllowReturnToBranch','anywhere','anywhere|homebranch|holdingbranch|homeorholdingbranch','Where an item may be returned','Choice'),
 ('AllowSetAutomaticRenewal','1',NULL,'If ON, allows staff to flag items for automatic renewal on the check out page','YesNo'),
+('AllowSIPRenewal', '1', NULL, 'Allow loan renewal via SIP', 'YesNo'),
 ('AllowStaffToSetCheckoutsVisibilityForGuarantor','0',NULL,'If enabled, library staff can set a patron''s checkouts to be visible to linked patrons from the opac.',  'YesNo'),
 ('AllowStaffToSetFinesVisibilityForGuarantor','0',NULL,'If enabled, library staff can set a patron''s fines to be visible to linked patrons from the opac.',  'YesNo'),
 ('AllowTooManyOverride','1','','If on, allow staff to override and check out items when the patron has reached the maximum number of allowed checkouts','YesNo'),
@@ -798,6 +799,5 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('XSLTListsDisplay','default','','Enable XSLT stylesheet control over lists pages display on intranet','Free'),
 ('XSLTResultsDisplay','default','','Enable XSL stylesheet control over results page display on intranet','Free'),
 ('z3950AuthorAuthFields','701,702,700',NULL,'Define the MARC biblio fields for Personal Name Authorities to fill biblio.author','free'),
-('z3950NormalizeAuthor','0','','If ON, Personal Name Authorities will replace authors in biblio.author','YesNo'),
-('AllowSIPRenewal', '0', NULL, 'Allow loan renewal via SIP', 'YesNo')
+('z3950NormalizeAuthor','0','','If ON, Personal Name Authorities will replace authors in biblio.author','YesNo')
 ;
