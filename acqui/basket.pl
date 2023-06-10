@@ -147,6 +147,7 @@ if ( $op eq 'delete_confirm' ) {
                 countbiblio   => $biblio->active_orders->count,
                 itemcount     => $biblio->items->count,
                 subscriptions => $biblio->subscriptions->count,
+                holdingscount => C4::Context->preference('SummaryHoldings') ? $biblio->holdings->count : 0,
             };
         }
     }
@@ -484,10 +485,11 @@ sub get_order_infos {
         my $invoice = $order->invoice;
 
         my $itemholds  = $biblio->holds->search({ itemnumber => { -in => [ $items->get_column('itemnumber') ] } })->count;
+        my $holdingscount = C4::Context->preference('SummaryHoldings') ? $biblio->holdings->count : 0;
 
-        # if the biblio is not in other orders and if there is no items elsewhere and no subscriptions and no holds we can then show the link "Delete order and Biblio" see bug 5680
+        # if the biblio is not in other orders and if there is no items elsewhere and no subscriptions and no holds and no holdings we can then show the link "Delete order and Biblio" see bug 5680
         $line{can_del_bib} = 1
-            if $countbiblio <= 1 && $itemcount == $items->count && !($cnt_subscriptions) && !($holds_count);
+            if $countbiblio <= 1 && $itemcount == $items->count && !($cnt_subscriptions) && !($holds_count) && !($holdingscount);
         $line{items}             = $itemcount - $items->count;
         $line{left_item}         = 1 if $line{items} >= 1;
         $line{left_biblio}       = 1 if $countbiblio > 1;
@@ -500,7 +502,7 @@ sub get_order_infos {
         $line{holds_on_order}      = $itemholds ? $itemholds : $holds_count if $line{left_holds_on_order};
         $line{order_object}        = $order;
         $line{invoice_object}      = $invoice;
-
+        $line{holdings}            = $holdingscount;
     }
 
     my $suggestion   = GetSuggestionInfoFromBiblionumber($line{biblionumber});
