@@ -1265,3 +1265,25 @@ sub host_record {
     );
     return $marc;
 }
+
+subtest 'adopt_holdings_from_biblio() tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $biblio1 = $builder->build_sample_biblio;
+    my $biblio2 = $builder->build_sample_biblio;
+    my $item1 = $builder->build_sample_item({ biblionumber => $biblio1->biblionumber });
+    my $item2 = $builder->build_sample_item({ biblionumber => $biblio1->biblionumber });
+
+    $biblio2->adopt_holdings_from_biblio($biblio1);
+
+    $item1->discard_changes;
+    $item2->discard_changes;
+
+    is($item1->biblionumber, $biblio2->biblionumber, "Item 1 moved");
+    is($item2->biblionumber, $biblio2->biblionumber, "Item 2 moved");
+
+    $schema->storage->txn_rollback;
+};
