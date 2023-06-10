@@ -137,6 +137,8 @@ my $fa_duedatespec        = $input->param('duedatespec');
 my $volume                = $input->param('volume');
 my $volume_description    = $input->param('volume_description');
 
+my $holding_id = $input->param('holding_id') // '';
+
 our $frameworkcode = &GetFrameworkCode($biblionumber);
 
 # Defining which userflag is needing according to the framework currently used
@@ -738,6 +740,7 @@ my $subfields =
             ? ( ignore_invisible_subfields => 1 )
             : ()
         ),
+        holding_id => $holding_id,
     }
 );
 
