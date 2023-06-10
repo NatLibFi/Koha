@@ -124,6 +124,8 @@ if( $input->param('itemnumber') && !$input->param('biblionumber') ){
 
 my $biblio = Koha::Biblios->find($biblionumber);
 
+my $holding_id = $input->param('holding_id') // '';
+
 my $op           = $input->param('op') || q{};
 my $hostitemnumber = $input->param('hostitemnumber');
 my $marcflavour  = C4::Context->preference("marcflavour");
@@ -745,6 +747,7 @@ my $subfields =
             ? ( ignore_invisible_subfields => 1 )
             : ()
         ),
+        holding_id => $holding_id,
     }
 );
 

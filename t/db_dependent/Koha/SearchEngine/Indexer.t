@@ -60,7 +60,7 @@ subtest 'Test indexer object creation' => sub {
 };
 
 subtest 'Test indexer calls' => sub {
-    plan tests => 48;
+    plan tests => 52;
 
     my @engines = ('Zebra');
     eval { Koha::SearchEngine::Elasticsearch->get_elasticsearch_params; };
@@ -184,8 +184,21 @@ subtest 'Test indexer calls' => sub {
         } undef, "index_records is not called for $engine when moving an item to another biblio (Item->move_to_biblio) if skip_record_index passed";
 
         warnings_are{
-            $biblio->items->move_to_biblio($biblio2);
-        } [$engine,"Koha::Items",$engine,"Koha::Items"], "index_records is called for from and to biblios for $engine when adopting items (Biblio->items->move_to_biblio(Biblio)";
+            $biblio2->adopt_holdings_from_biblio($biblio);
+        } [$engine,"Koha::Biblio",$engine,"Koha::Biblio"], "index_records is called for both biblios for $engine when adopting items and holdings (Biblio->adopt_holdings_from_biblio)";
+
+        my $holding1;
+        my $holding2;
+        warnings_are{
+            $holding1 = $builder->build_sample_holdings_record({biblionumber => $biblio->biblionumber});
+            $holding2 = $builder->build_sample_holdings_record({biblionumber => $biblio->biblionumber});
+        } [$engine,"Koha::Holding",$engine,"Koha::Holding"], "index_records is called for $engine when adding a holdings record (Holding->store)";
+        warnings_are{
+            $holding1->store({ skip_record_index => 1 });
+        } undef, "index_records is not called for $engine when adding a holdings record (Holding->store) if skip_record_index passed";
+        # Delete holdings records so that they don't interfere with biblio deletion tests
+        $holding1->delete;
+        $holding2->delete;
 
         my $items = Koha::Items->search({ itemnumber => [ $item2->itemnumber, $item5->itemnumber, $item6->itemnumber ] });
         warnings_are{

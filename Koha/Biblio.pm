@@ -48,6 +48,7 @@ use Koha::Libraries;
 use Koha::Old::Checkouts;
 use Koha::Ratings;
 use Koha::Recalls;
+use Koha::Holdings;
 use Koha::RecordProcessor;
 use Koha::Suggestions;
 use Koha::Subscriptions;
@@ -989,6 +990,22 @@ sub subscriptions {
     return Koha::Subscriptions->_new_from_dbic($rs);
 }
 
+=head3 holdings
+
+my $holdings = $self->holdings
+
+Returns the related (non-deleted) Koha::Holdings objects.
+
+=cut
+
+sub holdings {
+    my ($self) = @_;
+
+    $self->{_holdings} ||= Koha::Holdings->search({ biblionumber => $self->biblionumber(), deleted_on => undef });
+
+    return $self->{_holdings};
+}
+
 =head3 has_items_waiting_or_intransit
 
 my $itemsWaitingOrInTransit = $biblio->has_items_waiting_or_intransit
@@ -1917,6 +1934,42 @@ sub opac_summary_html {
     $summary_html =~ s/{BIBLIONUMBER}/$biblionumber/g;
 
     return $summary_html;
+}
+
+=head3 adopt_holdings_from_biblio
+
+$biblio->adopt_holdings_from_biblio($from_biblio);
+
+Move holdings and item records from the given biblio to this one.
+
+=cut
+
+sub adopt_holdings_from_biblio {
+    my ( $self, $from_biblio ) = @_;
+
+    my $schema = Koha::Database->new()->schema();
+
+    $schema->storage->txn_begin;
+
+    # Move holdings records. This will also move any items attached to the holdings.
+    my $holdings = $from_biblio->holdings;
+    while (my $holding = $holdings->next()) {
+        $holding->move_to_biblio($self, { skip_record_index => 1 });
+    }
+    # Move any items not already moved.
+    my $items = $from_biblio->items;
+    if ($items) {
+        while (my $item = $items->next()) {
+            $item->move_to_biblio($self, { skip_record_index => 1 });
+        }
+    }
+    if ($items || $holdings) {
+        my $indexer = Koha::SearchEngine::Indexer->new({ index => $Koha::SearchEngine::BIBLIOS_INDEX });
+        $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" );
+        $indexer->index_records( $from_biblio->biblionumber, "specialUpdate", "biblioserver" );
+    }
+
+    $schema->storage->txn_commit;
 }
 
 =head2 Internal methods
