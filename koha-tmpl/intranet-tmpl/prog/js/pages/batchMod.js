@@ -119,12 +119,12 @@ function hideAllColumns() {
 $(document).ready(function () {
     hideColumns();
     var items_table = KohaTable("itemst", {
-        "aoColumnDefs": [
-            { "aTargets": [0, 1], "bSortable": false, "bSearchable": true },
-            { "aTargets": [0], "bVisible": false },
-            { "sType": "anti-the", "aTargets": ["anti-the"] }
+        "columnDefs":  [
+            { "targets":  [0, 1], "orderable":  false, "searchable":  true },
+            { "targets":  [0], "visible":  false },
+            { "type":  "anti-the", "targets":  ["anti-the"] }
         ],
-        "bPaginate": false,
+        "paging":  false,
     });
     // Highlight in yellow item rows that cannot be deleted
     $(".error").parents('tr').find('td').css('background-color', '#ffff99');
