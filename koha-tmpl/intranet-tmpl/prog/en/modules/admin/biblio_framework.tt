@@ -161,7 +161,7 @@ MARC frameworks &rsaquo; Administration &rsaquo; Koha
     <tbody>
     <tr>
         <td>&nbsp;</td>
-        <td>Default framework</td>
+        <td>Default bibliographic framework</td>
         <td>
           <div class="btn-group dropup">
             <a class="btn btn-default btn-xs dropdown-toggle" id="frameworkactions[% loo.frameworkcode | html %]" role="button" data-toggle="dropdown" href="#">
@@ -225,7 +225,6 @@ MARC frameworks &rsaquo; Administration &rsaquo; Koha
         </div> <!-- /#import_modal_... -->
         </td>
     </tr>
-
     [% FOREACH loo IN frameworks %]
         <tr>
             <td>[% loo.frameworkcode | html %]</td>
