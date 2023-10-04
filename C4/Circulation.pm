@@ -3116,6 +3116,8 @@ sub CanBookBeRenewed {
 
     return ( 0, "auto_renew" ) if $auto_renew eq "ok" && !$override_limit; # 0 if auto-renewal should not succeed
 
+    return ( 0, 'restriction') if C4::Context->interface eq 'sip' and !C4::Context->preference("AllowSIPRenewal");
+
     return ( 1, undef );
 }
 
