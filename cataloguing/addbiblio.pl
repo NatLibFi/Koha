@@ -528,8 +528,10 @@ my $biblio;
 if ($biblionumber){
     $biblio = Koha::Biblios->find($biblionumber);
     unless ( $biblio ) {
-        $biblionumber = undef;
-        $template->param( bib_doesnt_exist => 1 );
+        # $biblionumber = undef;
+        # $template->param( bib_doesnt_exist => 1 );
+        output_and_exit( $input, $cookie, $template, 'unknown_biblio')
+            unless $biblio;
     }
 }
 
