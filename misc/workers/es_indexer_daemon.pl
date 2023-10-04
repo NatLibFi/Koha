@@ -26,6 +26,13 @@ es_indexer_daemon.pl - Worker script that will process background Elasticsearch 
 Options:
 
    -b --batch_size          how many jobs to commit (default: 10)
+   --process_new_and_quit   get all new jobs from DB directly,
+                            process them, then exit,
+                            don't get from the RabbitMQ queue
+   --redo_since_seconds_ago how many seconds to go back when reindexing,
+                            re-doing all job statuses
+   --redo_since_since_date  reindex from a specific date,
+                            re-doing all job statuses
    --help                   brief help message
 
 =head1 OPTIONS
@@ -39,6 +46,19 @@ Print a brief help message and exits.
 =item B<--batch_size>
 
 How many jobs to commit per batch. Defaults to 10, will commit after .1 seconds if no more jobs incoming.
+
+=item B<--process_new_and_quit>
+
+Get all new jobs from DB directly, process them, then exit.
+Does not intercommunicates with RabbitMQ dispatcher at all.
+
+=item B<--redo_since_seconds_ago>
+
+How many seconds to go back when reindexing, re-doing all job statuses
+
+=item B<--redo_since_since_date>
+
+Reindex from a specific date, re-doing all job statuses
 
 =back
 
@@ -62,9 +82,15 @@ use Koha::BackgroundJobs;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
 
+my $process_new_and_quit;
+my $redo_since_seconds_ago;
+my $redo_since_since_date;
 
 my ( $help, $batch_size );
 GetOptions(
+    'process_new_and_quit' => \$process_new_and_quit,
+    'redo_since_seconds_ago=i' => \$redo_since_seconds_ago,
+    'redo_since_since_date=s' => \$redo_since_since_date,
     'h|help' => \$help,
     'b|batch_size=s' => \$batch_size
 ) || pod2usage(1);
@@ -76,6 +102,43 @@ $batch_size //= 10;
 warn "Not using Elasticsearch" unless C4::Context->preference('SearchEngine') eq 'Elasticsearch';
 
 my $logger = Koha::Logger->get({ interface =>  'worker' });
+
+my $biblio_indexer = Koha::SearchEngine::Indexer->new({ index => $Koha::SearchEngine::BIBLIOS_INDEX });
+my $auth_indexer = Koha::SearchEngine::Indexer->new({ index => $Koha::SearchEngine::AUTHORITIES_INDEX });
+if ( $process_new_and_quit || $redo_since_seconds_ago || $redo_since_since_date ) {
+    # check for extra lost jobs:
+    die "Cannot use --redo_since_seconds_ago and --redo_since_since_date at the same time" if $redo_since_seconds_ago && $redo_since_since_date;
+    my @jobs;
+    if( ! $redo_since_since_date && ! $redo_since_seconds_ago ) {
+        if(my @more_jobs = Koha::BackgroundJobs->search({ status => 'new', queue => 'elastic_index' } )->as_list) {
+            warn "Found in DB unprocessed elastic_index jobs: " . scalar(@jobs) . ", processing...\n";
+            push @jobs, @more_jobs;
+        }
+    }
+
+    my $from_time;
+    if($redo_since_since_date) {
+        $from_time = $redo_since_since_date;
+    } elsif($redo_since_seconds_ago) {
+        $from_time = Koha::Database->new->schema->storage->datetime_parser->format_datetime(
+            DateTime->now()->subtract(seconds => $redo_since_seconds_ago)
+        );
+    }
+
+    if($from_time) {
+        if(my @more_jobs = Koha::BackgroundJobs->search({ enqueued_on => { '>=' => $from_time }, queue => 'elastic_index' } )->as_list) {
+            warn "Found in DB elastic_index jobs >= '$from_time': " . scalar(@more_jobs) . ", processing...\n";
+            push @jobs, @more_jobs;
+        }
+    }
+
+    while(@jobs) { # split jobs by $batch_size
+        my @jobs_batch = splice(@jobs, 0, $batch_size);
+        warn "Processing ".scalar(@jobs_batch)." jobs ...\n";
+        commit(@jobs_batch);
+    }
+    exit;
+}
 
 my $conn;
 try {
@@ -95,8 +158,7 @@ if ( $conn ) {
         }
     );
 }
-my $biblio_indexer = Koha::SearchEngine::Indexer->new({ index => $Koha::SearchEngine::BIBLIOS_INDEX });
-my $auth_indexer = Koha::SearchEngine::Indexer->new({ index => $Koha::SearchEngine::AUTHORITIES_INDEX });
+
 my @jobs = ();
 
 while (1) {
