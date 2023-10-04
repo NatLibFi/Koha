@@ -1319,7 +1319,8 @@ sub checkauth {
             ));
         }
 
-        track_login_daily( $userid );
+        my $patron = Koha::Patrons->find({ userid => $userid });
+        $patron->update_lastseen('login');
 
         # In case, that this request was a login attempt, we want to prevent that users can repost the opac login
         # request. We therefore redirect the user to the requested page again without the login parameters.
@@ -2343,30 +2344,6 @@ sub getborrowernumber {
         }
     }
     return 0;
-}
-
-=head2 track_login_daily
-
-    track_login_daily( $userid );
-
-Wraps the call to $patron->track_login, the method used to update borrowers.lastseen. We only call track_login once a day.
-
-=cut
-
-sub track_login_daily {
-    my $userid = shift;
-    return if !$userid || !C4::Context->preference('TrackLastPatronActivity');
-
-    my $cache     = Koha::Caches->get_instance();
-    my $cache_key = "track_login_" . $userid;
-    my $cached    = $cache->get_from_cache($cache_key);
-    my $today = dt_from_string()->ymd;
-    return if $cached && $cached eq $today;
-
-    my $patron = Koha::Patrons->find({ userid => $userid });
-    return unless $patron;
-    $patron->track_login;
-    $cache->set_in_cache( $cache_key, $today );
 }
 
 END { }    # module clean-up code here (global destructor)
