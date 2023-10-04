@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+
+    <link rel="shortcut icon" href="/intranet-tmpl/prog/img/favicon.ico" type="image/x-icon" />
+
+    <title>KK-Koha v%OUR_RELEASE%.%DRONE_BUILD_NUMBER%</title>
+
+    <style>
+    html { font-family: sans-serif; }
+    .content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .logo {
+        display: block;
+        margin: auto;
+        width: 50%;
+    }
+    .centered {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+    }
+    .give_a_little_space {
+        margin-top: 8px;
+    }
+    a[href ^= "http"]:after {
+        content: " " url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAVklEQVR4Xn3PgQkAMQhDUXfqTu7kTtkpd5RA8AInfArtQ2iRXFWT2QedAfttj2FsPIOE1eCOlEuoWWjgzYaB/IkeGOrxXhqB+uA9Bfcm0lAZuh+YIeAD+cAqSz4kCMUAAAAASUVORK5CYII=);    
+    }
+    </style>
+</head><body>
+<div class="content">
+    <a href="/" title="Open main page">
+        <img class="logo" src="/intranet-tmpl/prog/img/kk-logo2.jpg" alt="KK-Koha v%OUR_RELEASE%.%DRONE_BUILD_NUMBER%"/>
+    </a>
+    <h1 class="centered">
+        KK-Koha v%OUR_RELEASE%.%DRONE_BUILD_NUMBER%
+    </h1>
+    <div class="centered">
+        Kansalliskirjasto Koha build made by KK Koha Dev Department
+    </div>
+    <div class="centered give_a_little_space">
+        <a href="https://jira.kansalliskirjasto.fi/browse/KOHA-101" target="_blank">
+            KOHA-101
+        </a>
+        : KK-Koha release 23.05 (19): Spring'23
+        <a href="https://jira.kansalliskirjasto.fi/browse/KOHA-99" target="_blank">
+            KOHA-99
+        </a>
+        : KK-Koha release 22.11 (18): Autumn'22
+        <a href="https://jira.kansalliskirjasto.fi/browse/KOHA-66" target="_blank">
+            KOHA-66
+        </a>
+        : KK-Koha release 22.05 (17): Spring'22
+    </div>
+    <div class="centered give_a_little_space">
+        <a href="/kk-build.txt">
+            build tech info
+        </a>&nbsp;·&nbsp;
+        <a href="/cgi-bin/koha/admin/admin-home.pl">
+            admin
+        </a>&nbsp;·&nbsp;
+        <a href="/cgi-bin/koha/about.pl">
+            server info
+        </a>
+    </div>
+</div>
+</body></html>
