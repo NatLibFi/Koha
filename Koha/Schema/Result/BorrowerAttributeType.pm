@@ -55,6 +55,14 @@ defines whether one patron/borrower can have multiple values for this custom fie
 
 defines if this value needs to be unique (1 for yes, 0 for no)
 
+=head2 trim_value
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+defines if this value needs to be trimmed of whitespaces (1 for yes, 0 for no)
+
 =head2 opac_display
 
   data_type: 'tinyint'
@@ -139,6 +147,8 @@ __PACKAGE__->add_columns(
   "repeatable",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "unique_id",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "trim_value",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "opac_display",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
