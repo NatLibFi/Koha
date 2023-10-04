@@ -491,6 +491,8 @@ subtest 'pickup_locations() tests' => sub {
             categorycode => undef,
             itemtype     => $item1->itype,
             branchcode   => undef,
+            ccode             => undef,
+            shelving_location => undef,
             rules        => {
                 reservesallowed => 25,
             }
@@ -577,6 +579,8 @@ subtest 'pickup_locations() tests' => sub {
             {
                 branchcode => undef,
                 itemtype   => undef,
+                ccode             => undef,
+                shelving_location => undef,
                 rules => {
                     holdallowed => $ha,
                     hold_fulfillment_policy => $hfp,
@@ -652,6 +656,8 @@ subtest 'pickup_locations() tests' => sub {
         {
             branchcode => undef,
             itemtype   => $item1->itype,
+            ccode             => undef,
+            shelving_location => undef,
             rules      => {
                 holdallowed             => 'from_home_library',
                 hold_fulfillment_policy => 1,

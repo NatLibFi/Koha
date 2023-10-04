@@ -835,12 +835,16 @@ sub article_request_type {
       :                                      undef;
     my $borrowertype = $borrower->categorycode;
     my $itemtype = $self->effective_itemtype();
+    my $ccode = $self->ccode;
+    my $permanent_location = $self->permanent_location;
     my $rule = Koha::CirculationRules->get_effective_rule(
         {
             rule_name    => 'article_requests',
             categorycode => $borrowertype,
             itemtype     => $itemtype,
-            branchcode   => $branchcode
+            branchcode   => $branchcode,
+            ccode        => $ccode,
+            permanent_location => $permanent_location
         }
     );
 

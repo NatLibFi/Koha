@@ -131,13 +131,13 @@ sub Bug_17135_fix {
         {
             my $statement;
             if ( C4::Context->preference('item-level_itypes') ) {
-                $statement = "SELECT issues.*, items.itype as itemtype, items.homebranch, items.barcode, items.itemlost, items.replacementprice
+                $statement = "SELECT issues.*, items.itype as itemtype, items.homebranch, items.barcode, items.itemlost, items.replacementprice, items.ccode, items.location
                     FROM issues
                     LEFT JOIN items USING (itemnumber)
                     WHERE date_due < NOW() AND issue_id = ?
                 ";
             } else {
-                $statement = "SELECT issues.*, biblioitems.itemtype, items.itype, items.homebranch, items.barcode, items.itemlost, replacementprice
+                $statement = "SELECT issues.*, biblioitems.itemtype, items.itype, items.homebranch, items.barcode, items.itemlost, replacementprice, items.ccode, items.location
                     FROM issues
                     LEFT JOIN items USING (itemnumber)
                     LEFT JOIN biblioitems USING (biblioitemnumber)
