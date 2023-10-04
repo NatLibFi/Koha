@@ -119,7 +119,7 @@ sub getTranslatedLanguages {
       : split ",", C4::Context->preference('OPACLanguages');
 
     my $cache = Koha::Caches->get_instance;
-    my $cache_key = "languages_${interface}_${theme}";
+    my $cache_key = "languages_" . ($interface // '') . "_" . ($theme // '');
     if ($interface && $interface eq 'opac' ) {
         my $htdocs = C4::Context->config('opachtdocs');
         my $cached = $cache->get_from_cache($cache_key);

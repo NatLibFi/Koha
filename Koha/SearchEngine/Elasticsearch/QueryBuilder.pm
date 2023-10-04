@@ -739,10 +739,11 @@ sub _convert_sort_fields {
 
     # Convert the fields and orders, drop anything we don't know about.
     grep { $_->{field} } map {
-        my ( $f, $d ) = /(.+)_(.+)/;
+        my ( $f, $d ) = /^(.+?)(?:_([^_]+))?$/;
+        warn "Can't match regex for '$_'" if not defined $f;
         {
             field     => $sort_field_convert{$f},
-            direction => $sort_order_convert{$d}
+            direction => defined $d ? $sort_order_convert{$d} : undef,
         }
     } @sort_by;
 }
@@ -763,12 +764,12 @@ sub _convert_index_fields {
         # Lower case all field names
         my ( $f, $t ) = map(lc, split /,/);
         my $mc = '';
-        if ($f =~ /^mc-/) {
+        if ($f && $f =~ /^mc-/) {
             $mc = 'mc-';
             $f =~ s/^mc-//;
         }
         my $r = {
-            field => exists $index_field_convert{$f} ? $index_field_convert{$f} : $f,
+            field => $f && exists $index_field_convert{$f} ? $index_field_convert{$f} : $f,
             type  => $index_type_convert{ $t // '__default' }
         };
         $r->{field} = ($mc . $r->{field}) if $mc && $r->{field};
@@ -1161,7 +1162,8 @@ sub _fix_limit_special_cases {
         }
         else {
             my ( $field, $term ) = $l =~ /^\s*([\w,-]*?):(.*)/;
-            $field =~ s/,phr$//; #We are quoting all the limits as phrase, this prevents from quoting again later
+            $field =~ s/,phr$// #We are quoting all the limits as phrase, this prevents from quoting again later
+                if defined $field;
             if ( defined($field) && defined($term) ) {
                 push @new_lim, "$field:(\"$term\")";
             }

@@ -7,7 +7,7 @@
     <button class="btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus"></i> New <span class="caret"></span></button>
         <ul class="dropdown-menu">
             [% IF ( CAN_user_editcatalogue_edit_catalogue ) %]
-             <li><a id="newbiblio" href="/cgi-bin/koha/cataloguing/addbiblio.pl">New record</a></li>
+             <li><a id="newbiblio" href="/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=">New record</a></li>
             [% END %]
 
             [% IF ( Koha.Preference('SummaryHoldings') && CAN_user_editcatalogue_edit_items ) %]
@@ -25,7 +25,7 @@
                 <li><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | uri %]&amp;analyze=1">Analyze items</a></li>
             [% END %]
             [% IF CAN_user_editcatalogue_edit_catalogue && ! EasyAnalyticalRecords %]
-                <li><a href="/cgi-bin/koha/cataloguing/addbiblio.pl?parentbiblionumber=[% biblionumber | uri %]">New child record</a></li>
+                <li><a href="/cgi-bin/koha/cataloguing/addbiblio.pl?parentbiblionumber=[% biblionumber | uri %]&frameworkcode=">New child record</a></li>
             [% END %]
             [% IF Koha.Preference('CatalogConcerns') %]
                 <li><a id="newconcern" role="button" href="#" data-toggle="modal" data-target="#addConcernModal">New catalog concern</a></li>
