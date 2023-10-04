@@ -752,6 +752,8 @@ sub cancel {
                         itemtype => $item->effective_itemtype,
                         branchcode => C4::Reserves::GetReservesControlBranch($item->unblessed, $self->borrower->unblessed),
                         categorycode => $self->borrower->categorycode,
+                        ccode        => $item->ccode,
+                        shelving_location => $item->location,
                     }
                 );
 

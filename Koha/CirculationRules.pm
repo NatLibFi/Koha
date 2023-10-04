@@ -97,7 +97,7 @@ our $RULE_KINDS = {
         scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     expire_reserves_charge => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         can_be_blank => 0,
     },
     chargeperiod => {
@@ -787,12 +787,16 @@ sub get_effective_expire_reserves_charge {
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
     my $categorycode = $params->{categorycode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     my $expire_reserves_charge_rule = $class->get_effective_rule(
         {
             itemtype     => $itemtype,
             branchcode   => $branchcode,
             categorycode => $categorycode,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
             rule_name    => 'expire_reserves_charge',
         }
     );
