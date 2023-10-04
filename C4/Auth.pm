@@ -1320,7 +1320,13 @@ sub checkauth {
         }
 
         my $patron = Koha::Patrons->find({ userid => $userid });
-        $patron->update_lastseen('login');
+        if ($patron) {
+            $patron->update_lastseen('login');
+        } elsif ( !$userid ) {
+            warn "[post Bug-15504]: PATRON NOT FOUND, \$userid is undef.\n";
+        } else {
+            warn "[post Bug-15504]: PATRON $userid NOT FOUND.\n";
+        }
 
         # In case, that this request was a login attempt, we want to prevent that users can repost the opac login
         # request. We therefore redirect the user to the requested page again without the login parameters.
