@@ -1467,6 +1467,17 @@ sub _send_message_by_email {
       if !$message->{to_address}
       || $message->{to_address} ne $email->email->header('To');
 
+    # ==================================
+    # INJECTION DEBUGGING
+    # ==================================
+    my $logfile = C4::Context->config('logdir') . '/cron_emailer_direct.log';
+    open my $log, '>>', $logfile;
+    my $mailer_issue;
+    my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
+        ? $email->email->header('To') : $message->{to_address};
+    my $tmp_id = $message->{message_id};
+    # ==================================
+    
     $smtp_transports->{ $smtp_server->id // 'default' } ||= $smtp_server->transport;
     my $smtp_transport = $smtp_transports->{ $smtp_server->id // 'default' };
 
@@ -1480,9 +1491,11 @@ sub _send_message_by_email {
                 failure_code => ''
             }
         );
-        return 1;
+        $mailer_issue = 0;
+        # return 1;
     }
     catch {
+        my $mailer_issue = $_;
         _set_message_status(
             {
                 message_id => $message->{'message_id'},
@@ -1490,10 +1503,24 @@ sub _send_message_by_email {
                 failure_code => 'SENDMAIL'
             }
         );
-        carp "$_";
-        carp "$Mail::Sendmail::error";
-        return;
+        carp scalar(localtime)
+            . "\$Mail::Sendmail::error = " . ($Mail::Sendmail::error // '-undef-')
+            . "\$mailer_issue = " . ($mailer_issue // '-undef-');
+        # return;
     };
+
+    # ==================================
+    unless($mailer_issue) {
+        # print $log scalar(localtime) . " [$$] $tmp_id: SUCCESS sending message to $tmp_to.\n";
+    } else {
+        print $log scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to\n"
+            . ($Mail::Sendmail::error ? "\t\$Mail::Sendmail::error = $Mail::Sendmail::error\n" : '')
+            . ($mailer_issue ? "\t\$mailer_issue = $mailer_issue\n" : '');
+    }
+    close $log;
+    return $mailer_issue;
+    # ==================================
+
 }
 
 sub _wrap_html {
