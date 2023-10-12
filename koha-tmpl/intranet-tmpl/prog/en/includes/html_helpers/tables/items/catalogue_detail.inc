@@ -172,6 +172,7 @@
                 e["_str"] = e["branchname"];
                 return e;
             });
+    const libraries_names = new Map(all_libraries.map( l => [l.branchcode, l.branchname] ));
     const all_item_types = [% To.json(ItemTypes.Get) | $raw %];
     const item_types_filters = all_item_types.map(e => {
                 e["_id"] = e["itemtype"];
@@ -437,10 +438,13 @@
                 render: function (data, type, row, meta) {
                     let nodes = "";
                     if ( row.checkout ) {
+                        [%# Hacky for patron_to_html in case we simply want to display the patron's library name %]
+                        row.checkout.patron.library = { name: libraries_names.get(row.checkout.patron.library_id) };
+
                         nodes += '<span>';
                         if ( row.checkout.onsite_checkout ) {
                             if ( can_edit_items_from[row.holding_library_id] ){
-                                let patron_to_html = $patron_to_html(row.checkout.patron); [%# FIXME What about hide_patron_infos_if_needed?? %]
+                                let patron_to_html = $patron_to_html(row.checkout.patron);
                                 nodes += _("Currently in local use by %s").format(patron_to_html);
                             } else {
                                 nodes += _("Currently in local use");
@@ -448,7 +452,7 @@
                         } else {
                             nodes += '<span class="datedue">';
                             if ( can_edit_items_from[row.holding_library_id] ){
-                                let patron_to_html = $patron_to_html(row.checkout.patron); [%# FIXME What about hide_patron_infos_if_needed?? %]
+                                let patron_to_html = $patron_to_html(row.checkout.patron);
                                 nodes += _("Checked out to %s").format(patron_to_html);
                             } else {
                                 nodes += _("Checked out");
@@ -494,6 +498,9 @@
                             }
                             [% IF Koha.Preference('canreservefromotherbranches') %]
                                 if ( row.first_hold.waiting_date || row.first_hold.priority == 1 ) {
+                                    [%# Hacky for patron_to_html in case we simply want to display the patron's library name %]
+                                    row.first_hold.patron.library = { name: libraries_names.get(row.first_hold.patron.library_id) };
+
                                     let patron_to_html = $patron_to_html(row.first_hold.patron); [%# FIXME What about hide_patron_infos_if_needed?? %]
                                     nodes += ' <span class="heldfor">%s</span>'.format(_("Hold for: %s").format(patron_to_html));
                                 }
@@ -508,6 +515,9 @@
                             if ( row.recall.waiting_date ) {
                                 nodes += '<span>%s</span>'.format(_("Waiting at %s since %s").format(escape_str(row.recall.pickup_library_id.str), $date(row.recall.waiting_date)));
                             } else {
+                                [%# Hacky for patron_to_html in case we simply want to display the patron's library name %]
+                                row.recall.patron.library = { name: libraries_names.get(row.recall.patron.library_id) };
+
                                 let patron_to_html = $patron_to_html(row.recall.patron);
                                 nodes += '<span>%s</span>'.format(_("recalled by %s on %s").format(patron_to_html, $date(row.recall.created_date)))
                             }
