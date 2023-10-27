@@ -347,12 +347,32 @@ sub build_query_compat {
     my $query_cgi = '';
     shift @$operators;    # Shift out the one we unshifted before
     my $ea = each_array( @$operands, @$operators, @$indexes );
+    my $debug_was_undef;
     while ( my ( $oand, $otor, $index ) = $ea->() ) {
         $query_cgi .= '&' if $query_cgi;
         $query_cgi .= 'idx=' . uri_escape_utf8( $index // '' ) . '&q=' . uri_escape_utf8($oand);
         $query_cgi .= '&op=' . uri_escape_utf8($otor) if $otor;
+        $debug_was_undef = 1 if not defined $oand;
     }
     $query_cgi .= '&scan=1' if ($scan);
+
+    if ( $debug_was_undef ) {
+        use Data::Dumper (); warn Data::Dumper->new( [{
+            operators => $operators,
+            operands => $operands,
+            indexes => $indexes,
+            query_cgi => $query_cgi,
+        }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump
+    }
+
+    if ( $debug_was_undef ) {
+        use Data::Dumper (); warn Data::Dumper->new( [{
+            operators => $operators,
+            operands => $operands,
+            indexes => $indexes,
+            query_cgi => $query_cgi,
+        }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump
+    }
 
     my $simple_query;
     $simple_query = $operands->[0] if @$operands == 1;
