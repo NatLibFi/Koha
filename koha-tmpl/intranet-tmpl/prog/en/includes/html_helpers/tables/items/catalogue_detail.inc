@@ -449,7 +449,7 @@
                         nodes += '<span>';
                         if ( row.checkout.onsite_checkout ) {
                             if ( can_edit_items_from[row.holding_library_id] ){
-                                let patron_to_html = $patron_to_html(row.checkout.patron);
+                                let patron_to_html = $patron_to_html(row.checkout.patron, { url: true });
                                 nodes += _("Currently in local use by %s").format(patron_to_html);
                             } else {
                                 nodes += _("Currently in local use");
@@ -457,7 +457,7 @@
                         } else {
                             nodes += '<span class="datedue">';
                             if ( can_edit_items_from[row.holding_library_id] ){
-                                let patron_to_html = $patron_to_html(row.checkout.patron);
+                                let patron_to_html = $patron_to_html(row.checkout.patron, { url: true });
                                 nodes += _("Checked out to %s").format(patron_to_html);
                             } else {
                                 nodes += _("Checked out");
@@ -506,7 +506,7 @@
                                     [%# Hacky for patron_to_html in case we simply want to display the patron's library name %]
                                     row.first_hold.patron.library = { name: libraries_names.get(row.first_hold.patron.library_id) };
 
-                                    let patron_to_html = $patron_to_html(row.first_hold.patron); [%# FIXME What about hide_patron_infos_if_needed?? %]
+                                    let patron_to_html = $patron_to_html(row.first_hold.patron, { url: true });
                                     nodes += ' <span class="heldfor">%s</span>'.format(_("Hold for: %s").format(patron_to_html));
                                 }
                             [% END %]
@@ -523,7 +523,7 @@
                                 [%# Hacky for patron_to_html in case we simply want to display the patron's library name %]
                                 row.recall.patron.library = { name: libraries_names.get(row.recall.patron.library_id) };
 
-                                let patron_to_html = $patron_to_html(row.recall.patron);
+                                let patron_to_html = $patron_to_html(row.recall.patron, {url: true });
                                 nodes += '<span>%s</span>'.format(_("recalled by %s on %s").format(patron_to_html, $date(row.recall.created_date)))
                             }
                         }
