@@ -2,11 +2,21 @@
 [% USE Asset %]
 [% USE Koha %]
 [% USE HtmlTags %]
+[% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>Koha &rsaquo; Cataloging &rsaquo; [% title | html %] [% IF ( author ) %] by [% author | html %][% END %] (Record #[% biblionumber | html %]) &rsaquo; Holdings</title>
+<title>Holdings: [% FILTER collapse %]
+    [% IF( biblionumber ) %]
+        [% tx("Editing {title} (Record number {biblionumber})", { title = title, biblionumber = biblionumber }) | html %]
+    [% ELSE %]
+        [% t("Add MARC record") | html %]
+    [% END %] &rsaquo;
+    [% t("Cataloging") | html %] &rsaquo;
+    [% t("Koha") | html %]
+[% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
 [% INCLUDE 'calendar.inc' %]
 [% Asset.js("lib/hc-sticky.js") | $raw %]
+[% Asset.js( "lib/sortable/Sortable.min.js" ) | $raw %]
 [% INCLUDE 'select2.inc' %]
 <script>
     [% IF Koha.Preference('CreateAVFromCataloguing') && CAN_user_parameters_manage_auth_values %]
@@ -40,15 +50,20 @@
         if( hashPieces[0] !== "" && hashPieces[0] !== '#addholding' && hashPieces[0] !== '#editholding' ){
             selectTab( hashPieces[0] );
             window.scrollTo( 0, 0 );
+        } else {
+            selectTab( "#tab0XX_panel" );
         }
 
-        $( "ul.sortable_field", "#addholdingtabs" ).sortable({
-            axis: "y",
-            containment: $("#addholdingtabs")
+        $("#addholdingtabs ul.sortable_field").each( (i, e) => {
+            Sortable.create(e, {
+                animation: 150
+            });
         });
-        $( "ul.sortable_subfield", "#addholdingtabs" ).sortable({
-            axis: "y",
-            containment: "parent"
+
+        $("#addholdingtabs ul.sortable_subfield").each( (i, e) => {
+            Sortable.create(e, {
+                animation: 150
+            });
         });
 
         [% IF tab %]
@@ -151,7 +166,7 @@
             Changefwk();
         });
 
-        $(".toolbar-tabs a").on("click",function(e){
+        $(".toolbar-tabs-container .nav-tabs a").on("click",function(e){
             e.preventDefault();
             selectTab( this.hash );
         });
@@ -169,7 +184,7 @@
             e.preventDefault();
             var tab = $(this).data("tab");
             var field = $(this).data("field");
-            var tablink = $("a[data-tabid='" + tab + "']" ).get(0).hash;
+            var tablink = $("a[data-tabname='tab" + tab + "XX']" ).get(0).hash;
             selectTab( tablink );
             window.scrollTo( 0, getScrollto( field, "toolbar" ) );
         });
@@ -181,12 +196,17 @@
     });
 
     function selectTab( tablink ){
+        /* return if no tabs displayed (fast add framework) */
+        if ($(".toolbar-tabs-container .nav-tabs li").length === 0){
+          return;
+        }
         let a = $("a[href='" + tablink + "']");
-        $(".toolbar-tabs li").removeClass("selected");
+        $(".toolbar-tabs-container .nav-tabs li").removeClass("selected");
         a.tab("show").parent().addClass("selected");
-        var tabid = a.data("tabid");
+        /* Get number from string like "tab9XX" */
+        var tabid = a.data("tabname").substring(3, 4);
         $(".tag_anchors").removeClass("tab_selected").hide();
-        $(".d" + tabid ).addClass("tab_selected").show();
+        $(".tag_anchors_" + tabid ).addClass("tab_selected").show();
     }
 
     /**
@@ -220,7 +240,8 @@
         }
     [% END %]
 
-function PopupMARCFieldDoc(field) {
+function PopupMARCFieldDoc() {
+    let field = this.dataset.tag;
     [% IF Koha.Preference('marcfielddocurl') %]
         var docurl = "[% Koha.Preference('marcfielddocurl').replace('"','&quot;') | html %]";
         docurl = docurl.replace("{MARC}", "[% marcflavour | html %]");
@@ -232,7 +253,13 @@ function PopupMARCFieldDoc(field) {
     [% ELSIF ( marcflavour == 'UNIMARC' ) %]
         _UNIMARCFieldDoc(field);
     [% END %]
+    return false;
 }
+[%# Attach to body, so that cloned nodes will still have the event listener %]
+$(document).ready(function(){
+    $('body').on('click','.marcdocs',PopupMARCFieldDoc);
+});
+
     function confirmnotdup(redirect){
         $("#confirm_not_duplicate").attr("value","1");
         $("#redirect").attr("value",redirect);
@@ -250,7 +277,7 @@ function PopupMARCFieldDoc(field) {
     function PopupZ3950() {
         var strQuery = GetZ3950Terms();
         if(strQuery){
-            window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=[% biblionumber | html %]"+strQuery,"z3950search",'width=740,height=450,location=yes,toolbar=no,scrollbars=yes,resize=yes');
+            window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=[% biblionumber | html %]"+strQuery,"z3950search",'width=800,height=550,location=yes,toolbar=no,scrollbars=yes,resize=yes');
         }
     }
 
@@ -292,11 +319,11 @@ function PopupMARCFieldDoc(field) {
         if( flag === true ){
             $(".marcdocs").show();
             Cookies.set("marcdocs_[% borrowernumber | html %]",'show', { path: "/", expires: 365, sameSite: 'Lax'  });
-            $("#marcDocsSelect i").addClass('fa-check-square-o').removeClass('fa-square-o');
+            $("#marcDocsSelect i").addClass('fa-check-square').removeClass('fa-square');
         } else {
             $(".marcdocs").hide();
             Cookies.set("marcdocs_[% borrowernumber | html %]",'hide', { path: "/", expires: 365, sameSite: 'Lax'  });
-            $("#marcDocsSelect i").removeClass('fa-check-square-o').addClass('fa-square-o');
+            $("#marcDocsSelect i").removeClass('fa-check-square').addClass('fa-square');
         }
     }
 
@@ -305,12 +332,12 @@ function PopupMARCFieldDoc(field) {
             $(".tagnum").show();
             $(".subfieldcode").show();
             Cookies.set("marctags_[% borrowernumber | html %]",'show', { path: "/", expires: 365, sameSite: 'Lax'  });
-            $("#marcTagsSelect i").addClass('fa-check-square-o').removeClass('fa-square-o');
+            $("#marcTagsSelect i").addClass('fa-check-square').removeClass('fa-square');
         } else {
             $(".tagnum").hide();
             $(".subfieldcode").hide();
             Cookies.set("marctags_[% borrowernumber | html %]",'hide', { path: "/", expires: 365, sameSite: 'Lax'  });
-            $("#marcTagsSelect i").removeClass('fa-check-square-o').addClass('fa-square-o');
+            $("#marcTagsSelect i").removeClass('fa-check-square').addClass('fa-square');
         }
     }
 
@@ -445,7 +472,7 @@ function PopupMARCFieldDoc(field) {
         }
         StrAlert += "</div>";
         if ( flag ) {
-            $("#show-errors").html('<button type="button" class="btn btn-danger show-errors"><i class="fa fa-warning"></i> ' + _("Errors") + '</span>');
+            $("#show-errors").html('<button type="button" class="btn btn-danger show-errors"><i class="fa-solid fa-triangle-exclamation"></i> ' + _("Errors") + '</span>');
             return StrAlert;
         } else {
             return flag;
@@ -531,6 +558,7 @@ function PopupMARCFieldDoc(field) {
     $(document).ready(function(){
         $('body').on('click','.expandfield',ExpandField);
     });
+
 </script>
 [% Asset.css("css/addholding.css") | $raw %]
 </head>
@@ -614,9 +642,9 @@ function PopupMARCFieldDoc(field) {
                             [% END %]
                             [% UNLESS advancedMARCEditor %]
                                 <li>
-                                    <a href="#" id="marcDocsSelect"><i class="fa fa-check-square-o"></i> Show MARC tag documentation links</a>
+                                    <a href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
                                 <li>
-                                    <a href="#" id="marcTagsSelect"><i class="fa fa-check-square-o"></i> Show tags</a>
+                                    <a href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
                                 </li>
                             [% END %]
                             <li class="dropdown-header">Change framework</li>
@@ -650,24 +678,26 @@ function PopupMARCFieldDoc(field) {
                     <div id="show-errors" class="btn-group"></div>
                     <div class="toolbar-tabs-container">
                         [% IF ( BIG_LOOP && BIG_LOOP.size > 1 ) %]
-                            <ul class="toolbar-tabs" role="tablist">
+                            [% WRAPPER tabs_nav %]
                                 [%- FOREACH BIG_LOO IN BIG_LOOP -%]
                                     [% IF loop.first %]
-                                        <li role="presentation" class="active selected">
+                                        [% SET bt_active = 1 %]
                                     [% ELSE %]
-                                        <li role="presentation">
+                                        [% SET bt_active = 0 %]
                                     [% END %]
-                                        <a data-tabid="[% BIG_LOO.number | html %]" href="#tab[% BIG_LOO.number | html %]XX" aria-controls="#tab[% BIG_LOO.number | html %]XX" role="tab" data-toggle="tab">[% BIG_LOO.number | html %]</a>
+                                    [% WRAPPER tab_item tabname= "tab${BIG_LOO.number}XX" bt_active= bt_active %]
+                                        <span>[% BIG_LOO.number | html %]</span>
+                                    [% END %]
                                     </li>
                                 [%- END -%]
-                            </ul>
+                            [% END # /WRAPPER tabs_nav %]
                         [% END %]
-                        <ul class="dlist">
+                        <ul class="tag_anchors_list">
                             [% FOREACH BIG_LOO IN BIG_LOOP %]
                                 [% IF loop.first %][% SET tab_selected = "tab_selected" %][% ELSE %][% SET tab_selected = "" %][% END %]
                                 [% FOREACH innerloo IN BIG_LOO.innerloop %]
                                     [% IF ( innerloo.tag ) %]
-                                        <li class="tag_anchors d[% BIG_LOO.number | html %] [% tab_selected | html %]">
+                                        <li class="tag_anchors tag_anchors_[% BIG_LOO.number | html %] [% tab_selected | html %]">
                                             <a class="tag_anchor" id="tag_anchor_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]" title="tag_anchor_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]" href="#div_indicator_tag_[% innerloo.tag | uri %]_[% innerloo.index | uri %][% innerloo.random | uri %]">[% innerloo.tag | uri %]</a>
                                         </li>
                                     [% END %]
@@ -686,15 +716,15 @@ function PopupMARCFieldDoc(field) {
                 <input type="hidden" name="holding_id" value="[% holding_id | html %]" />
                 <input type="hidden" name="changed_framework" value="" />
 
-                <div id="addholdingtabs" class="toptabs numbered">
-                    <div class="tab-content">
-
+                [% WRAPPER tabs id="addholdingtabs" %]
+                    [% WRAPPER tab_panels %]
                         [% FOREACH BIG_LOO IN BIG_LOOP %]
                             [% IF loop.first %]
-                                <div id="tab[% BIG_LOO.number | html %]XX" role="tabpanel" class="tab-pane active">
+                                [% SET bt_active = 1 %]
                             [% ELSE %]
-                                <div id="tab[% BIG_LOO.number | html %]XX" role="tabpanel" class="tab-pane">
+                                [% SET bt_active = 0 %]
                             [% END %]
+                            [% WRAPPER tab_panel tabname="tab${BIG_LOO.number}XX" bt_active= bt_active %]
 
                                 [% IF ( BIG_LOOP.size > 1 ) %]
                                     <h3>Section [% BIG_LOO.number | html %]</h3>
@@ -723,7 +753,7 @@ function PopupMARCFieldDoc(field) {
                                                     <a href="#" tabindex="1" class="tagnum" title="[% innerloo.tag_lib | html %] - Click to Expand this Tag" data-field_id="tag_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]">[% innerloo.tag | html %]</a>
                                                 [% ELSE %]
                                                     <span class="tagnum" title="[% innerloo.tag_lib | html %]">[% innerloo.tag | html %]</span>
-                                                    <a href="#" class="marcdocs" onclick="PopupMARCFieldDoc('[% innerloo.tag | html %]'); return false;">&nbsp;?</a>
+                                                    <a href="#" class="marcdocs" data-tag="[% innerloo.tag | html %]">&nbsp;?</a>
                                                 [% END %]
 
                                                 [% IF ( innerloo.fixedfield ) %]
@@ -884,10 +914,10 @@ function PopupMARCFieldDoc(field) {
                                     [% END %]<!-- if innerloo.tag -->
                                 [% END # /FOREACH BIG_LOO.innerloop %]
                                 </ul> <!--  /.sortable_field -->
-                            </div> <!-- /#tabXXX -->
+                            [% END # /tab_panel#tabXXX %]
                         [% END # /FOREACH BIG_LOOP %]
-                    </div> <!-- /.tab-content -->
-                </div><!-- /#addholdingtabs -->
+                    [% END # /WRAPPER tab_panels %]
+                [% END # /WRAPPER tabs %]
             </form> <!-- /name=f -->
         </div> <!-- /.col-md-10.col-md-offset-1 -->
     </div> <!-- /.row -->

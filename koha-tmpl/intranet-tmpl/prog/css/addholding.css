@@ -59,15 +59,22 @@ li.ui-sortable-helper {
     padding: 2px;
 }
 
-li.ui-sortable-helper ul li {
+li.sortable-ghost {
+    background-color: #E0E0E0;
+    border-radius: 4px;
+    max-height: 150px;
+    padding: 2px;
+}
+
+li.sortable-ghost ul li {
     display: none !important;
 }
 
-.sortable_subfield .ui-sortable-helper input.flat {
+.sortable_subfield .sortable-ghost input.flat {
     background-color: transparent;
 }
 
-ul li.tag li.subfield_line.ui-sortable-helper::before {
+ul li.tag li.subfield_line.sortable-ghost::before {
     top: 5px;
 }
 
@@ -154,7 +161,6 @@ a.tagnum {
 .subfieldcode {
     display: block;
     float: left;
-    padding-right: 2px;
 }
 
 .labelsubfield {
@@ -311,12 +317,16 @@ tbody tr.active td {
     width: 15em;
 }
 
+#toolbar {
+    padding: 5px 0;
+}
+
 .toolbar-tabs-container {
     flex-basis: 100%;
     margin-top: .5em;
 }
 
-.toolbar-tabs {
+.toolbar-tabs-container .nav-tabs {
     background-color: #FFF;
     clear: both;
     display: flex;
@@ -326,7 +336,7 @@ tbody tr.active td {
     padding-left: 0;
 }
 
-.toolbar-tabs li {
+.toolbar-tabs-container .nav-tabs li {
     background-color: #FFF;
     display: flex;
     flex-grow: 1;
@@ -335,7 +345,7 @@ tbody tr.active td {
     text-align: center;
 }
 
-.toolbar-tabs li a {
+.toolbar-tabs-container .nav-tabs li a {
     background-color: #71B443;
     border: 1px solid #71B443;
     border-left: 0;
@@ -349,7 +359,7 @@ tbody tr.active td {
     width: 100%;
 }
 
-.toolbar-tabs li.selected a {
+.toolbar-tabs-container .nav-tabs li.selected a {
     background-color: #418940;
     border-bottom: 1px solid #418940;
     border-right: 1px solid #418940;
@@ -362,11 +372,14 @@ tbody tr.active td {
     width: 100%;
 }
 
-.toolbar-tabs li.selected a:hover {
+.toolbar-tabs-container .nav-tabs li.selected a:hover,
+.toolbar-tabs-container .nav-tabs li.selected a:focus {
     background-color: #418940;
+    border: 1px solid #418940;
+    border-left: 0;
 }
 
-.toolbar-tabs li a:hover {
+.toolbar-tabs-container .nav-tabs li a:hover {
     background-color: #418940;
     border-bottom: 1px solid #418940;
     border-right: 1px solid #418940;
