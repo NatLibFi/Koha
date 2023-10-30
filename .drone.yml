@@ -1,6 +1,7 @@
+---
 kind: pipeline
 type: docker
-name: default
+name: production
 
 clone:
   depth: 50
@@ -47,31 +48,31 @@ steps:
 
       - >
           (
-            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER";
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER production";
             echo "";
             echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
             TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
             echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
             echo "  community master  $COMMIT_COMMUNITYMASTER";
-            echo "  our preproduction $DRONE_COMMIT";
+            echo "  our production $DRONE_COMMIT";
             echo "";
           ) > debian/kk-build/kk-build.txt
 
       - >
           (
-            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
             echo " special (kk-* and bug-*) branches merged:";
           ) 1>> debian/kk-build/kk-build.txt
 
       - >
           git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
-          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)preproduction~\\\\7~p"
+          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
           1>> debian/kk-build/kk-build.txt
 
       - >
           (
             sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
-            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER/g debian/kk-build/about.html;
+            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Production/g debian/kk-build/about.html;
           )
 
       # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
@@ -100,18 +101,146 @@ steps:
       - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
 
       - mkdir -p ../repos/conf
-      - cp .reprepro ../repos/conf/distributions
+      - cp .reprepro.stable ../repos/conf/distributions
       - cd ../repos
       - reprepro includedeb stable ../*.deb
       - cd ../repos
       - echo "cd koha" >> ../sftp-cmds
-#      - echo 'mkdir conf' >> ../sftp-cmds
-#      - echo 'mkdir db' >> ../sftp-cmds
-#      - echo 'mkdir dists' >> ../sftp-cmds
-#      - echo 'mkdir pool' >> ../sftp-cmds
+     # - echo 'mkdir conf' >> ../sftp-cmds
+     # - echo 'mkdir db' >> ../sftp-cmds
+     # - echo 'mkdir dists' >> ../sftp-cmds
+     # - echo 'mkdir pool' >> ../sftp-cmds
       - echo 'put -r *' >> ../sftp-cmds
 
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
+
+    environment:
+      GPG:
+        from_secret: GPGKEY
+      SSH:
+        from_secret: SSHKEY
+      SFTPUSER:
+        from_secret: username
+    when:
+      branch:
+        - builds/*/production
+
+---
+kind: pipeline
+type: docker
+name: preproduction
+
+clone:
+  depth: 50
+
+steps:
+  - name: package
+    image: debian:10
+    commands:
+      - apt-get -qq update
+      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+
+      - echo $GPG | base64 -d > ../gpg.key
+      - echo $SSH | base64 -d > ../id_rsa
+      - chmod 600 ../id_rsa ../gpg.key
+      - unset GPG
+      - unset SSH
+
+      - gpg --batch --import ../gpg.key
+      - gpg --list-secret-keys
+
+      - echo "deb http://debian.koha-community.org/koha stable main" > /etc/apt/sources.list.d/koha.list
+      - wget -O- https://debian.koha-community.org/koha/gpg.asc | apt-key add -
+      - apt-get -qq update
+      - yes|mk-build-deps -i
+      - git clean -f
+      - git config --global user.name "Builder"
+      - git config --global user.email "nobody@example.com"
+      - EPOCH=`date +%s`
+      - git fetch --depth=1 origin +refs/heads/master
+      - COMMIT_COMMUNITYMASTER="[hash unknown]";
+      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
+      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+
+      # for now we have solution to set up ours "max"-ed version to always come
+      # in "concat(1, KCver)" style over that which comes from community:
+      - >
+          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
+          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
+          OUR_VERSION="1$COMMUNITY_VERSION"
+
+      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+
+
+      - >
+          (
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER beta";
+            echo "";
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
+            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
+            echo "  community master  $COMMIT_COMMUNITYMASTER";
+            echo "  our preproduction $DRONE_COMMIT";
+            echo "";
+          ) > debian/kk-build/kk-build.txt
+
+      - >
+          (
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
+            echo " special (kk-* and bug-*) branches merged:";
+          ) 1>> debian/kk-build/kk-build.txt
+
+      - >
+          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
+          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
+          1>> debian/kk-build/kk-build.txt
+
+      - >
+          (
+            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
+            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Beta/g debian/kk-build/about.html;
+          )
+
+      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
+      #     1>> debian/koha-common.install
+      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+
+      # - echo "debian/kk-build/favicon.ico"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg"
+      #     1>> debian/source/include-binaries
+
+
+
+      - git add debian/changelog
+      - git add debian/kk-build/kk-build.txt
+      - git add debian/kk-build/about.html
+      - git add debian/koha-common.install
+
+      - git commit -m "Modified changelog for build"
+      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
+
+      - mkdir -p ../repos/conf
+      - cp .reprepro.unstable ../repos/conf/distributions
+      - cd ../repos
+      - reprepro includedeb unstable ../*.deb
+      - cd ../repos
+      - echo "cd koha" >> ../sftp-cmds
+     # - echo 'mkdir conf' >> ../sftp-cmds
+     # - echo 'mkdir db' >> ../sftp-cmds
+     # - echo 'mkdir dists' >> ../sftp-cmds
+     # - echo 'mkdir pool' >> ../sftp-cmds
+      - echo 'put -r *' >> ../sftp-cmds
+
+      - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
+
     environment:
       GPG:
         from_secret: GPGKEY
@@ -122,6 +251,136 @@ steps:
     when:
       branch:
         - builds/*/preproduction
+
+---
+kind: pipeline
+type: docker
+name: release (both production and preproduction)
+
+clone:
+  depth: 50
+
+steps:
+  - name: package
+    image: debian:10
+    commands:
+      - apt-get -qq update
+      - apt-get install -y -qq devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget gnupg2 git equivs openssh-client reprepro
+
+      - echo $GPG | base64 -d > ../gpg.key
+      - echo $SSH | base64 -d > ../id_rsa
+      - chmod 600 ../id_rsa ../gpg.key
+      - unset GPG
+      - unset SSH
+
+      - gpg --batch --import ../gpg.key
+      - gpg --list-secret-keys
+
+      - echo "deb http://debian.koha-community.org/koha stable main" > /etc/apt/sources.list.d/koha.list
+      - wget -O- https://debian.koha-community.org/koha/gpg.asc | apt-key add -
+      - apt-get -qq update
+      - yes|mk-build-deps -i
+      - git clean -f
+      - git config --global user.name "Builder"
+      - git config --global user.email "nobody@example.com"
+      - EPOCH=`date +%s`
+      - git fetch --depth=1 origin +refs/heads/master
+      - COMMIT_COMMUNITYMASTER="[hash unknown]";
+      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
+      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+
+      # for now we have solution to set up ours "max"-ed version to always come
+      # in "concat(1, KCver)" style over that which comes from community:
+      - >
+          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
+          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
+          OUR_VERSION="1$COMMUNITY_VERSION"
+
+      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+
+
+      - >
+          (
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER production";
+            echo "";
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
+            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
+            echo "  community master  $COMMIT_COMMUNITYMASTER";
+            echo "  our release (both production and preproduction) $DRONE_COMMIT";
+            echo "";
+          ) > debian/kk-build/kk-build.txt
+
+      - >
+          (
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
+            echo " special (kk-* and bug-*) branches merged:";
+          ) 1>> debian/kk-build/kk-build.txt
+
+      - >
+          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
+          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
+          1>> debian/kk-build/kk-build.txt
+
+      - >
+          (
+            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
+            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Production/g debian/kk-build/about.html;
+          )
+
+      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
+      #     1>> debian/koha-common.install
+      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
+          1>> debian/koha-common.install
+
+      # - echo "debian/kk-build/favicon.ico"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg"
+      #     1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg"
+      #     1>> debian/source/include-binaries
+
+
+
+      - git add debian/changelog
+      - git add debian/kk-build/kk-build.txt
+      - git add debian/kk-build/about.html
+      - git add debian/koha-common.install
+
+      - git commit -m "Modified changelog for build"
+      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
+
+      - mkdir -p ../repos/conf
+      - cp .reprepro.stable ../repos/conf/distributions
+      - echo "" >> ../repos/conf/distributions
+      - cat .reprepro.unstable >> ../repos/conf/distributions
+      - cd ../repos
+      - reprepro includedeb stable ../*.deb
+      - reprepro includedeb unstable ../*.deb
+      - cd ../repos
+      - echo "cd koha" >> ../sftp-cmds
+     # - echo 'mkdir conf' >> ../sftp-cmds
+     # - echo 'mkdir db' >> ../sftp-cmds
+     # - echo 'mkdir dists' >> ../sftp-cmds
+     # - echo 'mkdir pool' >> ../sftp-cmds
+      - echo 'put -r *' >> ../sftp-cmds
+
+      - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
+
+    environment:
+      GPG:
+        from_secret: GPGKEY
+      SSH:
+        from_secret: SSHKEY
+      SFTPUSER:
+        from_secret: username
+    when:
+      branch:
+        - builds/*/release
 
 ---
 kind: secret
