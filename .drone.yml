@@ -15,6 +15,14 @@ steps:
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
       - apt-get -y -qq install inetutils-ping openssh-client
 
+      - wget -O- https://deb.nodesource.com/setup_16.x | bash -
+      - apt install -y nodejs
+
+      - wget -O- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+      - echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+      - apt-get -qq update
+      - apt-get -y -qq install yarn
+
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
       - chmod 600 ../id_rsa ../gpg.key
@@ -144,6 +152,14 @@ steps:
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
       - apt-get -y -qq install inetutils-ping openssh-client
 
+      - wget -O- https://deb.nodesource.com/setup_16.x | bash -
+      - apt install -y nodejs
+
+      - wget -O- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+      - echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+      - apt-get -qq update
+      - apt-get -y -qq install yarn
+
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
       - chmod 600 ../id_rsa ../gpg.key
@@ -272,6 +288,14 @@ steps:
       - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
       - apt-get -y -qq install inetutils-ping openssh-client
+
+      - wget -O- https://deb.nodesource.com/setup_16.x | bash -
+      - apt install -y nodejs
+
+      - wget -O- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+      - echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+      - apt-get -qq update
+      - apt-get -y -qq install yarn
 
       - echo $GPG | base64 -d > ../gpg.key
       - echo $SSH | base64 -d > ../id_rsa
