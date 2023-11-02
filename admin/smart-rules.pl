@@ -308,7 +308,7 @@ elsif ( $op eq 'cud-add' ) {
     my $opacitemholds                    = $input->param('opacitemholds')    || 0;
     my $article_requests                 = $input->param('article_requests') || 'no';
     my $overduefinescap                  = $input->param('overduefinescap')
-        && ( $input->param('overduefinescap') + 0 ) > 0 ? sprintf( "%.02f", $input->param('overduefinescap') ) : q{};
+        && ( $input->param('overduefinescap') + 0 ) > 0 ? sprintf( "%.02f", scalar $input->param('overduefinescap') ) : q{};
     my $cap_fine_to_replacement_price = ( $input->param('cap_fine_to_replacement_price') || q{} ) eq 'on';
     my $expire_reserves_charge        = $input->param('expire_reserves_charge') // q{};
     my $note                          = $input->param('note');
