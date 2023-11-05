@@ -176,7 +176,9 @@ while (1) {
         #     sleep 2;
         #     $job = Koha::BackgroundJobs->search( { id => $args->{job_id}, status => 'new' } )->next;
         #     unless( $job ) {
-        #         die localtime().": Anyway failed to get job $args->{job_id}.\n";
+        #         Koha::Logger->get( { interface => 'worker' } )
+        #             ->warn( sprintf "Job %s not found, or has wrong status", $args->{job_id} );
+        #         next;
         #     }
         # }
 
