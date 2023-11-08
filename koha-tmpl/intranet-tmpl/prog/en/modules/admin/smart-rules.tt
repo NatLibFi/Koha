@@ -425,7 +425,7 @@
                                             [% END %]
                                         </td>
                                     [% END %]
-                                    <td>[% rentaldiscount | html %]</td>
+                                    <td>[% rentaldiscount | $Price %]</td>
                                     [% IF Koha.Preference('UseRecalls') %]
                                         <td>[% recalls_allowed | html %]</td>
                                         <td>[% recalls_per_record | html %]</td>
