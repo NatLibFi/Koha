@@ -244,6 +244,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('ERMProviders', 'local', 'local|ebsco', 'Set the providers for the ERM module', 'Choice'),
 ('ERMProviderEbscoApiKey', '', '', 'API key for EBSCO', 'free'),
 ('ERMProviderEbscoCustomerID', '', '', 'Customer ID for EBSCO', 'free'),
+('EstimateDeliveryByBasketDate', '0', NULL, 'Calculate the estimated delivery date from the time the basket is opened, instead of when it is closed.', 'YesNo')
 ('expandedSearchOption','0',NULL,'If ON, set advanced search to be expanded by default','YesNo'),
 ('ExpireReservesAutoFill','0',NULL,'Automatically fill the next hold with a automatically canceled expired waiting hold.','YesNo'),
 ('ExpireReservesAutoFillEmail','', NULL,'Send email notification of hold filled from automatically expired/cancelled hold to this address. If not defined, Koha will fallback to the library reply-to address','Free'),
@@ -819,5 +820,5 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('XSLTListsDisplay','default','','Enable XSLT stylesheet control over lists pages display on intranet','Free'),
 ('XSLTResultsDisplay','default','','Enable XSL stylesheet control over results page display on intranet','Free'),
 ('z3950AuthorAuthFields','701,702,700',NULL,'Define the MARC biblio fields for Personal Name Authorities to fill biblio.author','free'),
-('z3950NormalizeAuthor','0','','If ON, Personal Name Authorities will replace authors in biblio.author','YesNo')
+('z3950NormalizeAuthor','0','','If ON, Personal Name Authorities will replace authors in biblio.author','YesNo'),
 ;
