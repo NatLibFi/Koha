@@ -281,6 +281,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('ERMProviderEbscoApiKey', ''),
 ('ERMProviderEbscoCustomerID', ''),
 ('ERMProviders', 'local'),
+('EstimateDeliveryByBasketDate', '0'),
 ('ExcludeHolidaysFromMaxPickUpDelay', '0'),
 ('expandedSearchOption','0'),
 ('ExpireReservesAutoFill','0'),
