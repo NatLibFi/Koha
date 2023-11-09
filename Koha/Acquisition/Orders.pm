@@ -66,6 +66,7 @@ sub filter_by_lates {
     my $estimated_from = $params->{estimated_from};
     my $estimated_to   = $params->{estimated_to};
     my $dtf            = Koha::Database->new->schema->storage->datetime_parser;
+    my $date_from_basket = C4::Context->preference("EstimateDeliveryByBasketDate") ? 'basketno.creationdate' : 'basketno.closedate';
 
     my @delivery_time_conditions;
     my $date_add =
@@ -133,7 +134,7 @@ sub filter_by_lates {
         },
         {
             '+select' => [
-                \"DATE_ADD(basketno.closedate, INTERVAL COALESCE(booksellerid.deliverytime, booksellerid.deliverytime, 0) day)",
+                \"DATE_ADD($date_from_basket, INTERVAL COALESCE(booksellerid.deliverytime, booksellerid.deliverytime, 0) day)",
             ],
             '+as' => [
                 qw/
