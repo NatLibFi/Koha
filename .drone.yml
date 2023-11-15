@@ -10,6 +10,33 @@ steps:
   - name: package
     image: debian:12
     commands:
+
+      - PROD_OR_BETA=production
+      - BUILD_TYPES=stable
+      - GIT_ORIGIN=origin
+      - BUILD_TYPE=$BUILD_TYPES
+
+      - |
+        pingwait () {
+          domain=$1
+          tries=$2
+          for i in $(seq 1 $tries)
+          do
+            if ! which ping > /dev/null; then
+              timeout 2 bash -c '</dev/tcp/$domain/80' && echo "DNS+inet OK" || echo "DNS+inet Fail"
+              echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            else
+              if ping -c 1 $domain; then
+                echo "Pinged $domain from $i try. Proceeding further."
+                break
+              fi
+              /etc/init.d/dns-clean restart || systemd-resolve --flush-caches || /etc/init.d/nscd restart || /etc/init.d/networking restart
+            fi
+          done
+        }
+
+      - pingwait deb.debian.org 10
+
       - apt-get -qq update
       - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
@@ -43,77 +70,54 @@ steps:
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
 
-      - |
-        # ping github.com in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 github.com; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+      - pingwait github.com 10
 
-      - git fetch --depth=1 origin +refs/heads/master
-      - COMMIT_COMMUNITYMASTER="[hash unknown]";
-      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
-      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      # - |
+      #   git fetch --depth=1 origin +refs/heads/master
+      #   COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)"
+      #   [ -z "$COMMIT_COMMUNITYMASTER" ] && COMMIT_COMMUNITYMASTER="[hash unknown]"
+      - CURRENT_COMMIT_SHORT=`git rev-parse --short=7 HEAD`
       - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+      # - OUR_BUILD_NUMBER="$(cat debian/kk-build/kk-build-number.txt 2>/dev/null)"
 
       # for now we have solution to set up ours "max"-ed version to always come
       # in "concat(1, KCver)" style over that which comes from community:
-      - >
-          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
-          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
-          OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')"
+      - if [ -z "$COMMUNITY_VERSION" ]; then echo "can't detect koha-common version"; exit 1; fi
+      - OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION_NO="$(echo "$COMMUNITY_VERSION" | sed 's/~git.*//')"
+      - OUR_VERSION_NO="1$COMMUNITY_VERSION_NO"
+      # - DEB_VER_TEXT="$OUR_VERSION~$EPOCH-git$CURRENT_COMMIT_SHORT-1"
+      - DEB_VER_TEXT="$OUR_VERSION_NO-$DRONE_BUILD_NUMBER"
 
-      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+      - dch --force-distribution -D "stretch" "Git build" -v "$DEB_VER_TEXT"
 
-
-      - >
+      - |
           (
-            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER production";
-            echo "";
-            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
-            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
-            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
-            echo "  community master  $COMMIT_COMMUNITYMASTER";
-            echo "  our production $DRONE_COMMIT";
-            echo "";
-          ) > debian/kk-build/kk-build.txt
-
-      - >
-          (
-            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
-            echo " special (kk-* and bug-*) branches merged:";
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER $PROD_OR_BETA"
+            echo "$CURRENT_COMMIT_SHORT"
+            echo ""
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, "
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z'
+            # echo "  community master  $COMMIT_COMMUNITYMASTER ($GIT_ORIGIN/master)"
+            echo "  our commit        $DRONE_COMMIT ($DRONE_BRANCH)"
+            echo "  DEB-version       $DEB_VER_TEXT on community version $COMMUNITY_VERSION"
+            echo ""
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo " special (kk-* and bug-*) branches merged:"
+            git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" | \
+              sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
           ) 1>> debian/kk-build/kk-build.txt
 
-      - >
-          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
-          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
-          1>> debian/kk-build/kk-build.txt
+      - sed -i -e "s/%OUR_RELEASE%/$OUR_RELEASE/g" debian/kk-build/about.html
+      - sed -i -e "s/%OUR_BUILD_NUMBER%/$DRONE_BUILD_NUMBER $PROD_OR_BETA/g" debian/kk-build/about.html
 
-      - >
-          (
-            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
-            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Production/g debian/kk-build/about.html;
-          )
-
-      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
-      #     1>> debian/koha-common.install
-      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-
-      # - echo "debian/kk-build/favicon.ico"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo1.jpg"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo2.jpg"
-      #     1>> debian/source/include-binaries
-
-
+      # - echo "debian/kk-build/favicon.ico usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico" 1>> debian/koha-common.install
+      # - echo "debian/kk-build/favicon.ico" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg" 1>> debian/source/include-binaries
+      - echo "debian/kk-build/kk-build.txt usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html  usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
 
       - git add debian/changelog
       - git add debian/kk-build/kk-build.txt
@@ -121,31 +125,27 @@ steps:
       - git add debian/koha-common.install
 
       - git commit -m "Modified changelog for build"
-      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
-      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
-
-      - mkdir -p ../repos/conf
-      - cp .reprepro.stable ../repos/conf/distributions
-      - cd ../repos
-      - reprepro includedeb stable ../*.deb
-      - cd ../repos
-      - echo "cd koha" >> ../sftp-cmds
-     # - echo 'mkdir conf' >> ../sftp-cmds
-     # - echo 'mkdir db' >> ../sftp-cmds
-     # - echo 'mkdir dists' >> ../sftp-cmds
-     # - echo 'mkdir pool' >> ../sftp-cmds
-      - echo 'put -r *' >> ../sftp-cmds
+      - git archive --format=tar HEAD | gzip > "../koha_$DEB_VER_TEXT.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey -b
 
       - |
-        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 repo.lib.helsinki.fi; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+        mkdir -p ../repos/conf
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && cat .reprepro.stable >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && cat .reprepro.unstable >> ../repos/conf/distributions
+        cd ../repos
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && reprepro includedeb stable ../*.deb
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && reprepro includedeb unstable ../*.deb
+        cd ../repos
+        echo "cd koha" >> ../sftp-cmds
+        # echo 'mkdir conf' >> ../sftp-cmds
+        # echo 'mkdir db' >> ../sftp-cmds
+        # echo 'mkdir dists' >> ../sftp-cmds
+        # echo 'mkdir pool' >> ../sftp-cmds
+        echo 'put -r *' >> ../sftp-cmds
+
+      - pingwait repo.lib.helsinki.fi 10
 
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
@@ -172,6 +172,33 @@ steps:
   - name: package
     image: debian:12
     commands:
+
+      - PROD_OR_BETA=preproduction
+      - BUILD_TYPES=unstable
+      - GIT_ORIGIN=origin
+      - BUILD_TYPE=$BUILD_TYPES
+
+      - |
+        pingwait () {
+          domain=$1
+          tries=$2
+          for i in $(seq 1 $tries)
+          do
+            if ! which ping > /dev/null; then
+              timeout 2 bash -c '</dev/tcp/$domain/80' && echo "DNS+inet OK" || echo "DNS+inet Fail"
+              echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            else
+              if ping -c 1 $domain; then
+                echo "Pinged $domain from $i try. Proceeding further."
+                break
+              fi
+              /etc/init.d/dns-clean restart || systemd-resolve --flush-caches || /etc/init.d/nscd restart || /etc/init.d/networking restart
+            fi
+          done
+        }
+
+      - pingwait deb.debian.org 10
+
       - apt-get -qq update
       - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
@@ -205,77 +232,54 @@ steps:
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
 
-      - |
-        # ping github.com in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 github.com; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+      - pingwait github.com 10
 
-      - git fetch --depth=1 origin +refs/heads/master
-      - COMMIT_COMMUNITYMASTER="[hash unknown]";
-      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
-      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      # - |
+      #   git fetch --depth=1 origin +refs/heads/master
+      #   COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)"
+      #   [ -z "$COMMIT_COMMUNITYMASTER" ] && COMMIT_COMMUNITYMASTER="[hash unknown]"
+      - CURRENT_COMMIT_SHORT=`git rev-parse --short=7 HEAD`
       - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+      # - OUR_BUILD_NUMBER="$(cat debian/kk-build/kk-build-number.txt 2>/dev/null)"
 
       # for now we have solution to set up ours "max"-ed version to always come
       # in "concat(1, KCver)" style over that which comes from community:
-      - >
-          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
-          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
-          OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')"
+      - if [ -z "$COMMUNITY_VERSION" ]; then echo "can't detect koha-common version"; exit 1; fi
+      - OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION_NO="$(echo "$COMMUNITY_VERSION" | sed 's/~git.*//')"
+      - OUR_VERSION_NO="1$COMMUNITY_VERSION_NO"
+      # - DEB_VER_TEXT="$OUR_VERSION~$EPOCH-git$CURRENT_COMMIT_SHORT-1"
+      - DEB_VER_TEXT="$OUR_VERSION_NO-$DRONE_BUILD_NUMBER"
 
-      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+      - dch --force-distribution -D "stretch" "Git build" -v "$DEB_VER_TEXT"
 
-
-      - >
+      - |
           (
-            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER beta";
-            echo "";
-            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
-            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
-            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
-            echo "  community master  $COMMIT_COMMUNITYMASTER";
-            echo "  our preproduction $DRONE_COMMIT";
-            echo "";
-          ) > debian/kk-build/kk-build.txt
-
-      - >
-          (
-            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
-            echo " special (kk-* and bug-*) branches merged:";
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER $PROD_OR_BETA"
+            echo "$CURRENT_COMMIT_SHORT"
+            echo ""
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, "
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z'
+            # echo "  community master  $COMMIT_COMMUNITYMASTER ($GIT_ORIGIN/master)"
+            echo "  our commit        $DRONE_COMMIT ($DRONE_BRANCH)"
+            echo "  DEB-version       $DEB_VER_TEXT on community version $COMMUNITY_VERSION"
+            echo ""
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo " special (kk-* and bug-*) branches merged:"
+            git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" | \
+              sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
           ) 1>> debian/kk-build/kk-build.txt
 
-      - >
-          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
-          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
-          1>> debian/kk-build/kk-build.txt
+      - sed -i -e "s/%OUR_RELEASE%/$OUR_RELEASE/g" debian/kk-build/about.html
+      - sed -i -e "s/%OUR_BUILD_NUMBER%/$DRONE_BUILD_NUMBER $PROD_OR_BETA/g" debian/kk-build/about.html
 
-      - >
-          (
-            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
-            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Beta/g debian/kk-build/about.html;
-          )
-
-      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
-      #     1>> debian/koha-common.install
-      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-
-      # - echo "debian/kk-build/favicon.ico"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo1.jpg"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo2.jpg"
-      #     1>> debian/source/include-binaries
-
-
+      # - echo "debian/kk-build/favicon.ico usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico" 1>> debian/koha-common.install
+      # - echo "debian/kk-build/favicon.ico" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg" 1>> debian/source/include-binaries
+      - echo "debian/kk-build/kk-build.txt usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html  usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
 
       - git add debian/changelog
       - git add debian/kk-build/kk-build.txt
@@ -283,31 +287,27 @@ steps:
       - git add debian/koha-common.install
 
       - git commit -m "Modified changelog for build"
-      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
-      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
-
-      - mkdir -p ../repos/conf
-      - cp .reprepro.unstable ../repos/conf/distributions
-      - cd ../repos
-      - reprepro includedeb unstable ../*.deb
-      - cd ../repos
-      - echo "cd koha" >> ../sftp-cmds
-     # - echo 'mkdir conf' >> ../sftp-cmds
-     # - echo 'mkdir db' >> ../sftp-cmds
-     # - echo 'mkdir dists' >> ../sftp-cmds
-     # - echo 'mkdir pool' >> ../sftp-cmds
-      - echo 'put -r *' >> ../sftp-cmds
+      - git archive --format=tar HEAD | gzip > "../koha_$DEB_VER_TEXT.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey -b
 
       - |
-        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 repo.lib.helsinki.fi; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+        mkdir -p ../repos/conf
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && cat .reprepro.stable >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && cat .reprepro.unstable >> ../repos/conf/distributions
+        cd ../repos
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && reprepro includedeb stable ../*.deb
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && reprepro includedeb unstable ../*.deb
+        cd ../repos
+        echo "cd koha" >> ../sftp-cmds
+        # echo 'mkdir conf' >> ../sftp-cmds
+        # echo 'mkdir db' >> ../sftp-cmds
+        # echo 'mkdir dists' >> ../sftp-cmds
+        # echo 'mkdir pool' >> ../sftp-cmds
+        echo 'put -r *' >> ../sftp-cmds
+
+      - pingwait repo.lib.helsinki.fi 10
 
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
@@ -334,6 +334,33 @@ steps:
   - name: package
     image: debian:12
     commands:
+
+      - PROD_OR_BETA=release
+      - BUILD_TYPES=stable,unstable
+      - GIT_ORIGIN=origin
+      - BUILD_TYPE=stable
+
+      - |
+        pingwait () {
+          domain=$1
+          tries=$2
+          for i in $(seq 1 $tries)
+          do
+            if ! which ping > /dev/null; then
+              timeout 2 bash -c '</dev/tcp/$domain/80' && echo "DNS+inet OK" || echo "DNS+inet Fail"
+              echo "nameserver 8.8.8.8" > /etc/resolv.conf
+            else
+              if ping -c 1 $domain; then
+                echo "Pinged $domain from $i try. Proceeding further."
+                break
+              fi
+              /etc/init.d/dns-clean restart || systemd-resolve --flush-caches || /etc/init.d/nscd restart || /etc/init.d/networking restart
+            fi
+          done
+        }
+
+      - pingwait deb.debian.org 10
+
       - apt-get -qq update
       - apt-get -y -qq install devscripts dh-make fakeroot debian-archive-keyring ca-certificates wget curl gnupg2 git equivs openssh-client reprepro
       - apt-get -y -qq install docbook-xsl docbook-xsl-ns
@@ -367,77 +394,54 @@ steps:
       - git config --global user.email "nobody@example.com"
       - EPOCH=`date +%s`
 
-      - |
-        # ping github.com in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 github.com; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+      - pingwait github.com 10
 
-      - git fetch --depth=1 origin +refs/heads/master
-      - COMMIT_COMMUNITYMASTER="[hash unknown]";
-      # - COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)";
-      - COMMIT_PREPROD=`git rev-parse --short HEAD`
+      # - |
+      #   git fetch --depth=1 origin +refs/heads/master
+      #   COMMIT_COMMUNITYMASTER="$(git rev-parse origin/master)"
+      #   [ -z "$COMMIT_COMMUNITYMASTER" ] && COMMIT_COMMUNITYMASTER="[hash unknown]"
+      - CURRENT_COMMIT_SHORT=`git rev-parse --short=7 HEAD`
       - OUR_RELEASE=`cat debian/kk-build/kk-release.txt`
+      # - OUR_BUILD_NUMBER="$(cat debian/kk-build/kk-build-number.txt 2>/dev/null)"
 
       # for now we have solution to set up ours "max"-ed version to always come
       # in "concat(1, KCver)" style over that which comes from community:
-      - >
-          COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')";
-          [ -z "$COMMUNITY_VERSION" ] && { echo "can't detect koha-common version"; exit 1; };
-          OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION="$(apt-cache madison koha-common | awk -F' \\| ' '{print $2}')"
+      - if [ -z "$COMMUNITY_VERSION" ]; then echo "can't detect koha-common version"; exit 1; fi
+      - OUR_VERSION="1$COMMUNITY_VERSION"
+      - COMMUNITY_VERSION_NO="$(echo "$COMMUNITY_VERSION" | sed 's/~git.*//')"
+      - OUR_VERSION_NO="1$COMMUNITY_VERSION_NO"
+      # - DEB_VER_TEXT="$OUR_VERSION~$EPOCH-git$CURRENT_COMMIT_SHORT-1"
+      - DEB_VER_TEXT="$OUR_VERSION_NO-$DRONE_BUILD_NUMBER"
 
-      - dch --force-distribution -D "stretch" "Git build" -v "$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD-1"
+      - dch --force-distribution -D "stretch" "Git build" -v "$DEB_VER_TEXT"
 
-
-      - >
+      - |
           (
-            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER production";
-            echo "";
-            echo -n "  $DRONE_REPO $DRONE_BRANCH, ";
-            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z';
-            echo "  DEB-version $OUR_VERSION based on community version $COMMUNITY_VERSION";
-            echo "  community master  $COMMIT_COMMUNITYMASTER";
-            echo "  our release (both production and preproduction) $DRONE_COMMIT";
-            echo "";
-          ) > debian/kk-build/kk-build.txt
-
-      - >
-          (
-            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)";
-            echo " special (kk-* and bug-*) branches merged:";
+            echo "KK-Koha $OUR_RELEASE.$DRONE_BUILD_NUMBER $PROD_OR_BETA"
+            echo "$CURRENT_COMMIT_SHORT"
+            echo ""
+            echo -n "  $DRONE_REPO $DRONE_BRANCH, "
+            TZ=":Europe/Helsinki" date -d @$EPOCH +'%Y-%m-%d %H:%M:%S %Z'
+            # echo "  community master  $COMMIT_COMMUNITYMASTER ($GIT_ORIGIN/master)"
+            echo "  our commit        $DRONE_COMMIT ($DRONE_BRANCH)"
+            echo "  DEB-version       $DEB_VER_TEXT on community version $COMMUNITY_VERSION"
+            echo ""
+            echo -n "$(git log --merges --after="2021-10-27T00:00:00" --oneline | wc -l)"
+            echo " special (kk-* and bug-*) branches merged:"
+            git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" | \
+              sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
           ) 1>> debian/kk-build/kk-build.txt
 
-      - >
-          git log --merges --after="2021-10-27T00:00:00" --pretty=format:"  %h %s" |
-          sed -n -E -e "s~(Merge branch '|Merge remote-tracking branch '(remotes/)?(origin/)?(NatLibFI/)?)(builds/)?($DRONE_BUILD_NUMBER/)?(.+)' into (.*)(preproduction|production|release)~\\\\7~p"
-          1>> debian/kk-build/kk-build.txt
+      - sed -i -e "s/%OUR_RELEASE%/$OUR_RELEASE/g" debian/kk-build/about.html
+      - sed -i -e "s/%OUR_BUILD_NUMBER%/$DRONE_BUILD_NUMBER $PROD_OR_BETA/g" debian/kk-build/about.html
 
-      - >
-          (
-            sed -i -e s/%OUR_RELEASE%/$OUR_RELEASE/g debian/kk-build/about.html;
-            sed -i -e s/%DRONE_BUILD_NUMBER%/$DRONE_BUILD_NUMBER\ Production/g debian/kk-build/about.html;
-          )
-
-      # - echo "debian/kk-build/favicon.ico                      usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico"
-      #     1>> debian/koha-common.install
-      - echo "debian/kk-build/kk-build.txt                     usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-      - echo "debian/kk-build/about.html                       usr/share/koha/intranet/htdocs"
-          1>> debian/koha-common.install
-
-      # - echo "debian/kk-build/favicon.ico"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo1.jpg"
-      #     1>> debian/source/include-binaries
-      # - echo "debian/kk-build/kk-logo2.jpg"
-      #     1>> debian/source/include-binaries
-
-
+      # - echo "debian/kk-build/favicon.ico usr/share/koha/intranet/htdocs/intranet-tmpl/prog/img/favicon.ico" 1>> debian/koha-common.install
+      # - echo "debian/kk-build/favicon.ico" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo1.jpg" 1>> debian/source/include-binaries
+      # - echo "debian/kk-build/kk-logo2.jpg" 1>> debian/source/include-binaries
+      - echo "debian/kk-build/kk-build.txt usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
+      - echo "debian/kk-build/about.html  usr/share/koha/intranet/htdocs" 1>> debian/koha-common.install
 
       - git add debian/changelog
       - git add debian/kk-build/kk-build.txt
@@ -445,34 +449,27 @@ steps:
       - git add debian/koha-common.install
 
       - git commit -m "Modified changelog for build"
-      - git archive --format=tar HEAD | gzip > "../koha_$OUR_VERSION~$EPOCH-git$COMMIT_PREPROD.orig.tar.gz"
-      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey
-
-      - mkdir -p ../repos/conf
-      - cp .reprepro.stable ../repos/conf/distributions
-      - echo "" >> ../repos/conf/distributions
-      - cat .reprepro.unstable >> ../repos/conf/distributions
-      - cd ../repos
-      - reprepro includedeb stable ../*.deb
-      - reprepro includedeb unstable ../*.deb
-      - cd ../repos
-      - echo "cd koha" >> ../sftp-cmds
-     # - echo 'mkdir conf' >> ../sftp-cmds
-     # - echo 'mkdir db' >> ../sftp-cmds
-     # - echo 'mkdir dists' >> ../sftp-cmds
-     # - echo 'mkdir pool' >> ../sftp-cmds
-      - echo 'put -r *' >> ../sftp-cmds
+      - git archive --format=tar HEAD | gzip > "../koha_$DEB_VER_TEXT.orig.tar.gz"
+      - DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -ktestkey -b
 
       - |
-        # ping repo.lib.helsinki.fi in loop until it reponds (and reset DNS in between):
-        for i in {1..7}
-        do
-          if ping -c 1 repo.lib.helsinki.fi; then
-            echo "Pinged repo from $i try. Proceeding further."
-            break
-          fi
-          /etc/init.d/dns-clean restart
-        done
+        mkdir -p ../repos/conf
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && cat .reprepro.stable >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && echo "" >> ../repos/conf/distributions
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && cat .reprepro.unstable >> ../repos/conf/distributions
+        cd ../repos
+        echo "$BUILD_TYPES" | grep -q -E '\bstable\b' && reprepro includedeb stable ../*.deb
+        echo "$BUILD_TYPES" | grep -q -E '\bunstable\b' && reprepro includedeb unstable ../*.deb
+        cd ../repos
+        echo "cd koha" >> ../sftp-cmds
+        # echo 'mkdir conf' >> ../sftp-cmds
+        # echo 'mkdir db' >> ../sftp-cmds
+        # echo 'mkdir dists' >> ../sftp-cmds
+        # echo 'mkdir pool' >> ../sftp-cmds
+        echo 'put -r *' >> ../sftp-cmds
+
+      - pingwait repo.lib.helsinki.fi 10
 
       - sftp -i ../id_rsa -o StrictHostKeyChecking=no -b ../sftp-cmds $SFTPUSER@repo.lib.helsinki.fi # host key checking should not be needed, worst case: packages are not uploaded.
 
