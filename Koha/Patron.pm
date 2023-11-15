@@ -1346,6 +1346,12 @@ sub update_lastseen {
         map { ( lc $_, 1 ); } split /\s*\,\s*/,
         C4::Context->preference('TrackLastPatronActivityTriggers')
     };
+
+    unless ($activity) {
+        my $ta = $tracked_activities->{$activity} ? 'found' : 'absent';
+        warn "[post Bug-15504]: WARNING: undefined activity [$ta] in hash.\n";
+        return $self;
+    }
     return $self unless $tracked_activities->{$activity};
 
     my $cache     = Koha::Caches->get_instance();
