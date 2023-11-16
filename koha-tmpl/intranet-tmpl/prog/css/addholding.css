@@ -40,23 +40,18 @@ ul li.tag::before {
     top: 0;
 }
 
-ul li.tag.sortable_tag::before,
-ul li.tag li.subfield_line::before {
+ul .handle {
     color: #999;
-    content: "\f0c9";
     cursor: move;
-    font-family: FontAwesome;
-    font-size: .8em;
-    left: 10px;
-    position: absolute;
-    top: 0;
-}
+    font-family: "Font Awesome 6 Free";
+    font-size: 1em;
+    padding-right: 3px;
+    passing-top: ;
 
-li.ui-sortable-helper {
-    background-color: #E0E0E0;
-    border-radius: 4px;
-    max-height: 150px;
-    padding: 2px;
+}
+ul li.subfield_line .handle {
+    font-size: .8em;
+
 }
 
 li.sortable-ghost {
