@@ -56,12 +56,16 @@
 
         $("#addholdingtabs ul.sortable_field").each( (i, e) => {
             Sortable.create(e, {
+                handle: '.handle',
+                direction: 'horizontal',
                 animation: 150
             });
         });
 
         $("#addholdingtabs ul.sortable_subfield").each( (i, e) => {
             Sortable.create(e, {
+                handle: '.handle',
+                direction: 'horizontal',
                 animation: 150
             });
         });
@@ -749,6 +753,9 @@ $(document).ready(function(){
                                             <li class="tag clearfix" id="tag_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]">
                                         [% END %]
                                             <div class="tag_title" id="div_indicator_tag_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]">
+                                                [% IF ( innerloo.repeatable ) %]
+                                                <span class="handle">&#xf58e;</span>
+                                                [% END %]
                                                 [% IF advancedMARCEditor %]
                                                     <a href="#" tabindex="1" class="tagnum" title="[% innerloo.tag_lib | html %] - Click to Expand this Tag" data-field_id="tag_[% innerloo.tag | html %]_[% innerloo.index | html %][% innerloo.random | html %]">[% innerloo.tag | html %]</a>
                                                 [% ELSE %]
@@ -811,6 +818,7 @@ $(document).ready(function(){
                                                 <!--  One line on the marc editor -->
                                                 <li class="subfield_line" style="[% subfield_loo.visibility | html %]" id="subfield[% subfield_loo.tag | html %][% subfield_loo.subfield | html %][% subfield_loo.random | html %]">
                                                     <div class="subfieldcode">
+                                                        <span class="handle">&#xf58e;</span>
                                                         <input type="text"
                                                                 title="[% subfield_loo.marc_lib | $raw %]"
                                                                 style=" [% IF ( subfield_loo.fixedfield ) %]display:none; [% END %]border:0;"
