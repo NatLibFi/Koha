@@ -78,21 +78,18 @@
             selectTab( "#tab0XX_panel" );
         }
 
-        $("#addbibliotabs ul.sortable_field").each( (i, e) => {
-            Sortable.create(e, {
-                handle: '.handle',
-                direction: 'vertical',
-                animation: 150
+        function initializeSortable(selector) {
+            $(selector).each((i, e) => {
+                Sortable.create(e, {
+                    handle: '.handle',
+                    direction: 'vertical',
+                    animation: 150,
+                });
             });
-        });
+        }
 
-        $("#addbibliotabs ul.sortable_subfield").each( (i, e) => {
-            Sortable.create(e, {
-                handle: '.handle',
-                direction: 'vertical',
-                animation: 150
-            });
-        });
+        initializeSortable("#addbibliotabs ul.sortable_field");
+        initializeSortable("#addbibliotabs ul.sortable_subfield");
 
         [% IF tab %]
             hash = "#[% tab | html %]";
