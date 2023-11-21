@@ -1465,7 +1465,7 @@
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         $(document).ready(function () {
-            $("#orders").kohaTable(
+            var orderst = $("#orders").kohaTable(
                 {
                     bKohaColumnsUseNames: true,
                     pagingType: "full",
@@ -1474,9 +1474,42 @@
                 orders_table_settings
             );
 
-            $("#cancelledorderst").kohaTable({
+            var cancelledorderst = $("#cancelledorderst").kohaTable({
                 pagingType: "full",
             });
+
+            $.fn.dataTable.ext.search.push(
+                function( settings, searchData, index, rowData, counter ) {
+                    let term = $(settings.nTableWrapper).find('.dataTables_filter input').val();
+                    if (term === '') {
+                        return true;
+                    }
+                    var row = searchData.join(' ');
+                    if (term.match(/^\s*\d+[-\d+]*\s*$/)) {
+                        let new_term = term.replace(/-/g, '').trim();
+                        row = row.replace(/\b\d[\d-]{7,}\d\b/g,
+                            (match) => {
+                                return match.replace(/-/g,'');
+                            });
+                        term=new_term;
+                    }
+                    if (row.toLowerCase().includes(term.toLowerCase())) {
+                        return true;
+                    }
+                    return false;
+                }
+            );
+
+            $('#orders_wrapper .dataTables_filter input').off().on('keyup', function() {
+                // Draw the table to execute the search plugin
+                orderst.DataTable().draw();
+            });
+
+            $('#cancelledorderst_wrapper .dataTables_filter input').off().on('keyup', function() {
+                // Draw the table to execute the search plugin
+                cancelledorderst.DataTable().draw();
+            });
+
             $("#reopenform").on("submit", function (e) {
                 var is_confirmed = skip_confirm_reopen || confirm(_("Are you sure you want to reopen this basket?"));
                 if (is_confirmed) {
