@@ -646,6 +646,11 @@ function _dt_default_ajax(params) {
                                             variants.push(...join_values([year, arr[0], arr[1]]));
                                         });
                                     });
+                                    years.forEach(function (year) {
+                                        generatePermutations(in_values).forEach(function (arr) {
+                                            variants.push(...join_values([year, arr[1], arr[0]]));
+                                        });
+                                    });
                                 // } else if(months.length) {
                                 //     months.forEach(function (month) {
                                 //         generatePermutations(in_values).forEach(function (arr) {
@@ -665,6 +670,8 @@ function _dt_default_ajax(params) {
                                     //     variants.push(...join_values([in_values[1], in_values[0]]));
                                     variants.push(...join_values([in_values[0], in_values[1]]));
                                     variants.push(...join_values([in_values[1], in_values[0]]));
+                                    variants.push(...join_values([in_values[0], '%', in_values[1]]));
+                                    variants.push(...join_values([in_values[1], '%', in_values[0]]));
                                 }
                             } else if (in_values.length === 1) {
                                 if(years.length && months.length) {
