@@ -517,7 +517,14 @@ function _dt_default_ajax(params) {
                         if (! match) return;
                         let in_values = match.slice(1).filter(Boolean);
                         // return self if 1:
-                        if (in_values.length == 1) return in_values;
+                        if (in_values.length == 1) {
+                            if ( in_values[0] < 120 ) {
+                                let today = new Date();
+                                let age = today.getFullYear() - in_values[0];
+                                return [age, in_values[0]];
+                            }
+                            return in_values;
+                        }
 
                         let years = [], months = [], days = [];
                         // Eating out for sure years
@@ -624,7 +631,12 @@ function _dt_default_ajax(params) {
                                 //     });
                                 } else if(years.length) {
                                     years.forEach(function (year) {
-                                        variants.push(...join_values([year]));
+                                        if ( years[0] < 120 ) {
+                                            let today = new Date();
+                                            let age = today.getFullYear() - years[0];
+                                            variants.push(age);
+                                        }
+                                        variants.push(year);
                                     });
                                 // } else if(months.length) {
                                 //     months.forEach(function (month) {
