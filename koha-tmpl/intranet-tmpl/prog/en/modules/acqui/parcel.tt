@@ -393,6 +393,12 @@
                     ],
                     pagingType: "full",
                 });
+
+                $('#receivedt_wrapper .dataTables_filter input').off().on('keyup', function() {
+                    // Draw the table to execute the search plugin
+                    receivedt.DataTable().draw();
+                });
+
             }
 
             var options = {
@@ -668,6 +674,33 @@
             let table_settings = [% TablesSettings.GetTableSettings( 'acqui', 'parcel', 'pending_orders', 'json' ) | $raw %];
 
             var pending_orders_table = $("#pending_orders").kohaTable(options, table_settings, 1, { "basket.vendor_id": [% booksellerid | html %] });
+
+            $.fn.dataTable.ext.search.push(
+                function( settings, searchData, index, rowData, counter ) {
+                    let term = $(settings.nTableWrapper).find('.dataTables_filter input').val();
+                    if (term === '') {
+                        return true;
+                    }
+                    var row = searchData.join(' ');
+                    if (term.match(/^\s*\d+[-\d+]*\s*$/)) {
+                        let new_term = term.replace(/-/g, '').trim();
+                        row = row.replace(/\b\d[\d-]{7,}\d\b/g,
+                            (match) => {
+                                return match.replace(/-/g,'');
+                            });
+                        term=new_term;
+                    }
+                    if (row.match(new RegExp(term, 'i'))) {
+                        return true;
+                    }
+                    return false;
+                }
+            );
+
+            $('#pending_orders_wrapper .dataTables_filter input').off().on('keyup', function() {
+                // Draw the table to execute the search plugin
+                pending_orders_table.DataTable().draw();
+            });
 
             var api = pending_orders_table.api();
             api.on('draw', function () {
