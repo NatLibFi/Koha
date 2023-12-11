@@ -197,6 +197,7 @@
                                         [% INCLUDE 'biblio-title.inc' biblio=order link = 1 %]
                                         [% IF ( order.author ) %]/ [% order.author | html %][% END %]
                                         [% IF ( order.isbn ) %]- [% order.isbn | html %][% END %]
+                                        [% IF ( order.issn ) %] - [% order.issn | html %][% END %]
                                         [% IF ( order.publishercode ) %]
                                             <br />Publisher: [% order.publishercode | html %]
                                             [%- IF    ( order.publicationyear > 0) -%]
@@ -459,6 +460,7 @@
                                 result = '<p><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' + encodeURIComponent(row.biblio_id) + '">' + escape_str(row.biblio.title) + "</a>";
                                 if (row.biblio.author != null) result += _(" by ") + escape_str(row.biblio.author);
                                 if (row.biblio.isbn != null) result += " &ndash; " + escape_str(row.biblio.isbn);
+                                if (row.biblio.issn != null) result += " &ndash; " + escape_str(row.biblio.issn);
                                 if (Koha.prefs.marcflavour == "UNIMARC" && row.biblio.ean != null) {
                                     result += " &ndash; EAN:" + escape_str(row.biblio.ean);
                                 }
