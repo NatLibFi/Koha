@@ -724,6 +724,11 @@ function _dt_default_ajax(params) {
                         return variants;
                     }
 
+                    let values_variants=[];
+                    if ( col['searchExpander'] ) {
+                        values_variants = col['searchExpander'](attr, value);
+                    }
+
                     let built_value;
                     let coded_codes = [];
                     if (col.type == "date") {
