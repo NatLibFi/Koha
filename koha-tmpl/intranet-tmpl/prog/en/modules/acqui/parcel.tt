@@ -230,6 +230,7 @@
                                         [% INCLUDE 'biblio-title.inc' biblio=order link = 1 %]
                                         [% IF ( order.author ) %]/ [% order.author | html %][% END %]
                                         [% IF ( order.isbn ) %]- [% order.isbn | html %][% END %]
+                                        [% IF ( order.issn ) %] - [% order.issn | html %][% END %]
                                         [% IF ( order.publishercode ) %]
                                             <br />Publisher: [% order.publishercode | html %]
                                             [%- IF    ( order.publicationyear > 0) -%]
@@ -449,7 +450,7 @@
                         }
                     },
                     {
-                        [% SET summary_fields = "biblio.title:biblio.author:biblio.isbn:biblio.publisher:me.internal_note:me.vendor_note" %]
+                        [% SET summary_fields = "biblio.title:biblio.author:biblio.isbn:biblio.issn:biblio.publisher:me.internal_note:me.vendor_note" %]
                         [% IF Koha.Preference('marcflavour')=='UNIMARC' %][% SET summary_fields = summary_fields _ ":biblio.ean" %][% END %]
                         "data": "[% summary_fields | html %]",
                         "render": function(data, type, row, meta) {
@@ -460,6 +461,8 @@
                                     result += _(" by ") + escape_str(row.biblio.author);
                                 if ( row.biblio.isbn != null )
                                     result += " &ndash; " + escape_str(row.biblio.isbn);
+                                if ( row.biblio.issn != null )
+                                    result += " &ndash; " + escape_str(row.biblio.issn);
                                 [% IF Koha.Preference('marcflavour')=='UNIMARC' %]
                                     if ( row.biblio.ean != null )
                                         result += " &ndash; EAN:" + escape_str(row.biblio.ean);
