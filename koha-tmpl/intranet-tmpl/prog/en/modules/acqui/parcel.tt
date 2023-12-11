@@ -453,6 +453,63 @@
                         [% SET summary_fields = "biblio.title:biblio.author:biblio.isbn:biblio.issn:biblio.publisher:me.internal_note:me.vendor_note" %]
                         [% IF Koha.Preference('marcflavour')=='UNIMARC' %][% SET summary_fields = summary_fields _ ":biblio.ean" %][% END %]
                         "data": "[% summary_fields | html %]",
+                        "searchExpander": function(attr, value) {
+                            let variations = [];
+
+                            if ( !attr.match(/\.(isbn|issn)$/) ) {
+                                return [];
+                            }
+                            if (value.match(/^\s*\d+[-\d+]*\s*$/)) {
+                                value = value.replace(/\D/g, '');
+                                variations.push(value);
+
+                                // variations:
+                                let templates = [
+                                    'X-XXX-XXXXX-X',
+                                    'X-XXXX-XXXX-X',
+                                    'X-XXXXX-XXX-X',
+                                    'X-XXXXXX-XX-X',
+                                    'X-XXXXXXX-X-X',
+                                    'XX-XXX-XXXX-X',
+                                    'XX-XXXX-XXX-X',
+                                    'XX-XXXXX-XX-X',
+                                    'XX-XXXXXX-X-X',
+                                    'XXX-X-XXX-XXX',
+                                    'XXX-X-XXX-XXXXX-X',
+                                    'XXX-X-XXXX-XXXX-X',
+                                    'XXX-X-XXXXXX-XX-X',
+                                    'XXX-XX-XXX-XXXX-X',
+                                    'XXX-XXX-X-XXXXX-X',
+                                    'XXX-XXX-XXX-X',
+                                    'XXX-XXX-XXXX-XXX',
+                                    'XXX-XXXXXXXXXX',
+                                    'XXXX-X-XXXX-X',
+                                    'XXXX-XXXX',
+                                    'XXXXX-XX-XX-X',
+                                    'XXXXXXXXXXXXX',
+                                ];
+
+                                // loop over templates and replace X with digits,
+                                // even if there's not enough digits to fill so cut on that point (incomplete):
+                                for (let template of templates) {
+                                    let variation = '';
+                                    let i = 0;
+                                    for (let c of template) {
+                                        if (i >= value.length) {
+                                            break;
+                                        }
+                                        if (c === 'X') {
+                                            variation += value[i];
+                                            i++;
+                                        } else {
+                                            variation += c;
+                                        }
+                                    }
+                                    variations.push(variation);
+                                }
+                            }
+                            return variations;
+                        },
                         "render": function(data, type, row, meta) {
                             var result = '';
                             if ( row && row.biblio_id != null ) {
