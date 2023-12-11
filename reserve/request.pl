@@ -621,8 +621,12 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     }
                 }
                 $reserve{'expirationdate'} = $res->expirationdate;
+
+                my $today = dt_from_string()->truncate(to => 'day');
+                my $expirationdate = dt_from_string( $res->expirationdate )->truncate(to => 'day');
                 $reserve{'expired'}        = 1
-                    if ( DateTime->compare( dt_from_string( $res->expirationdate ), dt_from_string() ) == -1 );
+                    if ( DateTime->compare( $expirationdate, $today ) == -1 );
+
                 $reserve{'date'}           = $res->reservedate;
                 $reserve{'borrowernumber'} = $res->borrowernumber();
                 $reserve{'biblionumber'}   = $res->biblionumber();
