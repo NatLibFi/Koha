@@ -508,11 +508,210 @@ function _dt_default_ajax(params) {
                     var attr = attributes[i];
                     let default_build = true;
 
+                    function guess_date_more(date) {
+                        // return if empty:
+                        if (!date) return;
+
+                        const match = date.match(/\b(\d{1,4})(?:\D+(\d{1,4})(?:\D+(\d{1,4})?)?)?\b/);
+                        // return if not found:
+                        if (! match) return;
+                        let in_values = match.slice(1).filter(Boolean);
+                        // return self if 1:
+                        if (in_values.length == 1) return in_values;
+
+                        let years = [], months = [], days = [];
+                        // Eating out for sure years
+                        in_values = in_values.filter(value => {
+                            if (value > 31) {
+                                years.push(value);
+                                return false;
+                            }
+                            return true;
+                        });
+                        if(years.length) {
+                            // Eating out for sure days
+                            in_values = in_values.filter(value => {
+                                if (value > 12) {
+                                    days.push(value);
+                                    return false;
+                                }
+                                return true;
+                            });
+                        }
+
+                        function lead_zero(v) {
+                            if(v === '%')
+                                return v;
+                            return v.length === 1 ? '0' + v : v;
+                        }
+                        function join_values(a) {
+                            a = a.filter(Boolean);
+                            if (a.lengh === 0) {
+                                return;
+                            } else if (a.length === 1) {
+                                return [a[0]];
+                            } else if (a.length === 2) {
+                                return [
+                                    a.map(lead_zero).join('-'),
+                                    [ a[0], lead_zero(a[1]) ].join('-'),
+                                    [ lead_zero(a[0]), a[1] ].join('-'),
+                                ];
+                            }
+                            // 3 items:
+                            return [
+                                a.map(lead_zero).join('-'),
+                                a.slice(0, -1).map(lead_zero).concat(a.slice(-1)).join('-'),
+                                [ a[0], lead_zero(a[1]), a[2] ].join('-'),
+                            ];
+                        }
+
+                        function generatePermutations(arr) {
+                            let result = [];
+                            // Recursive function to generate permutations
+                            function permute(arr, m = []) {
+                                if (arr.length === 0) {
+                                    result.push(m);
+                                } else {
+                                    for (let i = 0; i < arr.length; i++) {
+                                        let curr = arr.slice();
+                                        let next = curr.splice(i, 1);
+                                        permute(curr.slice(), m.concat(next));
+                                    }
+                               }
+                            }
+                            permute(arr);
+                            return result;
+                        }
+
+                        let variants = [];
+
+                        if (in_values.length && years.length && days.length) {
+                            // Eating out for sure months
+                            months.push(in_values[0]);
+                            in_values = [];
+                            // this can be only once, if we for sure found year and day
+                            // no more values, we can return the result:
+                            variants.push(...join_values([years[0], months[0], days[0]]));
+                        }
+                        else {
+
+                            let in_values_length = (years.length ? 1 : 0) + (months.length ? 1 : 0) + (days.length ? 1 : 0)
+                                + in_values.length;
+                            // console.log('INVALUES: ' + in_values_length + ', guessed years, months, days:', years, months, days);
+
+                            if (in_values.length === 0) {
+                                if(years.length && months.length && days.length) {
+                                    years.forEach(function (year) {
+                                        variants.push(...join_values([year, months[0], days[0]]));
+                                    });
+                                // } else if(years.length && months.length) {
+                                //     years.forEach(function (year) {
+                                //         months.forEach(function (month) {
+                                //             variants.push(...join_values([year, month]));
+                                //         });
+                                //     });
+                                } else if(years.length && days.length) {
+                                    years.forEach(function (year) {
+                                        days.forEach(function (day) {
+                                            variants.push(...join_values([year, '%', day]));
+                                        });
+                                    });
+                                // } else if(months.length && days.length) {
+                                //     months.forEach(function (month) {
+                                //         days.forEach(function (day) {
+                                //             variants.push(...join_values([month, day]));
+                                //         });
+                                //     });
+                                } else if(years.length) {
+                                    years.forEach(function (year) {
+                                        variants.push(...join_values([year]));
+                                    });
+                                // } else if(months.length) {
+                                //     months.forEach(function (month) {
+                                //         variants.push(...join_values([month]));
+                                //     });
+                                // } else if(days.length) {
+                                //     days.forEach(function (day) {
+                                //         variants.push(...join_values([day]));
+                                //     });
+                                }
+                            } else if (in_values.length === 3) {
+                                generatePermutations(in_values).forEach(function (arr) {
+                                    variants.push(...join_values([arr[0], arr[1], arr[2]]));
+                                });
+                            } else if (in_values.length === 2) {
+                                if(years.length) {
+                                    years.forEach(function (year) {
+                                        generatePermutations(in_values).forEach(function (arr) {
+                                            variants.push(...join_values([year, arr[0], arr[1]]));
+                                        });
+                                    });
+                                // } else if(months.length) {
+                                //     months.forEach(function (month) {
+                                //         generatePermutations(in_values).forEach(function (arr) {
+                                //             variants.push(...join_values([arr[0], month, arr[1]]));
+                                //         });
+                                //     });
+                                // } else if(days.length) {
+                                //     days.forEach(function (day) {
+                                //         generatePermutations(in_values).forEach(function (arr) {
+                                //             variants.push(...join_values([arr[0], arr[1], day]));
+                                //         });
+                                //     });
+                                } else {
+                                    // if (in_values[0] <= 12)
+                                    //     variants.push(...join_values([in_values[0], in_values[1]]));
+                                    // if (in_values[1] <= 12)
+                                    //     variants.push(...join_values([in_values[1], in_values[0]]));
+                                    variants.push(...join_values([in_values[0], in_values[1]]));
+                                    variants.push(...join_values([in_values[1], in_values[0]]));
+                                }
+                            } else if (in_values.length === 1) {
+                                if(years.length && months.length) {
+                                    years.forEach(function (year) {
+                                        months.forEach(function (month) {
+                                            variants.push(...join_values([year, month, in_values[0]]));
+                                        });
+                                    });
+                                } else if(years.length && days.length) {
+                                    years.forEach(function (year) {
+                                        days.forEach(function (day) {
+                                            variants.push(...join_values([year, in_values[0], days]));
+                                        });
+                                    });
+                                } else if(years.length) {
+                                    years.forEach(function (year) {
+                                        variants.push(...join_values([year, '%', in_values[0]]));
+                                        if (in_values[0] <= 12)
+                                            variants.push(...join_values([year, in_values[0]]));
+                                    });
+                                } else if(days.length) {
+                                    days.forEach(function (day) {
+                                        variants.push(...join_values([in_values[0], day]));
+                                    });
+                                } else {
+                                    variants.push(in_values[0]);
+                                    console.log("We shouldn't get here btw.");
+                                }
+                            }
+                        }
+
+                        // Remove duplicates
+                        variants = [...new Set(variants)];
+                        // console.log('GUESSED DATES:', variants);
+                        return variants;
+                    }
+
                     let built_value;
                     if (col.type == "date") {
                         let rfc3339 = $date_to_rfc3339(value);
                         if (rfc3339 != "Invalid Date") {
                             built_value = rfc3339;
+                        } else {
+                            let date_guessed = guess_date_more(value);
+                            if ( date_guessed ) {
+                                values_variants = date_guessed;
+                            }
                         }
                     }
 
@@ -612,23 +811,39 @@ function _dt_default_ajax(params) {
                                 ? [value, built_value]
                                 : value;
                         } else {
-                            let like = {
-                                like:
-                                    (["contains", "ends_with"].indexOf(
-                                        criteria
-                                    ) !== -1
-                                        ? "%"
-                                        : "") +
-                                    value +
-                                    (["contains", "starts_with"].indexOf(
-                                        criteria
-                                    ) !== -1
-                                        ? "%"
-                                        : ""),
-                            };
-                            value_part = built_value
-                                ? [like, built_value]
-                                : like;
+                            // let like = {
+                            //     like:
+                            //         (["contains", "ends_with"].indexOf(
+                            //             criteria
+                            //         ) !== -1
+                            //             ? "%"
+                            //             : "") +
+                            //         value +
+                            //         (["contains", "starts_with"].indexOf(
+                            //             criteria
+                            //         ) !== -1
+                            //             ? "%"
+                            //             : ""),
+                            // };
+                            // value_part = built_value
+                            //     ? [like, built_value]
+                            //     : like;
+
+                            if ( values_variants.length ) {
+                                let values_variants_like = [];
+                                // values_variants.push(value);
+                                for (let i = 0; i < values_variants.length; i++) {
+                                    values_variants_like.push({ like: (['contains', 'ends_with'].indexOf(criteria) !== -1 ? '%' : '') + values_variants[i] + (['contains', 'starts_with'].indexOf(criteria) !== -1 ? '%' : '') });
+                                }
+                                if ( built_value ) {
+                                    values_variants_like.push(built_value);
+                                }
+                                value_part = values_variants_like;
+                            } else {
+                                let like = {like: (['contains', 'ends_with'].indexOf(criteria) !== -1?'%':'') + value + (['contains', 'starts_with'].indexOf(criteria) !== -1?'%':'')};
+                                value_part = built_value ? [like, built_value] : like;
+                            }
+
                         }
 
                         part[!attr.includes(".") ? "me." + attr : attr] =
