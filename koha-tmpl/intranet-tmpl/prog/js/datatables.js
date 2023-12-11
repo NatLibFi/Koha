@@ -721,6 +721,11 @@ function _dt_default_ajax(params) {
                         return variants;
                     }
 
+                    let values_variants=[];
+                    if ( col['searchExpander'] ) {
+                        values_variants = col['searchExpander'](attr, value);
+                    }
+
                     let built_value;
                     if (col.type == "date") {
                         let rfc3339 = $date_to_rfc3339(value);
