@@ -1512,8 +1512,49 @@ sub _send_message_by_email {
         if !$message->{from_address}
         || $message->{from_address} ne $email->email->header('From');
 
-    try {
-        $email->send_or_die({ transport => $smtp_transport });
+    my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
+        ? $email->email->header('To') : $message->{to_address};
+    my $tmp_id = $message->{message_id};
+
+    local $Carp::Verbose = 0;
+
+    my $tmp_error;
+    my $tries = 5;
+    while( $tries-- ) {
+        eval {
+            $email->send_or_die({ transport => $smtp_transport });
+        };
+        if( $@ ) {
+            $tmp_error = $@;
+
+            if(    $Mail::Sendmail::error &&
+                   $Mail::Sendmail::error =~ /failed after MAIL FROM: too many messages in this connection/
+                   or
+                   $tmp_error &&
+                   $tmp_error =~ /failed after MAIL FROM: too many messages in this connection/
+            ) {
+
+                warn scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: Overload error [$tmp_to]: "
+                    . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+                    . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+                    . "\n";
+
+                # Do we need to renew the connection somehow?
+                sleep 15;
+                next;
+            }
+            # it was another error, fail instantly:
+            warn scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: Error sending message [$tmp_to]:"
+                . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+                . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+                . "\n";
+            last;
+        };
+
+        # warn scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: SUCCESS [$tmp_to]"
+        # . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+        # . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+        #     . "\n";
 
         _set_message_status(
             {
@@ -1524,25 +1565,22 @@ sub _send_message_by_email {
         );
         return 1;
     }
-    catch {
-        _set_message_status(
-            {
-                message_id => $message->{'message_id'},
-                status     => 'failed',
-                failure_code => 'SENDMAIL'
-            }
-        );
 
-        my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
-            ? $email->email->header('To') : $message->{to_address};
-        my $tmp_id = $message->{message_id};
+    _set_message_status(
+        {
+            message_id => $message->{'message_id'},
+            status     => 'failed',
+            failure_code => 'SENDMAIL'
+        }
+    );
 
-        carp scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to\n"
-            . ($Mail::Sendmail::error ? "Mail::Sendmail::error = " . $Mail::Sendmail::error . "\n" : '')
-            . ($_ ? "Mailer Issue: " . $_ . "\n" : '');
+    warn scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to"
+        . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+        . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+        . "\n"
+    ;
 
-        return;
-    };
+    return;
 }
 
 sub _wrap_html {
