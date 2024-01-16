@@ -1596,37 +1596,103 @@ sub _send_message_by_email {
     };
     return unless $email;
 
-    my $smtp_server;
-    if ($library) {
-        $smtp_server = $library->smtp_server;
-    } else {
-        $smtp_server = Koha::SMTP::Servers->get_default;
-    }
-
-    if ($username) {
-        $smtp_server->set(
-            {
-                sasl_username => $username,
-                sasl_password => $password,
-            }
-        );
-    }
-
     # if initial message address was empty, coming here means that a to address was found and
     # queue should be updated; same if to address was overridden by Koha::Email->create
     _update_message_to_address( $message->{'message_id'}, $email->email->header('To') )
         if !$message->{to_address}
         || $message->{to_address} ne $email->email->header('To');
 
-    $smtp_transports->{ $smtp_server->id // 'default' } ||= $smtp_server->transport;
-    my $smtp_transport = $smtp_transports->{ $smtp_server->id // 'default' };
-
     _update_message_from_address( $message->{'message_id'}, $email->email->header('From') )
         if !$message->{from_address}
         || $message->{from_address} ne $email->email->header('From');
 
-    try {
-        $email->send_or_die( { transport => $smtp_transport } );
+    my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
+        ? $email->email->header('To') : $message->{to_address};
+    my $tmp_id = $message->{message_id};
+
+    local $Carp::Verbose = 0;
+
+    my $smtp_server;
+    my $smtp_transport;
+    my $tmp_error;
+    my $tries = 1;
+
+    while( $tries-- ) {
+
+        unless( $smtp_server ) {
+            if ( $library ) {
+                $smtp_server = $library->smtp_server;
+            }
+            else {
+                $smtp_server = Koha::SMTP::Servers->get_default;
+            }
+
+            if ( $username ) {
+                $smtp_server->set(
+                    {
+                        sasl_username => $username,
+                        sasl_password => $password,
+                    }
+                );
+            }
+
+            $smtp_transports->{ $smtp_server->id // 'default' } ||= $smtp_server->transport;
+            $smtp_transport = $smtp_transports->{ $smtp_server->id // 'default' };
+        }
+
+        eval {
+            $email->send_or_die({ transport => $smtp_transport });
+        };
+        if( $@ ) {
+            $tmp_error = $@;
+
+            if(    $Mail::Sendmail::error &&
+                   $Mail::Sendmail::error =~ /failed after MAIL FROM: too many messages in this connection/
+                   or
+                   $tmp_error &&
+                   $tmp_error =~ /failed after MAIL FROM: too many messages in this connection/
+            ) {
+                # OVERLOAD ERROR: retry and try to reset server
+                # ----------------------
+
+                print STDERR scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: Overload error [$tmp_to]: "
+                    . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+                    . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+                    . "\n";
+
+                # Do we need to renew the connection somehow? BETA, trying this code:
+                $smtp_transports->{ $smtp_server->id // 'default' } = undef;
+                $smtp_server = undef;
+
+                sleep 15;
+                next;
+            }
+
+            # ANOTHER ERROR: fail instantly
+            # ----------------------
+            print STDERR scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: Error sending message [$tmp_to]:"
+                . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+                . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+                . "\n";
+
+            _set_message_status(
+                {
+                    message_id => $message->{'message_id'},
+                    status     => 'failed',
+                    failure_code => 'SENDMAIL'
+                }
+            );
+
+            return;
+        };
+
+        # SUCCESS: set status and return
+        # ----------------------
+
+        # print STDERR scalar(localtime) . " [$$] $tmp_id: PRE-RELEASE-DEBUG: SUCCESS [$tmp_to]"
+        # . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+        # . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+        #     . "\n";
 
         _set_message_status(
             {
@@ -1636,25 +1702,18 @@ sub _send_message_by_email {
             }
         );
         return 1;
-    } catch {
-        _set_message_status(
-            {
-                message_id   => $message->{'message_id'},
-                status       => 'failed',
-                failure_code => 'SENDMAIL'
-            }
-        );
+    }
 
-        my $tmp_to = ! $message->{to_address} || $message->{to_address} ne $email->email->header('To')
-            ? $email->email->header('To') : $message->{to_address};
-        my $tmp_id = $message->{message_id};
+    # OVERLOAD ERROR: no more retries, but we'll leave message in 'pending' state:
+    # ----------------------
 
-        carp scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to\n"
-            . ($Mail::Sendmail::error ? "Mail::Sendmail::error = " . $Mail::Sendmail::error . "\n" : '')
-            . ($_ ? "Mailer Issue: " . $_ . "\n" : '');
+    print STDERR scalar(localtime) . " [$$] $tmp_id: ERROR sending message to $tmp_to"
+        . ($Mail::Sendmail::error ? "\nMail::Sendmail::error = " . $Mail::Sendmail::error : '')
+        . ($tmp_error ? "\nMailer Issue: " . $tmp_error : '')
+        . "\n"
+    ;
 
-        return;
-    };
+    return;
 }
 
 sub _wrap_html {
