@@ -224,6 +224,10 @@ properties:
       - "null"
     description: Itemtype defining the type for this item
     maxLength: 10
+  is_closed_stack:
+    type:
+      - boolean
+      - "null"
   effective_item_type_id:
     type:
       - string
