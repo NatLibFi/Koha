@@ -37,6 +37,11 @@
                     <span class="badge text-bg-info">[% holds_count | html %]</span>
                 [% END %]
             [% END %]
+            [% IF closed_stack_requests_count > 0 %]
+                [% WRAPPER tab_item tabname="closed-stack-requests" %]
+                    <span>Closed stack requests</span> ([% closed_stack_requests_count | html %])
+                [% END %]
+            [% END %]
             [% IF Koha.Preference('EnableBooking') %]
                 [% WRAPPER tab_item tabname="bookings" %]
                     [% SET bookings_count = patron.bookings.filter_by_active.count %]
@@ -226,6 +231,47 @@
                     <p>Patron has nothing on hold.</p>
                 [% END %]
             [% END # /tab_panel#holds %]
+
+            [% IF closed_stack_requests_count > 0 %]
+                [% WRAPPER tab_panel tabname="closed-stack-requests" %]
+                    <div id="closed-stack-requests" role="tabpanel" class="tab-pane">
+                        <form action="/cgi-bin/koha/reserve/modrequest.pl" method="post">
+                            <input type="hidden" name="from" value="circ" />
+
+                            <table id="closed-stack-requests-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hold date</th>
+                                        <th>Title</th>
+                                        <th>Call number</th>
+                                        <th>Item type</th>
+                                        <th>Barcode</th>
+                                        <th>Expiration</th>
+                                        <th>Priority</th>
+                                        <th>Delete?</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                            </table>
+
+                            <fieldset class="action">
+                                <input type="submit" class="cancel" name="submit" value="Cancel marked holds" />
+
+                                [% SET hold_cancellation = AuthorisedValues.GetAuthValueDropbox('HOLD_CANCELLATION') %]
+                                [% IF hold_cancellation.count %]
+                                    <label for="cancellation-reason">Cancellation reason:</label>
+                                    <select name="cancellation-reason">
+                                        <option value="">No reason given</option>
+                                        [% FOREACH reason IN hold_cancellation %]
+                                            <option value="[% reason.authorised_value | html %]">[% reason.lib | html %]</option>
+                                        [% END %]
+                                    </select>
+                                [% END %]
+                            </fieldset>
+                        </form>
+                    </div>
+                [% END %]
+            [% END %]
 
             [% IF Koha.Preference('EnableBooking') %]
                 [% WRAPPER tab_panel tabname="bookings" %]

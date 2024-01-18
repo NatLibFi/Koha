@@ -661,8 +661,9 @@ if ($patron) {
     my $holds = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
     my $waiting_holds = $holds->waiting;
     $template->param(
-        holds_count  => $holds->count_holds,
-        WaitingHolds => $waiting_holds,
+        holds_count                 => $holds->filter_out_closed_stack_requests()->count_holds(),
+        closed_stack_requests_count => $holds->filter_by_closed_stack_requests()->count_holds(),
+        WaitingHolds                => $waiting_holds,
     );
 
     if ( C4::Context->preference('UseRecalls') ) {

@@ -2777,6 +2777,37 @@ sub analytics_count {
     return C4::Items::GetAnalyticsCount( $self->itemnumber );
 }
 
+=head3 is_available_for_closed_stack_request
+
+Returns 1 if item is available for a closed stack request, 0 otherwise
+
+An item is available for a closed stack request if:
+
+=over
+
+=item * it is flagged as "closed stack"
+
+=item * there is no holds on it
+
+=item * it is not checked out
+
+=item * it is not in transfer
+
+=back
+
+=cut
+
+sub is_available_for_closed_stack_request {
+    my ($self) = @_;
+
+    return 0 unless $self->is_closed_stack;
+    return 0 if $self->holds->count > 0;
+    return 0 if $self->checkout;
+    return 0 if $self->get_transfers->count > 0;
+
+    return 1;
+}
+
 =head3 strings_map
 
 Returns a map of column name to string representations including the string,

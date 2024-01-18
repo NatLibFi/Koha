@@ -306,6 +306,11 @@
                                     <span>Holds ([% reserves_count | html %])</span>
                                 [% END %]
                             [% END %]
+                            [% IF ( closed_stack_requests.count ) %]
+                                [% WRAPPER tab_item tabname="opac-user-closed-stack-requests" %]
+                                    <span>Closed stack requests ([% closed_stack_requests.count | html %])</span>
+                                [% END %]
+                            [% END %]
                             [% IF Koha.Preference('UseRecalls') && RECALLS.count %]
                                 [% WRAPPER tab_item tabname= "opac-user-recalls" %]
                                     <span>Recalls ([% RECALLS.count | html %])</span>
@@ -841,6 +846,12 @@
                                 [% END # /tab_panel#opac-user-holds %]
                             [% END # / #RESERVES.count %]
 
+                            [% IF ( closed_stack_requests.count ) %]
+                                [% WRAPPER tab_panel tabname="opac-user-closed-stack-requests" %]
+                                    [% PROCESS 'holds-table.inc' HOLDS = closed_stack_requests, SuspendHoldsOpac = SuspendHoldsOpac, showpriority = showpriority, AutoResumeSuspendedHolds = AutoResumeSuspendedHolds, table_id = 'closed-stack-requests-table' %]
+                                [% END %]
+                            [% END %]
+
                             [% IF Koha.Preference('UseRecalls') && RECALLS.count %]
                                 [% WRAPPER tab_panel tabname="opac-user-recalls" %]
                                     <table id="recalls-table" class="table table-bordered table-striped">
@@ -1102,9 +1113,17 @@
             }
         }
         $(document).ready(function () {
-            if (tab) {
+            [% IF ( opac_user_holds ) %]
+                $("#opac-user-views a[href='#opac-user-holds_panel']").tab("show");
+            [% ELSIF ( opac_user_overdues ) %]
+                $("#opac-user-views a[href='#opac-user-overdues_panel']").tab("show");
+            [% ELSIF ( opac_user_closed_stack_requests ) %]
+                $("#opac-user-views a[href='#opac-user-closed-stack-requests_panel']").tab("show");
+            [% ELSIF ( opac_user_article_requests ) %]
+                $("#opac-user-views a[href='#opac-user-article-requests_panel']").tab("show");
+            [% ELSIF tab %]
                 $(`#opac-user-views a[href='#${tab}_panel']`).tab("show");
-            }
+            [% END %]
             if ($("#opac-user-views .tab-pane.active").length < 1) {
                 $("#opac-user-views a:first").tab("show");
             }
@@ -1211,7 +1230,7 @@
                 });
             });
 
-            var dTables = $("#checkoutst,#holdst,#overduest,#opac-user-relative-issues-table");
+            var dTables = $("#checkoutst,#holdst,#closed-stack-requests-table,#overduest,#opac-user-relative-issues-table");
             dTables.each(function () {
                 var thIndex = $(this).find("th.psort").index();
                 $(this)
