@@ -132,6 +132,7 @@ Items that are not:
   widthdrawn
   not for loan
   not on loan
+  in closed stack
 
 =cut
 
@@ -171,10 +172,11 @@ sub get_items_that_can_fill {
 
     return Koha::Items->search(
         {
-            -or        => \@bibs_or_items,
-            itemnumber => { -not_in => [ @branchtransfers, @waiting_holds, @pending_recalls ] },
-            onloan     => undef,
-            notforloan => 0,
+            -or             => \@bibs_or_items,
+            itemnumber      => { -not_in => [ @branchtransfers, @waiting_holds, @pending_recalls ] },
+            onloan          => undef,
+            notforloan      => 0,
+            is_closed_stack => 0,
         }
     )->filter_by_for_hold();
 }
@@ -234,6 +236,74 @@ sub count_holds {
     $search_attrs->{group_by}       = 'me.hold_group_id';
     my $hold_groups_count = $self->search( $search_params, $search_attrs )->count();
     return $holds_without_group_count + $hold_groups_count;
+}
+
+=head3 filter_by_closed_stack_requests
+
+Apply filter to keep only closed stack requests
+
+    $holds = Koha::Holds->search($filter)->filter_by_closed_stack_requests();
+
+Returns a C<Koha::Holds> object
+
+=cut
+
+sub filter_by_closed_stack_requests {
+    my ($self) = @_;
+
+    return $self->search( $self->_closed_stack_request_filter, { join => 'item' } );
+}
+
+=head3 filter_out_closed_stack_requests
+
+Apply filter to exclude closed stack requests
+
+    $holds = Koha::Holds->search($filter)->filter_out_closed_stack_requests();
+
+Returns a C<Koha::Holds> object
+
+=cut
+
+sub filter_out_closed_stack_requests {
+    my ($self) = @_;
+
+    return $self->search( { -not_bool => $self->_closed_stack_request_filter }, { join => 'item' } );
+}
+
+sub _closed_stack_request_filter {
+
+    # This query returns the top priority reserve's id for each item
+    my $reserve_id_subselect = q{
+        select reserve_id from (
+            select reserve_id, itemnumber, row_number() over (partition by itemnumber order by priority) rank
+            from reserves where itemnumber is not null
+        ) r
+        where rank = 1
+    };
+
+    my %where = (
+        'me.reserve_id'        => { -in => \$reserve_id_subselect },
+        'me.suspend'           => 0,
+        'me.found'             => undef,
+        'me.priority'          => { '!=' => 0 },
+        'item.itemlost'        => 0,
+        'item.withdrawn'       => 0,
+        'item.onloan'          => undef,
+        'item.is_closed_stack' => 1,
+        'item.itemnumber'      => {
+            -not_in => \'SELECT itemnumber FROM branchtransfers WHERE datearrived IS NULL AND datecancelled IS NULL'
+        },
+    );
+
+    if ( !C4::Context->preference('AllowHoldsOnDamagedItems') ) {
+        $where{'item.damaged'} = 0;
+    }
+
+    if ( C4::Context->only_my_library() ) {
+        $where{'me.branchcode'} = C4::Context->userenv->{'branch'};
+    }
+
+    return \%where;
 }
 
 =head2 Internal methods
