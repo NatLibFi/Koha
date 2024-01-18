@@ -52,12 +52,15 @@
         [% END %]
 
         [%- IF ( CAN_user_reserveforothers ) -%]
-            <li [% IF holdsview %]class="active"[% END %]>
+            <li [% IF holdsview && !closed_stack_request %]class="active"[% END %]>
                 <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblio_object_id | url %]" title="Holds"
-                    ><i class="fa-solid fa-bookmark fa-fw" aria-hidden="true"></i><span class="menu-label">Holds ([% biblio.holds.count | html %])</span></a
+                    ><i class="fa-solid fa-bookmark fa-fw" aria-hidden="true"></i><span class="menu-label">Holds ([% biblio.holds.filter_out_closed_stack_requests.count | html %])</span></a
                 >
             </li>
         [%- END -%]
+        <li [% IF holdsview && closed_stack_request %]class="active"[% END %]>
+            <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblio_object_id | url %]&closed_stack_request=1">Closed stack requests ([% biblio.holds.filter_by_closed_stack_requests.count | html %])</a>
+        </li>
 
         [%- IF ( EasyAnalyticalRecords ) -%]
             <li [% IF analyze %]class="active"[% END %]>

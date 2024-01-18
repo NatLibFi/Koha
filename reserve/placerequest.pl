@@ -209,6 +209,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
             ? ( successful_biblionumbers => join( '|', @successful_biblionumbers ) )
             : ()
         ),
+        ( $input->param('closed_stack_request') ? ( closed_stack_request => 1 ) : () ),
     );
     print $input->redirect($redirect_url);
 } elsif ( $borrowernumber eq '' ) {
