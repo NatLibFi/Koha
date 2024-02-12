@@ -75,8 +75,7 @@ my $itemtypes = {
 };
 
 # Select borrowers infos
-my $findborrower = $input->param('findborrower');
-$findborrower = '' unless defined $findborrower;
+my $findborrower = $input->param('findborrower') // q{};
 $findborrower =~ s|,| |g;
 my $findclub = $input->param('findclub');
 $findclub = '' unless defined $findclub && !$findborrower;
