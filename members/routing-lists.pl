@@ -38,7 +38,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
-my $findborrower = $query->param('findborrower');
+my $findborrower = $query->param('findborrower') // q{};
 $findborrower =~ s|,| |g;
 
 my $borrowernumber = $query->param('borrowernumber');
