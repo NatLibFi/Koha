@@ -182,8 +182,8 @@ if ( ! defined $session ) {
     warn "Undefined session, but it's not expected to Koha reach here! \$sessionID=".($sessionID//'-undef-')."\n";
 }
 
-my $stickyduedate      = $query->param('stickyduedate')      || $session->param('stickyduedate');
-my $duedatespec        = $query->param('duedatespec')        || $session->param('stickyduedate');
+my $stickyduedate      = $query->param('stickyduedate')      || $session && $session->param('stickyduedate');
+my $duedatespec        = $query->param('duedatespec')        || $session && $session->param('stickyduedate');
 my $restoreduedatespec = $query->param('restoreduedatespec') || $duedatespec || $session->param('stickyduedate');
 if ( $restoreduedatespec && $restoreduedatespec eq "highholds_empty" ) {
     undef $restoreduedatespec;
