@@ -998,6 +998,10 @@ sub checkauth {
 
     if ($logout) {
 
+        if ( ! defined C4::Context->userenv ) {
+            warn "Undefined userenv but expected to be defined. \$sessionID=".($sessionID//'-undef-')."\n";
+        }
+
         # voluntary logout the user
         # check whether the user was using their shibboleth session or a local one
         my $shibSuccess = C4::Context->userenv ? C4::Context->userenv->{'shibboleth'} : undef;
