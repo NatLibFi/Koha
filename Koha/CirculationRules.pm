@@ -80,7 +80,7 @@ our $RULE_KINDS = {
     },
 
     article_requests => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     article_request_fee => {
         scope => [ 'branchcode', 'categorycode' ],
@@ -91,130 +91,130 @@ our $RULE_KINDS = {
     },
 
     auto_renew => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     cap_fine_to_replacement_price => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     chargeperiod => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     chargeperiod_charge_at => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     fine => {
-        scope       => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope       => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         is_monetary => 1,
     },
     finedays => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     firstremind => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     hardduedate => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     hardduedatecompare => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     waiting_hold_cancellation => {
-        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope        => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         can_be_blank => 0,
     },
     holds_per_day => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     holds_per_record => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     issuelength => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     daysmode => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     lengthunit => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     maxissueqty => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     maxonsiteissueqty => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     maxsuspensiondays => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     no_auto_renewal_after => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     no_auto_renewal_after_hard_limit => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     norenewalbefore => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     noautorenewalbefore => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     onshelfholds => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     opacitemholds => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     overduefinescap => {
-        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope        => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         is_monetary  => 1,
         can_be_blank => 1,
     },
     renewalperiod => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     renewalsallowed => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     unseen_renewals_allowed => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     rentaldiscount => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         can_be_blank => 0,
     },
     reservesallowed => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     suspension_chargeperiod => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     note => { # This is not really a rule. Maybe we will want to separate this later.
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     decreaseloanholds => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     recalls_allowed => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     recalls_per_record => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     on_shelf_recalls => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     recall_due_date_interval => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     recall_overdue_fine => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
         is_monetary => 1,
     },
     recall_shelf_time => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     holds_pickup_period => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ],
     },
     # Not included (deprecated?):
     #   * accountsent
@@ -248,22 +248,26 @@ sub get_effective_rule {
     $params->{categorycode} //= undef;
     $params->{branchcode}   //= undef;
     $params->{itemtype}     //= undef;
+    $params->{ccode}             //= undef;
+    $params->{shelving_location} //= undef;
 
     my $rule_name    = $params->{rule_name};
     my $categorycode = $params->{categorycode};
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     Koha::Exceptions::MissingParameter->throw(
         "Required parameter 'rule_name' missing")
       unless $rule_name;
 
-    for my $v ( $branchcode, $categorycode, $itemtype ) {
+    for my $v ( $branchcode, $categorycode, $itemtype, $ccode, $shelving_location ) {
         $v = undef if $v and $v eq '*';
     }
 
     my $order_by = $params->{order_by}
-      // { -desc => [ 'branchcode', 'categorycode', 'itemtype' ] };
+      // { -desc => [ 'branchcode', 'categorycode', 'itemtype', 'ccode', 'shelving_location' ] };
 
     my $search_params;
     $search_params->{rule_name} = $rule_name;
@@ -271,6 +275,8 @@ sub get_effective_rule {
     $search_params->{categorycode} = defined $categorycode ? [ $categorycode, undef ] : undef;
     $search_params->{itemtype}     = defined $itemtype     ? [ $itemtype, undef ] : undef;
     $search_params->{branchcode}   = defined $branchcode   ? [ $branchcode,   undef ] : undef;
+    $search_params->{ccode}             = defined $ccode             ? [$ccode,             undef] : undef;
+    $search_params->{shelving_location} = defined $shelving_location ? [$shelving_location, undef] : undef;
 
     my $rule = $self->search(
         $search_params,
@@ -290,6 +296,8 @@ sub get_effective_rule {
         rule_name    => $name,
         categorycode => $categorycode,
         itemtype     => $itemtype,
+        ccode             => $ccode,
+        shelving_location => $shelving_location,
         branchcode   => $branchcode
     }
   );
@@ -308,10 +316,12 @@ sub get_effective_rule_value {
     my $categorycode = $params->{categorycode};
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     my $memory_cache = Koha::Cache::Memory::Lite->get_instance;
-    my $cache_key = sprintf "CircRules:%s:%s:%s:%s", $rule_name // q{},
-      $categorycode // q{}, $branchcode // q{}, $itemtype // q{};
+    my $cache_key = sprintf "CircRules:%s:%s:%s:%s:%s:%s", $rule_name // q{},
+      $branchcode // q{}, $categorycode // q{}, $itemtype // q{}, $ccode // q{}, $shelving_location // q{};
 
     my $cached       = $memory_cache->get_from_cache($cache_key);
     return $cached if $cached;
@@ -334,6 +344,8 @@ sub get_effective_rules {
     my $categorycode = $params->{categorycode};
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     my $r;
     foreach my $rule (@$rules) {
@@ -343,6 +355,8 @@ sub get_effective_rules {
                 categorycode => $categorycode,
                 itemtype     => $itemtype,
                 branchcode   => $branchcode,
+                ccode             => $ccode,
+                shelving_location => $shelving_location,
             }
         );
 
@@ -371,7 +385,7 @@ sub set_rule {
         unless defined $kind_info;
 
     # Enforce scope; a rule should be set for its defined scope, no more, no less.
-    foreach my $scope_level ( qw( branchcode categorycode itemtype ) ) {
+    foreach my $scope_level ( qw( branchcode categorycode itemtype ccode shelving_location ) ) {
         if ( grep /$scope_level/, @{ $kind_info->{scope} } ) {
             croak "set_rule needs '$scope_level' to set '$params->{rule_name}'!"
                 unless exists $params->{$scope_level};
@@ -384,6 +398,8 @@ sub set_rule {
     my $branchcode   = $params->{branchcode};
     my $categorycode = $params->{categorycode};
     my $itemtype     = $params->{itemtype};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
     my $rule_name    = $params->{rule_name};
     my $rule_value   = $params->{rule_value};
     my $can_be_blank = defined $kind_info->{can_be_blank} ? $kind_info->{can_be_blank} : 1;
@@ -392,7 +408,7 @@ sub set_rule {
     Koha::Exceptions::CirculationRule::NotDecimal->throw( name => $rule_name, value => $rule_value )
         if ( $is_monetary && defined($rule_value) && $rule_value ne '' && $rule_value !~ /^\d+(\.\d+)?$/ );
 
-    for my $v ( $branchcode, $categorycode, $itemtype ) {
+    for my $v ( $branchcode, $categorycode, $itemtype, $ccode, $shelving_location ) {
         $v = undef if $v and $v eq '*';
     }
     my $rule = $self->search(
@@ -401,6 +417,8 @@ sub set_rule {
             branchcode   => $branchcode,
             categorycode => $categorycode,
             itemtype     => $itemtype,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
         }
     )->next();
 
@@ -420,6 +438,8 @@ sub set_rule {
                     branchcode   => $branchcode,
                     categorycode => $categorycode,
                     itemtype     => $itemtype,
+                    ccode             => $ccode,
+                    shelving_location => $shelving_location,
                     rule_name    => $rule_name,
                     rule_value   => $rule_value,
                 }
@@ -447,6 +467,8 @@ sub set_rules {
     $set_params{branchcode} = $params->{branchcode} if exists $params->{branchcode};
     $set_params{categorycode} = $params->{categorycode} if exists $params->{categorycode};
     $set_params{itemtype} = $params->{itemtype} if exists $params->{itemtype};
+    $set_params{ccode}             = $params->{ccode}             if exists $params->{ccode};
+    $set_params{shelving_location} = $params->{shelving_location} if exists $params->{shelving_location};
     my $rules        = $params->{rules};
 
     my $rule_objects = [];
@@ -562,6 +584,8 @@ sub get_opacitemholds_policy {
             categorycode => $patron->categorycode,
             itemtype     => $item->effective_itemtype,
             branchcode   => $item->homebranch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'opacitemholds',
         }
     );
@@ -585,6 +609,8 @@ sub get_onshelfholds_policy {
             categorycode => ( $patron ? $patron->categorycode : undef ),
             itemtype     => $itemtype,
             branchcode   => $item->holdingbranch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'onshelfholds',
         }
     );
@@ -729,12 +755,16 @@ sub get_effective_daysmode {
     my $categorycode     = $params->{categorycode};
     my $itemtype         = $params->{itemtype};
     my $branchcode       = $params->{branchcode};
+    my $ccode             = $params->{ccode};
+    my $shelving_location = $params->{shelving_location};
 
     my $daysmode_rule = $class->get_effective_rule(
         {
             categorycode => $categorycode,
             itemtype     => $itemtype,
             branchcode   => $branchcode,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
             rule_name    => 'daysmode',
         }
     );

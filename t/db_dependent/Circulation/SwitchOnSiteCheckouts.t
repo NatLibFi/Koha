@@ -68,6 +68,8 @@ Koha::CirculationRules->set_rules(
         branchcode   => $branch->{branchcode},
         categorycode => undef,
         itemtype     => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             maxissueqty       => 2,
             maxonsiteissueqty => 1,
@@ -131,6 +133,8 @@ Koha::CirculationRules->set_rules(
         branchcode   => $branch->{branchcode},
         categorycode => undef,
         itemtype     => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             maxissueqty       => 2,
             maxonsiteissueqty => 1,
