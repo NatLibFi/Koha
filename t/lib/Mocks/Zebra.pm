@@ -214,7 +214,7 @@ sub clean_records {
     $agent->form_name('clean_batch_'.$batch_id);
     $agent->click();
     $agent->get_ok( "$cgi_root/catalogue/detail.pl?biblionumber=$biblionumber", 'biblio on intranet' );
-    $agent->get_ok( "$cgi_root/cataloguing/addbiblio.pl?op=delete&biblionumber=$biblionumber", 'biblio deleted' );
+    $agent->get_ok( "$cgi_root/cataloguing/addbiblio.pl?op=delete&biblionumber=$biblionumber&frameworkcode=", 'biblio deleted' );
 
 }
 

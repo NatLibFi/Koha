@@ -310,7 +310,7 @@ our $mapping = {
 sub get_url {
     my ( $url, $preferred_language ) = @_;
     my $file;
-    if ( $url =~ /koha\/(.*)\.pl/ || $url =~ '/koha/(erm.*)' || $url =~ '/koha/(preservation.*)' ) {
+    if ( $url && ($url =~ /koha\/(.*)\.pl/ || $url =~ '/koha/(erm.*)' || $url =~ '/koha/(preservation.*)' )) {
         $file = $1;
     } else {
         $file = 'mainpage';
@@ -322,15 +322,15 @@ sub get_url {
     }
 
     my $view;
-    if ( $url =~ /(?:\?|\&)tab=(?<value>[\w+,.-]*)/ ) {
+    if ( $url && $url =~ /(?:\?|\&)tab=(?<value>[\w+,.-]*)/ ) {
         $view = $file . '#' . $+{value};
     }
 
     my $base_url = _get_base_url($preferred_language);
     return $base_url
       . (
-          exists $mapping->{$view} ? $mapping->{$view}
-        : exists $mapping->{$file} ? $mapping->{$file}
+          defined $view && exists $mapping->{$view} ? $mapping->{$view}
+        : defined $file && exists $mapping->{$file} ? $mapping->{$file}
         :                            $mapping->{mainpage}
       );
 }
