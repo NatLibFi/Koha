@@ -83,6 +83,13 @@ return {
         $pref = $dbh->selectrow_array(
             q{SELECT variable FROM systempreferences WHERE variable = 'OAI-PMH:AutoUpdateSetEmbedItemData'});
         if ( $pref eq "OAI-PMH:AutoUpdateSetEmbedItemData" ) {
+            my $pref_new = $dbh->selectrow_array(
+                q{SELECT variable FROM systempreferences WHERE variable = 'OAI-PMH:AutoUpdateSetsEmbedItemData'});
+            if ( $pref_new eq "OAI-PMH:AutoUpdateSetsEmbedItemData" ) {
+                $dbh->do(
+                    q{DELETE FROM systempreferences WHERE variable = 'OAI-PMH:AutoUpdateSetsEmbedItemData'});
+                say $out "Both OAI-PMH:AutoUpdateSetEmbedItemData and OAI-PMH:AutoUpdateSetsEmbedItemData exist. Deleted OAI-PMH:AutoUpdateSetsEmbedItemData.";
+            }
             $dbh->do(
                 q{UPDATE systempreferences SET variable = 'OAI-PMH:AutoUpdateSetsEmbedItemData' WHERE variable = "OAI-PMH:AutoUpdateSetEmbedItemData"}
             );
