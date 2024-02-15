@@ -53,25 +53,27 @@ corresponds to this table:
 
     $record = $biblio->metadata->record({
         {
-            embed_items => 0|1
-            itemnumbers => $itemnumbers,
-            opac        => $opac
+            embed_items   => 0|1
+            itemnumbers   => $itemnumbers,
+            opac          => $opac,
+            skip_holdings => 1
         }
     );
 
     Koha::Biblio::Metadata::record(
         {
-            record       => $record,
-            embed_items  => 1,
-            biblionumber => $biblionumber,
-            itemnumbers  => $itemnumbers,
-            opac         => $opac
+            record        => $record,
+            embed_items   => 1,
+            biblionumber  => $biblionumber,
+            itemnumbers   => $itemnumbers,
+            opac          => $opac,
+            skip_holdings => 1
         }
     );
 
 Given a MARC::Record object containing a bib record,
 modify it to include the items attached to it as 9XX
-per the bib's MARC framework.
+per the bib's MARC framework and any holdings location information.
 if $itemnumbers is defined, only specified itemnumbers are embedded.
 
 If $opac is true, then opac-relevant suppressions are included.
@@ -79,6 +81,9 @@ If $opac is true, then opac-relevant suppressions are included.
 If opac filtering will be done, patron should be passed to properly
 override if necessary.
 
+If $skip_holdings is set, it overrides the default of embedding basic
+location information from holdings records if summary holdings are
+enabled.
 
 =head4 Error handling
 
@@ -98,6 +103,7 @@ sub record {
 
     my $record = $params->{record};
     my $embed_items = $params->{embed_items};
+    my $skip_holdings = $params->{skip_holdings};
     my $format = blessed($self) ? $self->format : $params->{format};
     $format ||= 'marcxml';
 
@@ -128,7 +134,7 @@ sub record {
     }
 
     if ( $embed_items ) {
-        $self->_embed_items({ %$params, format => $format, record => $record });
+        $self->_embed_items({ %$params, format => $format, record => $record, skip_holdings => $skip_holdings });
     }
 
     return $record;
@@ -211,6 +217,12 @@ sub _embed_items {
         }
         $record->insert_fields_ordered( reverse @item_fields );
             # insert_fields_ordered with the reverse keeps 952s in right order
+
+        my $skip_holdings = $params->{skip_holdings} // 0;
+        if ( !$skip_holdings && C4::Context->preference('SummaryHoldings') && !@$itemnumbers ) {
+            my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $biblionumber });
+            $record->insert_fields_ordered(@$holdings_fields) if ( @$holdings_fields );
+        }
 
     }
     else {
