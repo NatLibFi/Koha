@@ -316,6 +316,8 @@ sub _do_reindex {
             _log( 2, "$id\n" );
         }
 
+        $indexer->fix_record($record, $id);
+
         push @id_buffer,     $id;
         push @commit_buffer, $record;
         if ( !( --$commit_count ) ) {
