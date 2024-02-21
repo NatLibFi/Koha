@@ -232,7 +232,7 @@ subtest '_split_query() tests' => sub {
 };
 
 subtest 'clean_search_term() tests' => sub {
-    plan tests => 29;
+    plan tests => 31;
 
     my $qb;
     ok(
@@ -348,6 +348,12 @@ subtest 'clean_search_term() tests' => sub {
     t::lib::Mocks::mock_preference( 'ElasticsearchEscapeCharacters', '?#' );
     $res = $qb->clean_search_term('Simple?# query');
     is( $res, 'Simple\?\# query', 'question mark and hash escaped' );
+
+    $res = $qb->clean_search_term('a"b?c');
+    is( $res, 'aʺb\?c', 'Fikka quote normalization happens before special character escaping' );
+
+    $res = $qb->clean_search_term('a "phrase?"');
+    is( $res, 'a "phrase\?"', 'Phrase quotes survive while special characters are escaped' );
 };
 
 subtest '_join_queries' => sub {
