@@ -533,6 +533,9 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
+$frameworkcode = C4::Context->userenv->{'default_framework'}
+    if ( C4::Context->userenv->{'default_framework'} and (! defined $frameworkcode or $frameworkcode eq ''));
+
 my $biblio;
 if ($biblionumber){
     $biblio = Koha::Biblios->find($biblionumber);

@@ -41,9 +41,11 @@ my $sessionID = $query->cookie("CGISESSID");
 my $session = get_session($sessionID);
 
 my $branch              = $query->param('branch');
+my $framework           = $query->param('framework');
 my $desk_id             = $query->param('desk_id');
 my $register_id         = $query->param('register_id');
 my $userenv_branch      = C4::Context->userenv->{'branch'} || '';
+my $userenv_framework   = C4::Context->userenv->{'default_framework'} || '';
 my $userenv_desk        = C4::Context->userenv->{'desk_id'} || '';
 my $userenv_register_id = C4::Context->userenv->{'register_id'} || '';
 my @updated;
@@ -60,6 +62,14 @@ if ( $branch and my $library = Koha::Libraries->find($branch) and ( C4::Auth::ha
                 new_branch => $branch,
         };
     } # else branch the same, no update
+    if ( defined($framework) and ($userenv_framework ne $framework) ) {
+        $session->param('default_framework', $framework);
+        push @updated, {
+            updated_default_framework => 1,
+                old_default_framework => $userenv_framework,
+                new_default_framework => $framework,
+        };
+    }
     if ( $desk_id && (!$userenv_desk or $userenv_desk ne $desk_id) ) {
         my $desk = Koha::Desks->find( { desk_id => $desk_id } );
         my $old_desk_name = '';
@@ -93,6 +103,7 @@ if ( $branch and my $library = Koha::Libraries->find($branch) and ( C4::Auth::ha
 } else {
     $branch = $userenv_branch;  # fallback value
     $desk_id = $userenv_desk;
+    $framework = $userenv_framework;
 }
 
 $template->param(updated => \@updated) if (scalar @updated);
@@ -101,6 +112,7 @@ my @recycle_loop;
 foreach ($query->param()) {
     $_ or next;                   # disclude blanks
     $_ eq "branch"     and next;  # disclude branch
+    $_ eq "framework"  and next;  # disclude framework
     $_ eq "desk_id"    and next;  # disclude desk_id
     $_ eq "register_id" and next;    # disclude register
     $_ eq "oldreferer" and next;  # disclude oldreferer
@@ -121,6 +133,7 @@ if (scalar @updated and not scalar @recycle_loop) {
 $template->param(
     referer     => $referer,
     branch      => $branch,
+    framework   => $framework,
     desk_id     => $desk_id,
     recycle_loop=> \@recycle_loop,
 );
