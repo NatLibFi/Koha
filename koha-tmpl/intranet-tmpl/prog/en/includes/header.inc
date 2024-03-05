@@ -227,6 +227,11 @@
                                 <li>
                                     <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default holdings framework</a>
                                 </li>
+                            [% ELSE %]
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default framework</a>
+                                </li>
                             [% END %]
                             [% IF EnableSearchHistory %]
                                 <li>
