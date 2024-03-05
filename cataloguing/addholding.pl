@@ -588,8 +588,12 @@ my ($template, $loggedinuser, $cookie) = get_template_and_user(
 
 my $record = $holding_id ? Koha::Holdings->find($holding_id) : Koha::Holding->new();
 
-$frameworkcode = $record->frameworkcode if $holding_id && $record;
-$frameworkcode = 'HLD' if not $frameworkcode or $frameworkcode eq '';
+if ( defined C4::Context->userenv->{'default_holding_framework'} and !defined $frameworkcode ) {
+    $frameworkcode = C4::Context->userenv->{'default_holding_framework'};
+} else {
+    $frameworkcode = $record->frameworkcode if $holding_id && $record;
+    $frameworkcode = 'HLD'                  if not $frameworkcode or $frameworkcode eq '';
+}
 
 # TODO: support in advanced editor?
 #if ( $op ne "delete" && C4::Context->preference('EnableAdvancedCatalogingEditor') && C4::Auth::haspermission(C4::Context->userenv->{id},{'editcatalogue'=>'advanced_editor'}) && $input->cookie( 'catalogue_editor_' . $loggedinuser ) eq 'advanced' ) {
