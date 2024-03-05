@@ -516,14 +516,7 @@ my $fa_duedatespec        = $input->param('duedatespec');
 my $userflags = 'edit_catalogue';
 
 my $changed_framework = $input->param('changed_framework') // q{};
-$frameworkcode = &GetFrameworkCode($biblionumber)
-  if ( $biblionumber and not( defined $frameworkcode) and $op ne 'addbiblio' );
 
-if ($frameworkcode eq 'FA'){
-    $userflags = 'fast_cataloging';
-}
-
-$frameworkcode = '' if ( $frameworkcode eq 'Default' );
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
         template_name   => "cataloguing/addbiblio.tt",
@@ -532,6 +525,18 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
         flagsrequired   => { editcatalogue => $userflags },
     }
 );
+
+if ( $biblionumber and not( defined $frameworkcode ) and $op ne 'addbiblio' ) {
+    $frameworkcode = &GetFrameworkCode($biblionumber);
+} elsif ( defined C4::Context->userenv->{'default_framework'} and not defined $frameworkcode ) {
+    $frameworkcode = C4::Context->userenv->{'default_framework'};
+}
+
+if ( $frameworkcode and $frameworkcode eq 'Default' ) {
+    $frameworkcode = '';
+} elsif ( $frameworkcode and $frameworkcode eq 'FA' ) {
+    $userflags = 'fast_cataloging';
+}
 
 my $biblio;
 if ($biblionumber){
@@ -542,7 +547,7 @@ if ($biblionumber){
     }
 }
 
-if ($frameworkcode eq 'FA'){
+if ($frameworkcode and $frameworkcode eq 'FA'){
     # We need to grab and set some variables in the template for use on the additems screen
     $template->param(
         'circborrowernumber' => $fa_circborrowernumber,
