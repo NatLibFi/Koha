@@ -1,6 +1,7 @@
 [% USE raw %]
 [% USE Asset %]
 [% USE Branches %]
+[% USE Frameworks %]
 [% USE Desks %]
 [% USE Registers %]
 [% USE Koha %]
@@ -56,7 +57,7 @@
 <h2>Update succeeded</h2>
 Updated:<ul>
     [% FOREACH update IN updated %]
-    [% IF ( update.updated_branch || update.updated_desk ||  update.updated_register ) %]
+    [% IF ( update.updated_branch || update.updated_desk ||  update.updated_register || update.updated_default_holding_framework ) %]
         [% IF ( updated.updated_branch ) %]
         <li>Library: [% update.old_branch or "?" | html %] &rArr; [% update.new_branch or "?" | html %]</li>
         [% END %]
@@ -65,6 +66,9 @@ Updated:<ul>
         [% END %]
         [% IF ( updated.updated_register ) %]
         <li>Register: [% updated.old_register or "?" | html %] &rArr; [% Registers.session_register_name or "?" | html %]</li>
+        [% END %]
+        [% IF ( updated.updated_default_holding_framework ) %]
+        <li>Holding Framework: [% updated.old_default_holding_framework or "?" | html %] &rArr; [% new_default_holding_framework or "?" | html %]</li>
         [% END %]
     [% ELSE %]
         <li>ERROR - unknown</li>
@@ -122,6 +126,18 @@ Updated:<ul>
                 [% PROCESS options_for_registers registers => Registers.all() %]
             </select>
         </li>
+    </ol>
+</fieldset>
+[% END %]
+
+[% IF Koha.Preference('SummaryHoldings') %]
+<fieldset class="rows">
+    <legend>Set default holding framework to be used for new holdings</legend>
+    <ol>
+        <li><label for="desk">Holding Framework:</label>
+        <select name="holding_framework" id="holding_framework">
+            [% PROCESS options_for_holding_frameworks holding_frameworks => Frameworks.all(), selected => holding_framework %]
+        </select></li>
     </ol>
 </fieldset>
 [% END %]
