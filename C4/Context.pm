@@ -689,6 +689,7 @@ sub set_userenv {
         $usersurname,  $userbranch, $branchname, $userflags,
         $emailaddress, $shibboleth, $desk_id,    $desk_name,
         $register_id,  $register_name,
+        $default_framework,
         $default_holding_framework,
     ) = @_;
 
@@ -709,6 +710,7 @@ sub set_userenv {
         "desk_name"     => $desk_name,
         "register_id"   => $register_id,
         "register_name" => $register_name,
+        "default_framework" => $default_framework,
         "default_holding_framework" => $default_holding_framework,
     };
     $context->{userenv} = $cell;
