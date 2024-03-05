@@ -67,6 +67,17 @@
     [% END %]
 [% END %]
 
+[% BLOCK options_for_frameworks %]
+    <option value="">Default</option>
+    [% FOREACH f IN frameworks %]
+        [% IF selected == f.frameworkcode %]
+            <option value="[% prefix | html %][% f.frameworkcode | html %]" selected="selected">[% f.frameworktext | html %]</option>
+        [% ELSE %]
+            <option value="[% prefix | html %][% f.frameworkcode | html %]">[% f.frameworktext | html %]</option>
+        [% END %]
+    [% END %]
+[% END %]
+
 [% BLOCK options_for_holding_frameworks %]
     <option value="">Default</option>
     [% FOREACH h IN holding_frameworks %]
