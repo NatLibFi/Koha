@@ -526,8 +526,11 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
-$frameworkcode = &GetFrameworkCode($biblionumber)
-  if ( $biblionumber and not( defined $frameworkcode) and $op ne 'cud-addbiblio' );
+if ( $biblionumber and not( defined $frameworkcode) and $op ne 'cud-addbiblio' ) {
+    $frameworkcode = &GetFrameworkCode($biblionumber);
+} elsif ( defined C4::Context->userenv->{'default_framework'} and not defined $frameworkcode ) {
+    $frameworkcode = C4::Context->userenv->{'default_framework'};
+}
 
 if ($frameworkcode and $frameworkcode eq 'FA'){
     $userflags = 'fast_cataloging';
