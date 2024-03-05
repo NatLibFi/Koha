@@ -794,7 +794,8 @@ sub set_userenv {
         $usernum,      $userid,     $usercnum,   $userfirstname,
         $usersurname,  $userbranch, $branchname, $userflags,
         $emailaddress, $shibboleth, $desk_id,    $desk_name,
-        $register_id,  $register_name
+        $register_id,  $register_name,
+        $default_holding_framework,
     ) = @_;
 
     my $var=$context->{"activeuser"} || '';
@@ -814,7 +815,8 @@ sub set_userenv {
         "desk_id"       => $desk_id,
         "desk_name"     => $desk_name,
         "register_id"   => $register_id,
-        "register_name" => $register_name
+        "register_name" => $register_name,
+        "default_holding_framework" => $default_holding_framework,
     };
     $context->{userenv}->{$var} = $cell;
     return $cell;

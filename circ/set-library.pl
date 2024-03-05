@@ -43,9 +43,11 @@ my $session = get_session($sessionID);
 my $branch              = $query->param('branch');
 my $desk_id             = $query->param('desk_id');
 my $register_id         = $query->param('register_id');
+my $holding_framework   = $query->param('holding_framework');
 my $userenv_branch      = C4::Context->userenv->{'branch'} || '';
 my $userenv_desk        = C4::Context->userenv->{'desk_id'} || '';
 my $userenv_register_id = C4::Context->userenv->{'register_id'} || '';
+my $userenv_holding_framework = C4::Context->userenv->{'default_holding_framework'} // 'HLD';
 my @updated;
 
 # $session lines here are doing the updating
@@ -89,10 +91,19 @@ if ( $branch and my $library = Koha::Libraries->find($branch) and ( C4::Auth::ha
             old_register     => $old_register_name
           };
     }
+    if ( defined($holding_framework) and ( $userenv_holding_framework ne $holding_framework ) ) {
+        $session->param( 'default_holding_framework', $holding_framework );
+        push @updated, {
+            updated_default_holding_framework => 1,
+            old_default_holding_framework     => $userenv_holding_framework,
+            new_default_holding_framework     => $holding_framework,
+        };
+    }
     $session->flush();
 } else {
     $branch = $userenv_branch;  # fallback value
     $desk_id = $userenv_desk;
+    $holding_framework = $userenv_holding_framework;
 }
 
 $template->param(updated => \@updated) if (scalar @updated);
@@ -104,6 +115,7 @@ foreach ($query->param()) {
     $_ eq "desk_id"    and next;  # disclude desk_id
     $_ eq "register_id" and next;    # disclude register
     $_ eq "oldreferer" and next;  # disclude oldreferer
+    $_ eq "holding_framework" and next;  # disclude holding_framework
     push @recycle_loop, {
         param => $_,
         value => scalar $query->param($_),
@@ -122,6 +134,7 @@ $template->param(
     referer     => $referer,
     branch      => $branch,
     desk_id     => $desk_id,
+    holding_framework => $holding_framework,
     recycle_loop=> \@recycle_loop,
 );
 
