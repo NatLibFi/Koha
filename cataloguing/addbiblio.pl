@@ -522,6 +522,11 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
+# Call to C4::Context->userenv should be always after get_template_and_user!
+if ( ! defined $frameworkcode && defined C4::Context->userenv->{'default_framework'} ) {
+    $frameworkcode = C4::Context->userenv->{'default_framework'};
+}
+
 $frameworkcode = '' if ( $frameworkcode and $frameworkcode eq 'Default' );
 
 # Set default values for global variable
