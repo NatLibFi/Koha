@@ -571,6 +571,11 @@ Circulation:
             - This is a list of value pairs. When an item is checked out, if the not for loan value on the left matches the items not for loan value
             - "it will be updated to the right-hand value. For example, '-1: 0' will cause an item that was set to 'Ordered' to now be available for loan."
             - Each pair of values should be on a separate line.
+        -
+            - "[BETA] Set the global hard limit of number of checkouts to"
+            - pref: MaxCheckoutsHardLimit
+              class: integer
+            - which any borrower can have in total, overlapping any other values calculated by other means or rules.
     Checkin policy:
         -
             - pref: TrapHoldsOnOrder
