@@ -416,6 +416,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('MARCOrgCode','OSt','','Define MARC Organization Code for MARC21 records - http://www.loc.gov/marc/organizations/orgshome.html','free'),
 ('MARCOverlayRules','0',NULL,'Use the MARC record overlay rules system to decide what actions to take for each field when modifying records.','YesNo'),
 ('MarkLostItemsAsReturned','batchmod,moredetail,cronjob,additem,pendingreserves,onpayment','claim_returned|batchmod|moredetail|cronjob|additem|pendingreserves|onpayment','Mark items as returned when flagged as lost','multiple'),
+('MaxCheckoutsHardLimit', '', NULL, 'If not empty, sets the global hard limit of number of checkouts ANY borrower can have in total, overlapping any other values calculated by other means or rules', 'integer'),
 ('MaxComponentRecords', '300', '','Max number of component records to display','Integer'),
 ('MaxFine','','','Maximum fine a patron can have for all late returns at one moment. Single item caps are specified in the circulation rules matrix.','Integer'),
 ('maxItemsInSearchResults','20',NULL,'Specify the maximum number of items to display for each result on a page of results','free'),

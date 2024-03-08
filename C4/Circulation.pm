@@ -478,6 +478,25 @@ sub TooMany {
         }
     );
 
+    # [BETA] Hard limit on checkouts
+    if ( C4::Context->preference("MaxCheckoutsHardLimit") ) {
+        my $max_checkouts_hard_limit = C4::Context->preference("MaxCheckoutsHardLimit");
+        my $checkouts                = $patron->checkouts->search( undef, { prefetch => 'item' } );
+        my $checkout_count           = $checkouts->count;
+        if ( $checkout_count >= $max_checkouts_hard_limit ) {
+
+            warn "[BETA/DEBUG] Hard limit on checkouts reached for patron " . $patron->borrowernumber
+                . ", values: " . $checkout_count . " >= " . $max_checkouts_hard_limit
+                . "\n";
+
+            return {
+                reason      => 'TOO_MANY_CHECKOUTS_HARDLIMIT',
+                count       => $checkout_count,
+                max_allowed => $max_checkouts_hard_limit,
+            };
+        }
+    }
+
     # if a rule is found and has a loan limit set, count
     # how many loans the patron already has that meet that
     # rule
