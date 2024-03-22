@@ -129,7 +129,7 @@ function get_DT_defaults(tableFeatures = ["full"]) {
         buttons: [],
         lengthMenu: [10, 20, 50, 100, -1],
         pageLength: 20,
-        fixedHeader: true,
+        fixedHeader: typeof global_fixedHeaderSetting !== "undefined" ? global_fixedHeaderSetting : false,
         initComplete: function (settings) {
             var tableId = settings.nTable.id;
 
