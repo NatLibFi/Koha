@@ -68,6 +68,7 @@ sub new {
                 warn "Plugin $class failed during installation!";
             }
         } catch {
+            warn "ERROR FROM PLUGIN: $_";
             Koha::Exceptions::Plugin::InstallDied->throw( plugin_class => $class );
         };
     } elsif ( $self->can('upgrade') ) {
@@ -79,6 +80,7 @@ sub new {
                     warn "Plugin $class failed during upgrade!";
                 }
             } catch {
+                warn "ERROR FROM PLUGIN: $_";
                 Koha::Exceptions::Plugin::UpgradeDied->throw( plugin_class => $class );
             };
         }
