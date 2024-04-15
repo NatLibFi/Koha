@@ -781,6 +781,8 @@ sub cancel {
                         itemtype => $item->effective_itemtype,
                         branchcode => Koha::Policy::Holds->holds_control_library( $item, $self->borrower ),
                         categorycode => $self->borrower->categorycode,
+                        ccode        => $item->ccode,
+                        shelving_location => $item->location,
                     }
                 );
 
