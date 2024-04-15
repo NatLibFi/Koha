@@ -229,6 +229,14 @@ while (1) {
             if ( ++$not_found_retries->{ $args->{job_id} } >= $max_retries ) {
                 Koha::Logger->get( { interface => 'worker' } )
                     ->warn( sprintf "Job %s not found, no more retry", $args->{job_id} );
+                # use Data::Dumper ();
+                # Koha::Logger->get( { interface => 'worker' } )
+                #     ->warn( "DEBUG:\n" . Data::Dumper->new( [{
+                #             args => $args,
+                #             not_found_retries => $not_found_retries,
+                #             job => $job,
+                #         }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump
+                #     );
 
                 # nack without requeue, we do not want to process this frame again
                 $conn->nack( { frame => $frame, requeue => 'false' } );
