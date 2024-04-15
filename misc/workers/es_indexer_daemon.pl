@@ -29,6 +29,9 @@ Options:
    --process_new_and_quit   get all new jobs from DB directly,
                             process them, then exit,
                             don't get from the RabbitMQ queue
+   --process_new_on_start   get all new jobs from DB directly,
+                            process them, then continue
+   --drain_not_found_jobs   drain not found in DB queue jobs
    --redo_since_seconds_ago how many seconds to go back when reindexing,
                             re-doing all job statuses
    --redo_since_since_date  reindex from a specific date,
@@ -85,6 +88,8 @@ use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
 
 my $process_new_and_quit;
+my $process_new_on_start;
+my $drain_not_found_jobs;
 my $redo_since_seconds_ago;
 my $redo_since_since_date;
 
@@ -95,6 +100,8 @@ my $max_retries = $ENV{MAX_RETRIES} || 10;
 
 GetOptions(
     'process_new_and_quit' => \$process_new_and_quit,
+    'process_new_on_start' => \$process_new_on_start,
+    'drain_not_found_jobs' => \$drain_not_found_jobs,
     'redo_since_seconds_ago=i' => \$redo_since_seconds_ago,
     'redo_since_since_date=s' => \$redo_since_since_date,
     'h|help' => \$help,
@@ -114,9 +121,11 @@ my $auth_indexer   = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchE
 my $config         = $biblio_indexer->get_elasticsearch_params;
 my $at_a_time      = $config->{chunk_size} // 5000;
 
-if ( $process_new_and_quit || $redo_since_seconds_ago || $redo_since_since_date ) {
-    # check for extra lost jobs:
+if ( $process_new_on_start || $process_new_and_quit || $redo_since_seconds_ago || $redo_since_since_date ) {
     die "Cannot use --redo_since_seconds_ago and --redo_since_since_date at the same time" if $redo_since_seconds_ago && $redo_since_since_date;
+    die "Cannot use --process_new_on_start and --process_new_and_quit at the same time" if $process_new_on_start && $process_new_and_quit;
+
+    # check for extra lost jobs:
     my @jobs;
     if( ! $redo_since_since_date && ! $redo_since_seconds_ago ) {
         if(my @more_jobs = Koha::BackgroundJobs->search({ status => 'new', queue => 'elastic_index' } )->as_list) {
@@ -146,7 +155,8 @@ if ( $process_new_and_quit || $redo_since_seconds_ago || $redo_since_since_date 
         warn "Processing ".scalar(@jobs_batch)." jobs ...\n";
         commit(@jobs_batch);
     }
-    exit;
+    exit
+        unless $process_new_on_start;
 }
 
 my $conn;
@@ -205,6 +215,16 @@ while (1) {
         }
 
         unless ($job) {
+
+            if ($drain_not_found_jobs) {
+                Koha::Logger->get( { interface => 'worker' } )
+                    ->warn( sprintf "Job %s drained.", $args->{job_id} );
+
+                # nack without requeue, we do not want to process this frame again
+                $conn->nack( { frame => $frame, requeue => 'false' } );
+                next;
+            }
+
             $not_found_retries->{ $args->{job_id} } //= 0;
             if ( ++$not_found_retries->{ $args->{job_id} } >= $max_retries ) {
                 Koha::Logger->get( { interface => 'worker' } )
