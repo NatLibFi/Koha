@@ -194,7 +194,12 @@
                     [% ELSIF Koha.Preference('SummaryHoldings') %]
                     <li role="separator" class="loggedin-menu-label divider"></li>
                     <li>
-                        <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default holdings framework</a>
+                        <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default frameworks</a>
+                    </li>
+                    [% ELSE %]
+                    <li role="separator" class="loggedin-menu-label divider"></li>
+                    <li>
+                        <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default framework</a>
                     </li>
                     [% END %]
                     [% IF EnableSearchHistory %]
