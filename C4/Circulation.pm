@@ -448,6 +448,8 @@ sub TooMany {
             categorycode => $cat_borrower,
             itemtype     => $type,
             branchcode   => $branch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'maxissueqty',
         }
     );
@@ -457,6 +459,8 @@ sub TooMany {
             categorycode => $cat_borrower,
             itemtype     => $type,
             branchcode   => $branch,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rule_name    => 'maxonsiteissueqty',
         }
     );
@@ -802,7 +806,8 @@ sub CanBookBeIssued {
     my $circ_library = Koha::Libraries->find( _GetCircControlBranch($item_object, $patron) );
 
     my $now = dt_from_string();
-    $duedate ||= CalcDateDue( $now, $effective_itemtype, $circ_library->branchcode, $patron );
+    $duedate ||= CalcDateDue( $now, $effective_itemtype, $circ_library->branchcode, $patron,
+        undef, $item_object->ccode, $item_object->location );
     if (DateTime->compare($duedate,$now) == -1 ) { # duedate cannot be before now
          $needsconfirmation{INVALID_DATE} = $duedate;
     }
@@ -1458,17 +1463,22 @@ sub checkHighHolds {
                 categorycode => $patron->categorycode,
                 itemtype     => $itype,
                 branchcode   => $branchcode,
+                ccode             => $item->ccode,
+                shelving_location => $item->location,
             }
         );
         my $calendar = Koha::Calendar->new( branchcode => $branchcode, days_mode => $daysmode );
 
-        my $orig_due = C4::Circulation::CalcDateDue( $issuedate, $itype, $branchcode, $patron );
+        my $orig_due = C4::Circulation::CalcDateDue( $issuedate, $itype, $branchcode, $patron,
+            undef, $item->ccode, $item->location );
 
         my $rule = Koha::CirculationRules->get_effective_rule_value(
             {
                 categorycode => $patron->categorycode,
                 itemtype     => $item->effective_itemtype,
                 branchcode   => $branchcode,
+                ccode             => $item->ccode,
+                shelving_location => $item->location,
                 rule_name    => 'decreaseloanholds',
             }
         );
@@ -1596,7 +1606,8 @@ sub AddIssue {
 
             unless ($datedue) {
                 my $itype = $item_object->effective_itemtype;
-                $datedue = CalcDateDue( $issuedate, $itype, $branchcode, $patron );
+                $datedue = CalcDateDue( $issuedate, $itype, $branchcode, $patron,
+                    undef, $item_object->ccode, $item_object->location );
 
             }
 
@@ -1680,6 +1691,8 @@ sub AddIssue {
                         categorycode => $patron->categorycode,
                         itemtype     => $item_object->effective_itemtype,
                         branchcode   => $branchcode,
+                        ccode             => $item_object->ccode,
+                        shelving_location => $item_object->location,
                         rule_name    => 'auto_renew'
                     }
                 );
@@ -1874,14 +1887,17 @@ sub AddIssue {
 
 =head2 GetLoanLength
 
-  my $loanlength = &GetLoanLength($borrowertype,$itemtype,branchcode)
+  my $loanlength = &GetLoanLength($borrowertype, $itemtype, $branchcode, $ccode, $shelving_location)
 
-Get loan length for an itemtype, a borrower type and a branch
+Get loan length for an itemtype, a borrower type, a branch, ccode and shelving_location
 
 =cut
 
 sub GetLoanLength {
-    my ( $categorycode, $itemtype, $branchcode ) = @_;
+    my ( $categorycode, $itemtype, $branchcode, $ccode, $shelving_location ) = @_;
+
+    # Set search precedences
+    my @params = _create_params_variations( $branchcode, $categorycode, $itemtype, $ccode, $shelving_location );
 
     # Initialize default values
     my $rules = {
@@ -1894,6 +1910,8 @@ sub GetLoanLength {
         branchcode => $branchcode,
         categorycode => $categorycode,
         itemtype => $itemtype,
+        ccode             => $ccode,
+        shelving_location => $shelving_location,
         rules => [
             'issuelength',
             'renewalperiod',
@@ -1912,20 +1930,22 @@ sub GetLoanLength {
 
 =head2 GetHardDueDate
 
-  my ($hardduedate,$hardduedatecompare) = &GetHardDueDate($borrowertype,$itemtype,branchcode)
+  my ($hardduedate,$hardduedatecompare) = &GetHardDueDate($borrowertype, $itemtype, $branchcode, $ccode, $shelving_location)
 
 Get the Hard Due Date and it's comparison for an itemtype, a borrower type and a branch
 
 =cut
 
 sub GetHardDueDate {
-    my ( $borrowertype, $itemtype, $branchcode ) = @_;
+    my ( $borrowertype, $itemtype, $branchcode, $ccode, $shelving_location ) = @_;
 
     my $rules = Koha::CirculationRules->get_effective_rules(
         {
             categorycode => $borrowertype,
             itemtype     => $itemtype,
             branchcode   => $branchcode,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
             rules        => [ 'hardduedate', 'hardduedatecompare' ],
         }
     );
@@ -2706,6 +2726,8 @@ sub _calculate_new_debar_dt {
         {   categorycode => $patron->categorycode,
             itemtype     => $item->effective_itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->{ccode},
+            shelving_location => $item->{location},
             rules => [
                 'finedays',
                 'lengthunit',
@@ -3018,6 +3040,8 @@ sub CanBookBeRenewed {
                 categorycode => $patron->categorycode,
                 itemtype     => $item->effective_itemtype,
                 branchcode   => $branchcode,
+                ccode             => $item->ccode,
+                shelving_location => $item->location,
                 rules => [
                     'renewalsallowed',
                     'lengthunit',
@@ -3248,7 +3272,8 @@ sub AddRenewal {
             $datedue = (C4::Context->preference('RenewalPeriodBase') eq 'date_due') ?
                                             dt_from_string( $issue->date_due, 'sql' ) :
                                             dt_from_string();
-            $datedue =  CalcDateDue($datedue, $itemtype, $circ_library->branchcode, $patron, 'is a renewal');
+            $datedue =  CalcDateDue($datedue, $itemtype, $circ_library->branchcode, $patron, 'is a renewal',
+                $item_object->ccode, $item_object->location);
         }
 
         my $fees = Koha::Charges::Fees->new(
@@ -3436,6 +3461,8 @@ sub GetRenewCount {
             categorycode => $patron->categorycode,
             itemtype     => $item->effective_itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rules        => [ 'renewalsallowed', 'unseen_renewals_allowed' ]
         }
     );
@@ -3494,6 +3521,8 @@ sub GetSoonestRenewDate {
         {   categorycode => $patron->categorycode,
             itemtype     => $item->effective_itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rules => [
                 $circ_rule,
                 'lengthunit',
@@ -3563,6 +3592,8 @@ sub GetLatestAutoRenewDate {
             categorycode => $patron->categorycode,
             itemtype     => $item->effective_itemtype,
             branchcode   => $branchcode,
+            ccode             => $item->ccode,
+            shelving_location => $item->location,
             rules => [
                 'no_auto_renewal_after',
                 'no_auto_renewal_after_hard_limit',
@@ -3620,7 +3651,7 @@ sub GetIssuingCharges {
     my $item_type;
 
     # Get the book's item type and rental charge (via its biblioitem).
-    my $charge_query = 'SELECT itemtypes.itemtype,rentalcharge FROM items
+    my $charge_query = 'SELECT itemtypes.itemtype,rentalcharge,ccode,location FROM items
         LEFT JOIN biblioitems ON biblioitems.biblioitemnumber = items.biblioitemnumber';
     $charge_query .= (C4::Context->preference('item-level_itypes'))
         ? ' LEFT JOIN itemtypes ON items.itype = itemtypes.itemtype'
@@ -3642,6 +3673,8 @@ sub GetIssuingCharges {
                 categorycode => $patron->categorycode,
                 branchcode   => $branch,
                 itemtype     => $item_type,
+                ccode             => $item_data->{ccode},
+                shelving_location => $item_data->{location},
                 rule_name    => 'rentaldiscount'
             });
             if ($discount) {
@@ -3847,7 +3880,8 @@ sub updateWrongTransfer {
 
 =head2 CalcDateDue
 
-$newdatedue = CalcDateDue($startdate,$itemtype,$branchcode,$borrower);
+$newdatedue = CalcDateDue($startdate, $itemtype, $branchcode, $borrower, $isrenewal,
+    $ccode, $shelving_location);
 
 this function calculates the due date given the start date and configured circulation rules,
 checking against the holidays calendar as per the daysmode circulation rule.
@@ -3856,17 +3890,19 @@ C<$itemtype>  = itemtype code of item in question
 C<$branch>  = location whose calendar to use
 C<$patron> = Patron object
 C<$isrenewal> = Boolean: is true if we want to calculate the date due for a renewal. Else is false.
+C<$ccode>             = item collection code
+C<$shelving_location> = item shelving location ("LOC")
 
 =cut
 
 sub CalcDateDue {
-    my ( $startdate, $itemtype, $branch, $patron, $isrenewal ) = @_;
+    my ( $startdate, $itemtype, $branch, $patron, $isrenewal, $ccode, $shelving_location) = @_;
 
     $isrenewal ||= 0;
 
     # loanlength now a href
     my $loanlength =
-            GetLoanLength( $patron->categorycode, $itemtype, $branch );
+            GetLoanLength( $patron->categorycode, $itemtype, $branch, $ccode, $shelving_location );
 
     my $length_key = ( $isrenewal and defined $loanlength->{renewalperiod} and $loanlength->{renewalperiod} ne q{} )
             ? qq{renewalperiod}
@@ -3889,6 +3925,8 @@ sub CalcDateDue {
             categorycode => $patron->categorycode,
             itemtype     => $itemtype,
             branchcode   => $branch,
+            ccode             => $ccode,
+            shelving_location => $shelving_location,
         }
     );
 
@@ -3920,7 +3958,7 @@ sub CalcDateDue {
 
     # if Hard Due Dates are used, retrieve them and apply as necessary
     my ( $hardduedate, $hardduedatecompare ) =
-      GetHardDueDate( $patron->categorycode, $itemtype, $branch );
+      GetHardDueDate( $patron->categorycode, $itemtype, $branch, $ccode, $shelving_location );
     if ($hardduedate) {    # hardduedates are currently dates
         $hardduedate->truncate( to => 'minute' );
         $hardduedate->set_hour(23);
@@ -4621,6 +4659,29 @@ sub _CanBookBeAutoRenewed {
     return "ok";
 }
 
+
+sub _create_params_variations {
+    my ( $branchcode, $categorycode, $itemtype, $ccode, $shelving_location ) = @_;
+
+    my @params;
+    for my $i (qw/ 31 30 29 27 23 15 28 26 25 22 21 19 14 13 11  7 24 20 18 17 12 10  9  6  5  3 16  8  4  2  1  0 /) {
+        next if
+            $i & 16 && ! $branchcode        or
+            $i &  8 && ! $itemtype          or
+            $i &  4 && ! $categorycode      or
+            $i &  2 && ! $ccode             or
+            $i &  1 && ! $shelving_location;
+
+        push @params, {
+            branchcode        =>  $i & 16  ? $branchcode        : undef,
+            itemtype          =>  $i &  8  ? $itemtype          : undef,
+            categorycode      =>  $i &  4  ? $categorycode      : undef,
+            ccode             =>  $i &  2  ? $ccode             : undef,
+            shelving_location =>  $i &  1  ? $shelving_location : undef,
+        };
+    }
+    return @params;
+}
 
 1;
 
