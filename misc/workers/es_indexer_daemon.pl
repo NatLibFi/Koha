@@ -26,6 +26,9 @@ es_indexer_daemon.pl - Worker script that will process background Elasticsearch 
 Options:
 
    -b --batch_size          how many jobs to commit (default: 10)
+   --process_new_and_quit   get all new jobs from DB directly,
+                            process them, then exit,
+                            don't get from the RabbitMQ queue
    --help                   brief help message
 
 =head1 OPTIONS
@@ -39,6 +42,11 @@ Print a brief help message and exits.
 =item B<--batch_size>
 
 How many jobs to commit per batch. Defaults to 10, will commit after .1 seconds if no more jobs incoming.
+
+=item B<--process_new_and_quit>
+
+Get all new jobs from DB directly, process them, then exit.
+Does not intercommunicates with RabbitMQ dispatcher at all.
 
 =back
 
@@ -64,6 +72,7 @@ use Koha::BackgroundJobs;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
 
+my $process_new_and_quit;
 
 my ( $help, $batch_size );
 
@@ -71,6 +80,7 @@ my $not_found_retries = {};
 my $max_retries = $ENV{MAX_RETRIES} || 10;
 
 GetOptions(
+    'process_new_and_quit' => \$process_new_and_quit,
     'h|help' => \$help,
     'b|batch_size=s' => \$batch_size
 ) || pod2usage(1);
@@ -82,6 +92,31 @@ $batch_size //= 10;
 warn "Not using Elasticsearch" unless C4::Context->preference('SearchEngine') eq 'Elasticsearch';
 
 my $logger = Koha::Logger->get({ interface =>  'worker' });
+
+my $biblio_indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+my $auth_indexer   = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::AUTHORITIES_INDEX } );
+my $config         = $biblio_indexer->get_elasticsearch_params;
+my $at_a_time      = $config->{chunk_size} // 5000;
+
+if ( $process_new_and_quit ) {
+    # check for extra lost jobs:
+    my $jobs = Koha::BackgroundJobs->search({ status => 'new', queue => 'elastic_index' });
+    if($jobs->count()) {
+        warn "Found unprocessed jobs in DB: " . $jobs->count() . ", processing...\n";
+        while ( my $j = $jobs->next ) {
+            warn " - processing job " . $j->id . ", " . $j->type() . ".\n";
+            my $args = try {
+                $j->json->decode($j->data);
+            } catch {
+                Koha::Logger->get({ interface => 'worker' })->warn(sprintf "Cannot decode data for job id=%s", $j->id);
+                $j->status('failed')->store;
+                next;
+            };
+            process_job( $j, { job_id => $j->id, %$args } );
+        }
+    }
+    exit;
+}
 
 my $conn;
 try {
@@ -101,10 +136,6 @@ if ( $conn ) {
         }
     );
 }
-my $biblio_indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-my $auth_indexer   = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::AUTHORITIES_INDEX } );
-my $config         = $biblio_indexer->get_elasticsearch_params;
-my $at_a_time      = $config->{chunk_size} // 5000;
 
 my @jobs = ();
 
