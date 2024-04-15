@@ -686,6 +686,14 @@ my $biblio = Koha::Biblios->find($biblionumber);
 output_and_exit( $input, $cookie, $template, 'unknown_biblio')
     unless $biblio;
 
+if (!$biblio) {
+    warn "Orphan holdings record? Attached to removed biblio? "
+        ."\$frameworkcode='$frameworkcode', "
+        ."\$holding_id='".($holding_id//'-undef-')."', "
+        ."\$biblionumber='$biblionumber', "
+        ."\$record->holding_id()='".($record->holding_id()//'-undef-')."'"
+        .($input->referer() ? ", referer: ".$input->referer() : '');
+}
 build_tabs($template, $marc, C4::Context->dbh, '', $input);
 $template->param(
     holding_id               => $holding_id,
