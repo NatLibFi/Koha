@@ -27,6 +27,7 @@ INSERT IGNORE INTO authorised_value_categories( category_name, is_system )
 INSERT IGNORE INTO authorised_value_categories( category_name, is_system )
     VALUES
     ('branches', 1),
+    ('holdings', 1),
     ('itemtypes', 1),
     ('cn_source', 1);
 
