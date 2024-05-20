@@ -136,7 +136,7 @@ foreach my $dato (@links){
 if ($id_to_del) {
     $agent->get_ok( "$intranet/cgi-bin/koha/admin/authorised_values.pl?op=delete&searchfield=" . uri_escape_utf8($category) . "&id=$id_to_del", 'UTF_8 auth. value deleted' );
 }else{
-    ok($id_to_del ne undef, "error, link to delete not working");
+    ok(! defined($id_to_del), "error, link to delete not working");
 }
 
 Koha::AuthorisedValueCategories->find($category)->delete; # Clean up
@@ -197,7 +197,7 @@ foreach my $dato (@links2){
 if ($id_to_del2) {
     $agent->get_ok( "$intranet/cgi-bin/koha/admin/authorised_values.pl?op=delete&searchfield=tòmas&id=$id_to_del2", 'UTF_8 auth. value deleted' );
 }else{
-    ok($id_to_del2 ne undef, "error, link to delete not working");
+    ok(! defined($id_to_del2), "error, link to delete not working");
 }
 
 Koha::AuthorisedValueCategories->find($category)->delete; # Clean up

@@ -98,7 +98,7 @@
                                         </span>
                                         &raquo;
                                     [% END %]
-                                    [% IF item.stages.size > 0 %]
+                                    [% IF item.stages.size AND item.stages.size > 0 %]
                                         <span class="stage">
                                             [% IF item.rota.cyclical %]
                                                 START
