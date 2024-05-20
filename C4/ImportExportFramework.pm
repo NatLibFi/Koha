@@ -270,7 +270,7 @@ sub _export_table_csv {
 
     eval {
         # First row with the name of the columns
-        my $query = 'SHOW COLUMNS FROM ' . $table;
+        my $query = 'SHOW COLUMNS FROM ' . $dbh->quote_identifier($table);
         my $sth   = $dbh->prepare($query);
         $sth->execute();
         my @fields = ();
@@ -332,7 +332,7 @@ sub _export_table_ods {
         my $elementData;
 
         # First row with the name of the columns
-        my $query = 'SHOW COLUMNS FROM ' . $table;
+        my $query = 'SHOW COLUMNS FROM ' . $dbh->quote_identifier($table);
         my $sth   = $dbh->prepare($query);
         $sth->execute();
         my @fields = ();
@@ -401,7 +401,7 @@ sub _export_table_excel {
         # First row with the name of the columns
         my $elementCell;
         my $elementData;
-        my $query = 'SHOW COLUMNS FROM ' . $table;
+        my $query = 'SHOW COLUMNS FROM ' . $dbh->quote_identifier($table);
         my $sth   = $dbh->prepare($query);
         $sth->execute();
         my @fields = ();
@@ -814,7 +814,7 @@ sub _check_validity_worksheet {
         my $sth   = $dbh->prepare($query);
         $sth->execute();
         $sth->finish;
-        $query = 'SHOW COLUMNS FROM ' . $table;
+        $query = 'SHOW COLUMNS FROM ' . $dbh->quote_identifier($table);
         $sth   = $dbh->prepare($query);
         $sth->execute();
         my $fields = {};
@@ -872,7 +872,7 @@ sub _import_table {
     if ( $format eq 'csv' ) {
         my @fieldsName = ();
         eval {
-            my $query = 'SHOW COLUMNS FROM ' . $table;
+            my $query = 'SHOW COLUMNS FROM ' . $dbh->quote_identifier($table);
             my $sth   = $dbh->prepare($query);
             $sth->execute();
             while ( my $hashRef = $sth->fetchrow_hashref ) {
