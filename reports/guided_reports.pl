@@ -1125,7 +1125,8 @@ sub get_tables {
 
     $tables = C4::Reports::Guided->get_all_tables();
     for my $table ( @{$tables} ) {
-        my $sql  = "SHOW COLUMNS FROM $table";
+        my $dbh = C4::Context->dbh;
+        my $sql  = "SHOW COLUMNS FROM " . $dbh->quote_identifier($table);
         my $rows = C4::Context->dbh->selectall_arrayref( $sql, { Slice => {} } );
         for my $row ( @{$rows} ) {
             push @{ $result->{$table} }, $row->{Field};
