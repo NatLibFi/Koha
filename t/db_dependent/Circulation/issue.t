@@ -96,6 +96,8 @@ Koha::CirculationRules->set_rules(
         itemtype     => '*',
         categorycode => '*',
         branchcode   => '*',
+        ccode             => '*',
+        shelving_location => '*',
         rules        => {
             lengthunit      => 'days',
             issuelength     => 0,
@@ -377,6 +379,8 @@ Koha::CirculationRules->set_rules(
         categorycode => undef,
         itemtype     => undef,
         branchcode   => undef,
+        ccode             => undef,
+        shelving_location => undef,
         rules        => {
             renewalsallowed => 3,
         }
