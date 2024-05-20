@@ -144,7 +144,12 @@
             let original_date = $(input).val();
             if ( original_date ) {
                 original_date = Date_from_syspref( original_date ).getTime();
-                let tomorrow = new Date().fp_incr(1).getTime();
+                let tomorrow;
+                if( $(input).data("flatpickr-futureinclusive") === true ) {
+                    tomorrow = (new Date()).setHours(00, 00, 00, 00);
+                } else {
+                    tomorrow = new Date().fp_incr(1).getTime();
+                }
 
                 options['enable'] = [function(date){
                     date = date.getTime();
