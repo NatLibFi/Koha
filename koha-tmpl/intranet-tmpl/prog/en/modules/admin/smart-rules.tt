@@ -1581,7 +1581,7 @@
                             // Remove potential previous input added
                             $(current_column).find("input").remove();
                             $(current_column).append("<input type='hidden' name='"+name+"' value='"+val+"' />");
-                        } else if ( i == 5 || i == 6 || i == 17 || i == 27 || i == 28 || i == 29 || current_input_id === "holds_pickup_period" ) {
+                        } else if ( i == 4 || i == 5 || i == 17 || i == 27 || i == 28 || i == 29 || current_input_id === "holds_pickup_period" ) {
                             // If the value is not an integer for
                             //     - "Current checkouts allowed"
                             //     - "Current on-site checkouts allowed"
