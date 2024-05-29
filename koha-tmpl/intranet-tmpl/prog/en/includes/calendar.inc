@@ -207,12 +207,19 @@
                 let original_date = $(input).val();
                 if ( original_date ) {
                     original_date = flatpickr.parseDate(original_date, 'Y-m-d').getTime();
-                    let tomorrow = new Date().fp_incr(1).getTime();
+                    let border_date;
+                    if( $(input).data("flatpickr-futureinclusive") === true ) {
+                        /* the border date is today */
+                        border_date = (new Date()).setHours(00, 00, 00, 00);
+                    } else {
+                        /* the border date is tomorrow */
+                        border_date = new Date().fp_incr(1).getTime();
+                    }
 
                     options['enable'] = [function(date){
                         date = date.getTime();
                         if ( date == original_date ) return true;
-                        if ( date >= tomorrow)       return true;
+                        if ( date >= border_date)       return true;
                     }];
                 }
                 else {
