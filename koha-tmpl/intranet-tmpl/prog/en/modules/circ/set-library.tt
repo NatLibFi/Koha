@@ -57,7 +57,7 @@
 <h2>Update succeeded</h2>
 Updated:<ul>
     [% FOREACH update IN updated %]
-    [% IF ( update.updated_branch || update.updated_desk ||  update.updated_register || update.updated_default_holding_framework ) %]
+    [% IF ( update.updated_branch || update.updated_desk ||  update.updated_register || update.updated_default_framework || update.updated_default_holding_framework ) %]
         [% IF ( updated.updated_branch ) %]
         <li>Library: [% update.old_branch or "?" | html %] &rArr; [% update.new_branch or "?" | html %]</li>
         [% END %]
@@ -66,6 +66,9 @@ Updated:<ul>
         [% END %]
         [% IF ( updated.updated_register ) %]
         <li>Register: [% updated.old_register or "?" | html %] &rArr; [% Registers.session_register_name or "?" | html %]</li>
+        [% END %]
+        [% IF ( updated.updated_default_framework ) %]
+        <li>Framework: [% updated.old_default_framework or "?" | html %] &rArr; [% new_default_framework or "?" | html %]</li>
         [% END %]
         [% IF ( updated.updated_default_holding_framework ) %]
         <li>Holding Framework: [% updated.old_default_holding_framework or "?" | html %] &rArr; [% new_default_holding_framework or "?" | html %]</li>
@@ -129,6 +132,16 @@ Updated:<ul>
     </ol>
 </fieldset>
 [% END %]
+
+<fieldset class="rows">
+    <legend>Set default framework to be used for new biblio records</legend>
+    <ol>
+        <li><label for="desk">Framework:</label>
+        <select name="framework" id="framework">
+            [% PROCESS options_for_frameworks frameworks => Frameworks.all(), selected => framework %]
+        </select></li>
+    </ol>
+</fieldset>
 
 [% IF Koha.Preference('SummaryHoldings') %]
 <fieldset class="rows">
