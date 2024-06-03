@@ -831,6 +831,9 @@ sub attributes_from_api {
             # Handle booleans gracefully
             $value = ( $value ) ? 1 : 0;
         }
+        elsif ( ! defined $columns_info->{$koha_field_name}->{data_type} ) {
+            warn "DEBUG: Unknown API column requested: \$koha_field_name=[".($koha_field_name//'-undef-')."], key/value: ($key, $value)\n";
+        }
         elsif ( _date_or_datetime_column_type( $columns_info->{$koha_field_name}->{data_type} ) ) {
             if (defined $value) {
                 try {
