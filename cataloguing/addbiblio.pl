@@ -545,8 +545,10 @@ if ($biblionumber){
     # just in case $biblionumber obtained from CGI contains weird characters like spaces
     $biblionumber = $biblio->biblionumber if $biblio;
     unless ( $biblio ) {
-        $biblionumber = undef;
-        $template->param( bib_doesnt_exist => 1 );
+        # $biblionumber = undef;
+        # $template->param( bib_doesnt_exist => 1 );
+        output_and_exit( $input, $cookie, $template, 'unknown_biblio')
+            unless $biblio;
     }
 }
 
