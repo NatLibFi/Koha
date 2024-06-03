@@ -1276,7 +1276,8 @@ sub checkauth {
                     $session->param('branchname'),   $session->param('flags'),
                     $session->param('emailaddress'), $session->param('shibboleth'),
                     $session->param('desk_id'),      $session->param('desk_name'),
-                    $session->param('register_id'),  $session->param('register_name')
+                    $session->param('register_id'),  $session->param('register_name'),
+                    $session->param('default_holding_framework'),
                 );
 
             }
@@ -1719,7 +1720,8 @@ sub check_api_auth {
                 $session->param('branchname'),   $session->param('flags'),
                 $session->param('emailaddress'), $session->param('shibboleth'),
                 $session->param('desk_id'),      $session->param('desk_name'),
-                $session->param('register_id'),  $session->param('register_name')
+                $session->param('register_id'),  $session->param('register_name'),
+                $session->param('default_holding_framework'),
             );
             return ( "ok", $cookie, $sessionID );
         } else {
@@ -1845,7 +1847,8 @@ sub check_cookie_auth {
                     $session->param('branchname'),   $session->param('flags'),
                     $session->param('emailaddress'), $session->param('shibboleth'),
                     $session->param('desk_id'),      $session->param('desk_name'),
-                    $session->param('register_id'),  $session->param('register_name')
+                    $session->param('register_id'),  $session->param('register_name'),
+                    $session->param('default_holding_framework'),
                 );
                 if ( C4::Context->preference('TwoFactorAuthentication') ne 'disabled' ) {
                     return ( "additional-auth-needed", $session )
