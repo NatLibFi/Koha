@@ -367,11 +367,34 @@
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
-                    console.log(escape_str(row.holding_id), row);
-                    let nodes = escape_str(row.holding_id);
-                    // let nodes = escape_str(row._strings.holding_id.str);
-                    //nodes += ''; // '[% Holdings.GetLocation(item.holding_id) | html %]';
-                    return nodes ? nodes : ' ';
+                    if(! row.holding_id)
+                        return ' ';
+                    let values = [];
+                    if ( row.holding['branch_name'] ) {
+                        values.push(row.holding.branch_name);
+                    }
+                    if ( row.holding['location_name'] ) {
+                        values.push(row.holding.location_name);
+                    }
+                    if ( row.holding['ccode_name'] ) {
+                        values.push(row.holding.ccode_name);
+                    }
+                    if ( row.holding.callnumber ) {
+                        values.push(row.holding.callnumber);
+                    }
+                    return values.join(' - ');
+
+                    // if (my $branch = $holding->holding_branch()) {
+                    //     push @parts, $branch->branchname();
+                    // }
+                    // if ($holding->location()) {
+                    //     my $av = Koha::AuthorisedValues->search({ category => 'LOC', authorised_value => $holding->location() });
+                    //     push @parts, $av->next()->opac_description() if $av->count;
+                    // }
+                    // push @parts, $holding->callnumber() if $holding->callnumber();
+                    // return join(' - ', @parts);
+
+                    return nodes;
                 }
             },
             [%- END %]
