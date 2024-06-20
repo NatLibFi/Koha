@@ -371,11 +371,27 @@
                 searchable: true,
                 orderable: true,
                 render: function (data, type, row, meta) {
-                    console.log(escape_str(row.holding_id), row);
+                    if(! row.holding_id)
+                        return ' ';
                     let nodes = escape_str(row.holding_id);
-                    // let nodes = escape_str(row._strings.holding_id.str);
-                    //nodes += ''; // '[% Holdings.GetLocation(item.holding_id) | html %]';
-                    return nodes ? nodes : ' ';
+                    if ( row.holdingbranch ) {
+                        nodes += ' ' + escape_str(row._strings.holding_library_id.str);
+                    }
+                    if ( row.location ) {
+                        nodes += ' ' + escape_str(row._strings.location.str);
+                    }
+                    if ( row.ccode ) {
+                        nodes += ' ' + escape_str(row._strings.collection_code.str);
+                    }
+                    if ( row.callnumber ) {
+                        nodes += ' ' + escape_str(row.callnumber);
+                    }
+                    // push @parts, $holding->holding_id();
+                    // push @parts, $holding->holdingbranch() if $holding->holdingbranch();
+                    // push @parts, $holding->location() if $holding->location();
+                    // push @parts, $holding->ccode() if $holding->ccode();
+                    // push @parts, $holding->callnumber() if $holding->callnumber();
+                    return nodes;
                 }
             },
             [%- END %]
