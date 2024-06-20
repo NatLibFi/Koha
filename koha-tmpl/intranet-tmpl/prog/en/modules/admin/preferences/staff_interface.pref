@@ -179,6 +179,12 @@ Staff interface:
                   0: Disable
             - item selection in record detail page.
         -
+            - pref: ShowQuickBranchSelector
+              choices:
+                  1: Enable
+                  0: Disable
+            - The dropdown selector in the header for quick change branches.
+        -
             - pref: UseWYSIWYGinSystemPreferences
               choices:
                   1: Show
