@@ -552,6 +552,17 @@ if ($biblionumber) {
             print $input->redirect("/cgi-bin/koha/errors/403.pl");    # escape early
             exit;
         }
+
+        # DEBUG: ... add [NTWIP] to warn later?
+        if(not defined $frameworkcode) {
+            warn "Undefined frameworkcode, $ENV{REQUEST_METHOD}"
+                . "\n\t$ENV{REQUEST_URI}"
+                . ($ENV{HTTP_REFERER} ? "\n\tRef: $ENV{HTTP_REFERER}":'')
+                . ($input->request_method eq 'POST'
+                    ? " Form parameters:\n\t" . join("\n\t", map { "$_=[".$input->params()."]" } $input->params ) : '')
+            ."\n";
+        }
+
     } else {
         $biblionumber = undef;
         $template->param( bib_doesnt_exist => 1 );
