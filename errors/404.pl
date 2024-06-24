@@ -41,4 +41,7 @@ my $status = '404 Not Found';
 if ( C4::Context->is_internal_PSGI_request() ) {
     $status = '200 OK';
 }
+# if ( any { /(^psgi\.|^plack\.)/i } keys %ENV ) {
+#     $status = '200 OK';
+# }
 output_with_http_headers $query, $cookie, $template->output, 'html', $status;
