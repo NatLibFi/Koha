@@ -6,6 +6,9 @@
 [% USE ItemTypes %]
 [% USE raw %]
 
+[% USE Holdings %]
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
+
 [% BLOCK build_table %]
     <table class="items_table" id="[% tab | html %]_table">
         <thead>
@@ -14,6 +17,7 @@
                 <th id="[% tab | html %]_cover_image" data-colname="[% tab | html %]_cover_image">Cover image</th>
             [% END %]
             [% IF ( item_level_itypes ) %]<th id="[% tab | html %]_itype" data-colname="[% tab | html %]_itype">Item type</th>[% END %]
+            [% IF ( ShowSummaryHoldings ) %]<th id="[% tab | html %]_holdings" data-colname="[% tab | html %]_holdings">Holdings record</th>[% END %]
             <th id="[% tab | html %]_holdingbranch" data-colname="[% tab | html %]_holdingbranch">Current library</th>
             <th id="[% tab | html %]_homebranch" data-colname="[% tab | html %]_homebranch">Home library</th>
             <th id="[% tab | html %]_ccode" data-colname="[% tab | html %]_ccode">Collection</th>
@@ -356,7 +360,21 @@
                     return node;
                 }
             },
-            [% END %]
+            [%- END %][% IF ( ShowSummaryHoldings ) %]
+            {
+                data: "me.holding_id",
+                className: "holding",
+                searchable: true,
+                orderable: true,
+                render: function (data, type, row, meta) {
+                    console.log(escape_str(row.holding_id), row);
+                    let nodes = escape_str(row.holding_id);
+                    // let nodes = escape_str(row._strings.holding_id.str);
+                    //nodes += ''; // '[% Holdings.GetLocation(item.holding_id) | html %]';
+                    return nodes ? nodes : ' ';
+                }
+            },
+            [%- END %]
             {
                 data: "me.holding_library_id",
                 className: "location",
