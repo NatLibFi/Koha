@@ -6,6 +6,9 @@
 [% USE ItemTypes %]
 [% USE raw %]
 
+[% USE Holdings %]
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
+
 [% BLOCK build_table %]
     <table class="items_table" id="[% tab | html %]_table">
         <thead>
@@ -14,6 +17,7 @@
                 <th id="[% tab | html %]_cover_image" data-colname="[% tab | html %]_cover_image">Cover image</th>
             [% END %]
             [% IF ( item_level_itypes ) %]<th id="[% tab | html %]_itype" data-colname="[% tab | html %]_itype">Item type</th>[% END %]
+            [% IF ( ShowSummaryHoldings ) %]<th id="[% tab | html %]_holdings" data-colname="[% tab | html %]_holdings">Holdings record</th>[% END %]
             <th id="[% tab | html %]_holdingbranch" data-colname="[% tab | html %]_holdingbranch">Current library</th>
             <th id="[% tab | html %]_homebranch" data-colname="[% tab | html %]_homebranch">Home library</th>
             <th id="[% tab | html %]_ccode" data-colname="[% tab | html %]_ccode">Collection</th>
@@ -141,6 +145,10 @@
                 items_selection[tab_id] = [];
                 $("input[name='itemnumber'][type='checkbox']", tab).prop('checked', false);
                 itemSelectionBuildActionLinks(tab_id);
+            });
+
+            $('a.delete').click(function() {
+                return confirm(_("Are you sure?"));
             });
 
         });
@@ -356,7 +364,37 @@
                     return node;
                 }
             },
-            [% END %]
+            [%- END %][% IF ( ShowSummaryHoldings ) %]
+            {
+                data: "me.holding_id",
+                className: "holding",
+                searchable: true,
+                orderable: true,
+                render: function (data, type, row, meta) {
+                    if(! row.holding_id)
+                        return ' ';
+                    let nodes = escape_str(row.holding_id);
+                    if ( row.holdingbranch ) {
+                        nodes += ' ' + escape_str(row._strings.holding_library_id.str);
+                    }
+                    if ( row.location ) {
+                        nodes += ' ' + escape_str(row._strings.location.str);
+                    }
+                    if ( row.ccode ) {
+                        nodes += ' ' + escape_str(row._strings.collection_code.str);
+                    }
+                    if ( row.callnumber ) {
+                        nodes += ' ' + escape_str(row.callnumber);
+                    }
+                    // push @parts, $holding->holding_id();
+                    // push @parts, $holding->holdingbranch() if $holding->holdingbranch();
+                    // push @parts, $holding->location() if $holding->location();
+                    // push @parts, $holding->ccode() if $holding->ccode();
+                    // push @parts, $holding->callnumber() if $holding->callnumber();
+                    return nodes;
+                }
+            },
+            [%- END %]
             {
                 data: "me.holding_library_id",
                 className: "location",
