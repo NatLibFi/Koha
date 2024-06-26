@@ -71,7 +71,6 @@ BEGIN {
       GetBudgetChildren
       SetOwnerToFundHierarchy
       CheckBudgetParent
-      CheckBudgetParentPerm
 
       HideCols
       GetCols
@@ -122,21 +121,6 @@ sub GetCols {
 
     return  $res->{cnt} > 0 ? 0: 1
 
-}
-
-sub CheckBudgetParentPerm {
-    my ( $budget, $borrower_id ) = @_;
-    my $depth = $budget->{depth};
-    my $parent_id = $budget->{budget_parent_id};
-    while ($depth) {
-        my $parent = GetBudget($parent_id);
-        $parent_id = $parent->{budget_parent_id};
-        if ( $parent->{budget_owner_id} == $borrower_id ) {
-            return 1;
-        }
-        $depth--
-    }
-    return 0;
 }
 
 sub AddBudgetPeriod {
