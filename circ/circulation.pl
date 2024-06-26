@@ -716,7 +716,8 @@ if ($patron) {
     $template->param( patron_messages => $patron_messages );
 
     if ( C4::Context->preference("WaitingNotifyAtCheckout") ) {
-        my $waiting_holds = $patron->holds->search( { found => 'W', branchcode => $branch } );
+        # we need "->as_list" because in template this var is used in truth/fail if:
+        my $waiting_holds = $patron->holds->search( { found => 'W', branchcode => $branch } )->as_list;
         $template->param( waiting_holds => $waiting_holds );
     }
 }
