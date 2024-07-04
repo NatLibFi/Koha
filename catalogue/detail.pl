@@ -50,6 +50,7 @@ use Koha::Biblio::ItemGroups;
 use Koha::CoverImages;
 use Koha::DateUtils;
 use Koha::ILL::Requests;
+use Koha::Libraries;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Patrons;
@@ -527,8 +528,30 @@ if ( C4::Context->preference('UseCourseReserves') ) {
     $template->param( course_reserves => $course_reserves );
 }
 
+# NEW_CODE:
 my @libraries = $patron->libraries_where_can_edit_items;
 $template->param( can_edit_items_from => \@libraries );
+
+# # OLD_CODE:
+# # my @libraries = $biblio->items($items_params)->get_column('homebranch');
+# # my %can_edit_items_from = map {
+# #     $_ => $patron->can_edit_items_from($_)
+# # } @libraries;
+# # $template->param(can_edit_items_from => \%can_edit_items_from);
+
+# # MY_CODE:
+# # my @libraries = $biblio->items($items_params)->get_column('homebranch');
+# my @libraries = Koha::Libraries->search->get_column('branchcode');
+
+# my %can_edit_items_from = map {
+#     $_ => $patron->can_edit_items_from($_)
+# } @libraries;
+# $template->param(can_edit_items_from => \%can_edit_items_from);
+
+# # use Data::Dumper (); warn Data::Dumper->new( [{
+# #     libraries => \@libraries,
+# #     can_edit_items_from => \%can_edit_items_from,
+# # }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump;
 
 my @itemtypes                 = Koha::ItemTypes->search->as_list;
 my %item_type_image_locations = map { $_->itemtype => $_->image_location('intranet') } @itemtypes;
