@@ -21,8 +21,10 @@
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
+use CGI;
+use POSIX     qw( strftime );
+use Try::Tiny qw(catch try);
 
-use CGI q(-utf8);
 use C4::Output qw( output_html_with_http_headers output_and_exit );
 use C4::Auth qw( get_template_and_user haspermission );
 use C4::Biblio
@@ -502,7 +504,7 @@ sub build_tabs {
                     }
                  } # foreach $field end
 
-            # if breeding is empty
+                # if breeding is empty
             }
             else {
                 my @subfields_data;
@@ -593,8 +595,31 @@ my ($template, $loggedinuser, $cookie) = get_template_and_user(
     }
 );
 
-my $holding = $holding_id ? Koha::Holdings->find($holding_id) : Koha::Holding->new();
+my $logged_in_patron = Koha::Patrons->find($loggedinuser);
+my $holding;
 
+if ($holding_id) {
+
+    $holding = Koha::Holdings->find($holding_id);
+
+    # just in case $biblionumber obtained from CGI contains weird characters like spaces
+    $holding_id = $holding->holding_id if $holding;
+    if ($holding) {
+        unless ( $holding->can_be_edited($logged_in_patron) ) {
+            print $input->redirect("/cgi-bin/koha/errors/403.pl");    # escape early
+            exit;
+        }
+    } else {
+        $holding_id = undef;
+        $template->param( holding_doesnt_exist => 1 );
+    }
+} else {
+    $holding = Koha::Holding->new();
+    $holding->frameworkcode($frameworkcode);
+    $holding->biblionumber($biblionumber);
+}
+
+# should this be moved to above logged_in_patron like in addbiblio.pl?
 if ( defined C4::Context->userenv->{'default_holding_framework'} and !defined $frameworkcode ) {
     $frameworkcode = C4::Context->userenv->{'default_holding_framework'};
 } else {
@@ -622,11 +647,11 @@ if ($op eq 'cud-addholding') {
     );
     # Convert HTML input to MARC
     my @params = $input->multi_param();
-    my $marc = TransformHtmlToMarc( $input, 1 );
+    my $record = TransformHtmlToMarc( $input, 1 );
 
     $holding->frameworkcode($frameworkcode);
     $holding->biblionumber($biblionumber);
-    $holding->set_marc({ record => $marc });
+    $holding->set_marc({ record => $record });
     $holding->store();
 
     $holding_id = $holding->holding_id;
@@ -676,24 +701,45 @@ if ($op eq 'duplicate') {
     $holding_id = '';
 }
 
-my $marc;
+my $record = -1;
 if ($changed_framework) {
-    $marc = TransformHtmlToMarc($input, 1);
-} else {
-    my $metadata = $holding->metadata();
-    $marc = $metadata ? $metadata->record() : -1;
+    $record = TransformHtmlToMarc($input, 1);
+}
+
+if ( $holding ) {
+    if( $record == -1 ) {
+        if( my $metadata = $holding->metadata() ) {
+            eval { $record = $metadata->record };
+            if ($@) {
+                my $exception = $@;
+                warn "Invalid metadata found for holding $holding_id";
+                $exception->rethrow unless ( $exception->isa('Koha::Exceptions::Metadata::Invalid') );
+                $record = $holding->metadata->record_strip_nonxml;
+                $template->param( INVALID_METADATA => $exception );
+            }
+        }
+        else {
+            warn "No metadata found for holding $holding_id";
+            $record = -1;
+        }
+    }
+    elsif ( !$record ) {
+        warn "Unexpected error: record is empty for holding $holding_id";
+        $record = -1;
+    }
 }
 
 if (!$biblionumber) {
     # we must have a holdings record if we don't have a biblionumber
     $biblionumber = $holding->biblionumber;
 }
-my $biblio = Koha::Biblios->find($biblionumber);
+my $biblio;
+$biblio = Koha::Biblios->find($biblionumber) if $biblionumber;
 
 output_and_exit( $input, $cookie, $template, 'unknown_biblio')
     unless $biblio;
 
-build_tabs($template, $marc, C4::Context->dbh, '', $input);
+build_tabs($template, $record, C4::Context->dbh, '', $input);
 $template->param(
     holding_id               => $holding_id,
     biblionumber             => $biblionumber,
