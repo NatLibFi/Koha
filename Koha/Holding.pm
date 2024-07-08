@@ -91,6 +91,40 @@ sub metadata {
     return Koha::Holdings::Metadata->_new_from_dbic($metadata);
 }
 
+=head3 record
+
+my $record = $holding->record();
+
+Returns a Marc::Record object
+
+=cut
+
+sub record {
+    my ( $self ) = @_;
+
+    return $self->metadata->record;
+}
+
+=head3 can_be_edited
+
+    if ( $holding->can_be_edited( $patron ) ) { ... }
+
+Returns a boolean denoting whether the passed I<$patron> meets the required
+conditions to manually edit the record (follows up how its made for biblio).
+
+=cut
+
+sub can_be_edited {
+    my ( $self, $patron ) = @_;
+
+    Koha::Exceptions::MissingParameter->throw( error => "The patron parameter is missing or invalid" )
+        unless $patron && ref($patron) eq 'Koha::Patron';
+
+    return (
+        ( $self->metadata->source_allows_editing && $patron->has_permission( { editcatalogue => 'edit_catalogue' } ) )
+            || $patron->has_permission( { editcatalogue => 'edit_locked_records' } ) ) ? 1 : 0;
+}
+
 =head3 set_marc
 
 $holding->set_marc({ record => $record });
