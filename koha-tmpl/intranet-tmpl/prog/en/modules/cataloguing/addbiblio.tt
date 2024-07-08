@@ -209,6 +209,8 @@
         var tabid = a.data("tabname").substring(3, 4);
         $(".tag_anchors").removeClass("tab_selected").hide();
         $(".tag_anchors_" + tabid ).addClass("tab_selected").show();
+        // add to locaiton hash to allow direct link to tab:
+        window.location.hash = tablink;
     }
 
     /**
