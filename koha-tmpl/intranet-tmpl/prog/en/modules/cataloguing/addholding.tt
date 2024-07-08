@@ -39,6 +39,11 @@
 
     $(document).ready(function() {
 
+        [% IF holding_doesnt_exist %]
+            $("#addholdingtabs").hide();
+            $("#toolbar").hide();
+        [% END %]
+
         $("a[data-toggle='tab']").on("shown.bs.tab", function (e) {
             $( e.target.hash + " .input_marceditor:visible:eq(0)").focus();
         });
@@ -47,7 +52,6 @@
         /* If present the location hash will be used to activate the correct tab */
         var hash = location.hash;
         var hashPieces = hash.split('?');
-        // console.log(hashPieces);
         if( hashPieces[0] !== "" && hashPieces[0] !== '#addholding' && hashPieces[0] !== '#editholding' ){
             selectTab( hashPieces[0] );
             window.scrollTo( 0, 0 );
@@ -55,8 +59,8 @@
             selectTab( "#tab0XX_panel" );
         }
 
-        initializeSortable("#addbibliotabs ul.sortable_field");
-        initializeSortable("#addbibliotabs ul.sortable_subfield");
+        initializeSortable("#addholdingtabs ul.sortable_field");
+        initializeSortable("#addholdingtabs ul.sortable_subfield");
 
         [% IF tab %]
             hash = "#[% tab | html %]";
@@ -143,6 +147,7 @@
             return false;
         });
 
+        /*
         $( '#switcheditor' ).click( function() {
             var breedingid = [% breedingid || "null" | html %];
 
@@ -156,6 +161,8 @@
 
             return false;
         } );
+        */
+
         $(".change-framework").on("click", function(){
             var frameworkcode = $(this).data("frameworkcode");
             $("#frameworkcode").val( frameworkcode );
@@ -203,6 +210,8 @@
         var tabid = a.data("tabname").substring(3, 4);
         $(".tag_anchors").removeClass("tab_selected").hide();
         $(".tag_anchors_" + tabid ).addClass("tab_selected").show();
+        // add to locaiton hash to allow direct link to tab:
+        window.location.hash = tablink;
     }
 
     /**
@@ -640,7 +649,7 @@ $(document).ready(function(){
                     <div class="btn-group">
                         <button class="btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i> Settings <span class="caret"></span></button>
                         <ul id="settings-menu" class="dropdown-menu">
-                            [% IF Koha.Preference( 'EnableAdvancedCatalogingEditor' ) == 1 && CAN_user_editcatalogue_advanced_editor %]
+                            [% IF 0 && Koha.Preference( 'EnableAdvancedCatalogingEditor' ) == 1 && CAN_user_editcatalogue_advanced_editor %]
                                 <li><a href="#" id="switcheditor">Switch to advanced editor</a></li>
                             [% END %]
                             [% UNLESS advancedMARCEditor %]
