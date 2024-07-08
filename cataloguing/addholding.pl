@@ -397,6 +397,14 @@ sub build_tabs {
     }
     # loop through each tab 0 through 9
     for ( my $tabloop = 0 ; $tabloop <= $max_num_tab ; $tabloop++ ) {
+
+        # if($tabloop == 0) {
+        #     use Data::Dumper (); warn Data::Dumper->new( [{
+        #         tabloop => $tabloop,
+        #         record => $record,
+        #     }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump;
+        # }
+
         my @loop_data = (); #innerloop in the template.
         my $i = 0;
         foreach my $tag (sort @tab_data) {
@@ -506,6 +514,18 @@ sub build_tabs {
                            $tag_data{indicator2} = format_indicator($field->indicator(2)),
                         }
                         push( @loop_data, \%tag_data );
+
+                        # if($tag eq '000' && ( $subfields_data[0]{value} eq '                        '
+                        #         # || $ENV{REMOTE_ADDR} eq '127.0.0.1'
+                        # )) {
+                        #     use Data::Dumper (); warn "PID: $$, Data: " . Data::Dumper->new( [{
+                        #         subfields_data0 => $subfields_data[0],
+                        #     }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(2)->Indent(1)->Purity(0)->Deepcopy(1)->Dump;
+                        #     use Data::Dumper (); warn Data::Dumper->new( [{
+                        #         record => $record,
+                        #     }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(3)->Indent(1)->Purity(0)->Deepcopy(1)->Dump;
+                        # }
+
                     }
                  } # foreach $field end
 
