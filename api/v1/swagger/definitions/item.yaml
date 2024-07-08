@@ -12,6 +12,11 @@ properties:
       - integer
       - "null"
     description: Internal identifier for the parent holdings record
+  holding:
+    type:
+      - object
+      - "null"
+    description: Holdings record object if one exists
   external_id:
     type:
       - string
