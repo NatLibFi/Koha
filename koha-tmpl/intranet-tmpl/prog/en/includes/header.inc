@@ -106,6 +106,7 @@
                             <form id="select_braches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
                                 [% INCLUDE 'csrf-token.inc' %]
                                 [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) %]
+                                <input type="hidden" name="op" value="cud-set-library">
                                 Library:
                                     <select name="branch" id="quick-branch" style="background: #352c2e; border: hidden; font-weight: bolder;">
                                         [% PROCESS options_for_libraries libraries => Branches.all() %]
