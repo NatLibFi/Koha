@@ -247,6 +247,21 @@ $template->param(
     use_template_for_session => $use_template_for_session,
 );
 
+# Pre-check item existance for some operations which depends from this:
+my $found_item;
+if (     $op eq "edititem"
+      or $op eq "dupeitem"
+      or $op eq "cud-delitem"
+      or $op eq "cud-saveitem") {
+
+    $found_item = Koha::Items->find($itemnumber)
+        if $itemnumber;
+
+    unless ($found_item) {
+        push @errors, "item_not_exist";
+    }
+}
+
 #-------------------------------------------------------------------------------
 if ( $op eq "cud-additem" ) {
 
@@ -501,19 +516,19 @@ if ( $op eq "cud-additem" ) {
     }
 
     #-------------------------------------------------------------------------------
-} elsif ( $op eq "edititem" ) {
+} elsif ( $op eq "edititem" and $found_item ) {
 
     #-------------------------------------------------------------------------------
     # retrieve item if exist => then, it's a modif
-    $current_item = Koha::Items->find($itemnumber)->unblessed;
+    $current_item = $found_item->unblessed;
     $nextop       = "cud-saveitem";
 
     #-------------------------------------------------------------------------------
-} elsif ( $op eq "dupeitem" ) {
+} elsif ( $op eq "dupeitem" and $found_item ) {
 
     #-------------------------------------------------------------------------------
     # retrieve item if exist => then, it's a modif
-    $current_item = Koha::Items->find($itemnumber)->unblessed;
+    $current_item = $found_item->unblessed;
     if ( C4::Context->preference('autoBarcode') eq 'incremental' ) {
         my ($barcode) = C4::Barcodes::ValueBuilder::incremental::get_barcode;
         $current_item->{barcode} = $barcode;
@@ -524,11 +539,11 @@ if ( $op eq "cud-additem" ) {
     $nextop = "cud-additem";
 
     #-------------------------------------------------------------------------------
-} elsif ( $op eq "cud-delitem" ) {
+} elsif ( $op eq "cud-delitem" and $found_item ) {
 
     #-------------------------------------------------------------------------------
     # check that there is no issue on this item before deletion.
-    my $item = Koha::Items->find($itemnumber);
+    my $item = $found_item;
     my $deleted;
     if ($item) {
         $deleted = $item->safe_delete;
@@ -575,12 +590,12 @@ if ( $op eq "cud-additem" ) {
     }
 
     #-------------------------------------------------------------------------------
-} elsif ( $op eq "cud-saveitem" ) {
+} elsif ( $op eq "cud-saveitem" and $found_item ) {
 
     #-------------------------------------------------------------------------------
 
     my $itemnumber = $input->param('itemnumber');
-    my $item       = Koha::Items->find($itemnumber);
+    my $item       = $found_item;
     unless ($item) {
         C4::Output::output_error( $input, '404' );
         exit;
