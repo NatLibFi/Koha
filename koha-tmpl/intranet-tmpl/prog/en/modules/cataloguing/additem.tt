@@ -89,6 +89,7 @@
     <h1>Items for [% biblio.title | html %] [% IF ( biblio.author ) %]by [% biblio.author | html %][% END %] (Record #[% biblio.biblionumber | html %])</h1>
     <a id="newitem_jump" href="#f"><i class="fa fa-arrow-down"></i> Jump to form</a>
 
+    [% IF ( item_not_exist ) %]<div class="alert alert-warning"><strong>Error</strong>: Item [% itemnumber | html %] does not exist.</div>[% END %]
     [% IF ( onloan_cannot_withdraw ) %]<div class="alert alert-warning"><strong>Error saving item</strong>: Onloan item cannot be withdrawn.</div>[% END %]
     [% IF ( intransit_cannot_withdraw ) %]<div class="alert alert-warning"><strong>Error saving item</strong>: In transit item cannot be withdrawn.</div>[% END %]
     [% IF ( barcode_not_unique ) %]<div class="alert alert-warning"><strong>Error saving item</strong>: Barcode must be unique.</div>[% END %]
