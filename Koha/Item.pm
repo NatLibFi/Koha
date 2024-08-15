@@ -1737,7 +1737,17 @@ sub to_api {
 
     $overrides->{effective_item_type_id} = $self->effective_itemtype;
 
-    my $itype_notforloan = $self->itemtype->notforloan;
+    my $itemtype = $self->itemtype;
+    my $itype_notforloan;
+    # item-level_itypes set but no itemtype set for item $self->itemnumber
+    # biblioitemnumber->itemtype requested but NULL for item $self->itemnumber
+    if ( $itemtype ) {
+        $itype_notforloan = $itemtype->notforloan;
+    }
+    else {
+        warn "Can't get itype_notforloan because itemtype not found for item nor for biblio [".$self->itemnumber."]";
+    }
+
     $overrides->{effective_not_for_loan_status} =
         ( defined $itype_notforloan && !$self->notforloan ) ? $itype_notforloan : $self->notforloan;
 
