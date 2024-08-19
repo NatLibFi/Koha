@@ -617,6 +617,12 @@ if ($holding_id) {
         $template->param( holding_doesnt_exist => 1 );
     }
 } else {
+
+    # Call to C4::Context->userenv should be always after get_template_and_user!
+    if ( defined C4::Context->userenv->{'default_holding_framework'} and !defined $frameworkcode ) {
+        $frameworkcode = C4::Context->userenv->{'default_holding_framework'};
+    }
+
     $holding = Koha::Holding->new();
     $holding->frameworkcode($frameworkcode);
     $holding->biblionumber($biblionumber);
