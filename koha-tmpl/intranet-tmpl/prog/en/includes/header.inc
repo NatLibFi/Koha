@@ -222,6 +222,11 @@
                                 <li>
                                     <a class="dropdown-item" href="/cgi-bin/koha/circ/set-library.pl">Set cash register</a>
                                 </li>
+                            [% ELSIF Koha.Preference('SummaryHoldings') %]
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="toplinks" href="/cgi-bin/koha/circ/set-library.pl">Set default holdings framework</a>
+                                </li>
                             [% END %]
                             [% IF EnableSearchHistory %]
                                 <li>
