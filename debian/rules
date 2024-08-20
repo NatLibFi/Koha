@@ -50,3 +50,6 @@ override_dh_compress:
 override_dh_installchangelogs:
 	# Debian Buster onwards renames history.txt to changelog which breaks Koha's timeline feature
 	dh_installchangelogs --exclude=history.txt
+
+override_dh_builddeb:
+	dh_builddeb -- -Zxz -z9
