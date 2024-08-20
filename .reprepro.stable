@@ -1,0 +1,8 @@
+Origin: Koha KK
+Label: Koha KK
+Suite: production
+Codename: stable
+Architectures: source i386 amd64
+Components: main
+Description: Packages for KK Koha fork stable
+SignWith: testkey
