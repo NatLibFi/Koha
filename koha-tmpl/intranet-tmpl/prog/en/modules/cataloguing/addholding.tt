@@ -119,27 +119,23 @@
         });
 
         $("#saverecord").click(function(){
-            $("#saverecord").prop("disabled", true);
             $(".btn-group").removeClass("open");
             onOption();
             return false;
         });
 
         $("#saveandview").click(function(){
-            $("#saverecord").prop("disabled", true);
             $(".btn-group").removeClass("open");
             redirect("view");
             return false;
         });
 
         $("#saveanditems").click(function(){
-            $("#saverecord").prop("disabled", true);
             $(".btn-group").removeClass("open");
             redirect("items");
             return false;
         });
         $("#saveandcontinue").click(function(){
-            $("#saverecord").prop("disabled", true);
             $(".btn-group").removeClass("open");
             var tab = $("#addholdingtabs div.active:first").attr('id');
             $("#current_tab").val(tab);
@@ -490,6 +486,12 @@ $(document).ready(function(){
         }
     }
 
+    // prevent the user from submitting the form two times
+    function ToggleButtonsTo(state){
+        $("#saverecord").prop("disabled", state);
+        $("#saveandview, #saveanditems, #saveandcontinue").toggleClass("disabled", state);
+    }
+
     /**
      * Run checks for mandatory and important fields
      * Output errors if necessary, or submit the form
@@ -504,8 +506,10 @@ $(document).ready(function(){
 
             var r=confirm( _("Important fields(s) are not filled. Are you sure you want to save?" ) );
             if (! r){
+                ToggleButtonsTo(false);
                 return false;
             } else {
+                ToggleButtonsTo(true);
                 document.f.submit();
                 return true;
             }
@@ -519,6 +523,7 @@ $(document).ready(function(){
             Sticky.hcSticky('refresh');
             return false;
         } else if( !StrAlert && !StrWarning ){
+            ToggleButtonsTo(true);
             document.f.submit();
             return true;
         }
