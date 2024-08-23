@@ -635,7 +635,7 @@ sub get_file_path_from_name {
 sub primary_key_exists {
     my ( $table_name, $key_name ) = @_;
     my $dbh = C4::Context->dbh;
-    my $sql = qq| SHOW INDEX FROM $table_name WHERE key_name='PRIMARY' |;
+    my $sql = qq| SHOW INDEX FROM | . $dbh->quote_identifier($table_name) . qq| WHERE key_name='PRIMARY' |;
     my $exists;
     if( $key_name ){
         $sql .= 'AND column_name = ? ' if $key_name;
@@ -650,14 +650,18 @@ sub primary_key_exists {
 sub foreign_key_exists {
     my ( $table_name, $constraint_name ) = @_;
     my $dbh = C4::Context->dbh;
-    my (undef, $infos) = $dbh->selectrow_array(qq|SHOW CREATE TABLE $table_name|);
+    my (undef, $infos) = $dbh->selectrow_array(
+        qq|SHOW CREATE TABLE | . $dbh->quote_identifier($table_name)
+    );
     return $infos =~ m|CONSTRAINT `$constraint_name` FOREIGN KEY|;
 }
 
 sub unique_key_exists {
     my ( $table_name, $constraint_name ) = @_;
     my $dbh = C4::Context->dbh;
-    my (undef, $infos) = $dbh->selectrow_array(qq|SHOW CREATE TABLE $table_name|);
+    my (undef, $infos) = $dbh->selectrow_array(
+        qq|SHOW CREATE TABLE | . $dbh->quote_identifier($table_name)
+    );
     return $infos =~ m|UNIQUE KEY `$constraint_name`|;
 }
 
@@ -666,7 +670,7 @@ sub index_exists {
     my $dbh = C4::Context->dbh;
     my ($exists) = $dbh->selectrow_array(
         qq|
-        SHOW INDEX FROM $table_name
+        SHOW INDEX FROM | . $dbh->quote_identifier($table_name) . qq|
         WHERE key_name = ?
         |, undef, $key_name
     );
@@ -679,7 +683,7 @@ sub column_exists {
     my $dbh = C4::Context->dbh;
     my ($exists) = $dbh->selectrow_array(
         qq|
-        SHOW COLUMNS FROM $table_name
+        SHOW COLUMNS FROM | . $dbh->quote_identifier($table_name) . qq|
         WHERE Field = ?
         |, undef, $column_name
     );
@@ -1019,8 +1023,10 @@ sub sanitize_zero_date {
 
     my $dbh = C4::Context->dbh;
 
-    my (undef, $datatype) = $dbh->selectrow_array(qq|
-        SHOW COLUMNS FROM $table_name WHERE Field = ?|, undef, $column_name);
+    my (undef, $datatype) = $dbh->selectrow_array(
+        qq|SHOW COLUMNS FROM | . $dbh->quote_identifier($table_name) . qq| WHERE Field = ?|,
+        undef, $column_name
+    );
 
     if ( $datatype eq 'date' ) {
         $dbh->do(qq|
