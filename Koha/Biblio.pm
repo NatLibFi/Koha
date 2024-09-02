@@ -54,6 +54,7 @@ use Koha::Libraries;
 use Koha::Old::Checkouts;
 use Koha::Ratings;
 use Koha::Recalls;
+use Koha::Holdings;
 use Koha::RecordProcessor;
 use Koha::Suggestions;
 use Koha::Subscriptions;
@@ -985,6 +986,22 @@ sub subscription_histories {
     my ($self) = @_;
     my $rs = $self->_result->subscriptionhistories;
     return Koha::Subscription::Histories->_new_from_dbic($rs);
+}
+
+=head3 holdings
+
+my $holdings = $self->holdings
+
+Returns the related (non-deleted) Koha::Holdings objects.
+
+=cut
+
+sub holdings {
+    my ($self) = @_;
+
+    $self->{_holdings} ||= Koha::Holdings->search({ biblionumber => $self->biblionumber(), deleted_on => undef });
+
+    return $self->{_holdings};
 }
 
 =head3 has_items_waiting_or_intransit
@@ -1944,6 +1961,11 @@ sub merge_with {
             sub {
                 foreach my $bn_merge (@biblio_ids_to_merge) {
                     my $from_biblio = Koha::Biblios->find($bn_merge);
+
+                    # Move holdings records. This will also move any items attached to the holdings.
+                    $from_biblio->holdings->move_to_biblio($self);
+
+                    # Move any items not already moved.
                     $from_biblio->items->move_to_biblio($self);
 
                     # Move article requests
