@@ -66,7 +66,10 @@ if ( C4::Context->preference('marcflavour') eq 'UNIMARC' ) {
     MARC::File::XML->default_record_format('UNIMARC');
 }
 
-our($tagslib,$authorised_values_sth,$is_a_modif,$usedTagsLib,$mandatory_z3950,$op,$changed_framework);
+our($tagslib,$usedTagsLib,$mandatory_z3950);
+
+my $op;
+my $changed_framework;
 
 =head1 FUNCTIONS
 
@@ -654,8 +657,7 @@ if ($parentbiblio) {
     }
 }
 
-$is_a_modif = 0;
-
+my $is_a_modif;
 if ($biblionumber) {
     $is_a_modif = 1;
     my $title = C4::Context->preference('marcflavour') eq "UNIMARC" ? $record->subfield('200', 'a') : $record->title;
