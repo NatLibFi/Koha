@@ -633,6 +633,11 @@ $(document).ready(function() {
         }
 
         let item_ids = $(".checkin:checked:visible").map((i, c) => c.value);
+        if ( item_ids.length == 0 ) {
+            // Skip of no items to checkin otherwise we will die in .then below
+            alert( __("There is no items to checkin.") );
+            return false;
+        }
 
         checkin_all(item_ids, checkin).then(() => {
             // Refocus on barcode field if it exists
@@ -737,6 +742,11 @@ $(document).ready(function() {
         }
 
         let item_ids = $(".renew:checked:visible").map((i, c) => c.value);
+        if ( item_ids.length == 0 ) {
+            // Skip of no items to renew otherwise we will die in .then below
+            alert( __("There is no items to renew.") );
+            return false;
+        }
 
         renew_all(item_ids, renew).then(() => {
             // Refocus on barcode field if it exists
