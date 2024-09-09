@@ -1,11 +1,12 @@
 [% USE raw %]
 [% USE Branches %]
 [% USE Categories %]
-[% SET ClaimReturnedWarningThreshold = Koha.Preference('ClaimReturnedWarningThreshold') %]
+[% SET ClaimReturnedWarningThreshold = Koha.Preference('ClaimReturnedWarningThreshold') || 0 %]
 [% SET return_claims = patron.return_claims %]
 [% SET logged_in_branchcode = Branches.GetLoggedInBranchcode() %]
+[% SET return_claims_count = return_claims.count || 0 %]
 
-[% IF ( has_modifications || warndeparture || returnbeforeexpiry || expired || patron.gonenoaddress || patron.lost || userdebarred || odues || ( return_claims.count > ClaimReturnedWarningThreshold ) || age_limitations || limited_category || charges || charges_guarantors_guarantees || charges_guarantees || credits ) %]
+[% IF ( has_modifications || warndeparture || returnbeforeexpiry || expired || patron.gonenoaddress || patron.lost || userdebarred || odues || ( return_claims_count > ClaimReturnedWarningThreshold ) || age_limitations || limited_category || charges || charges_guarantors_guarantees || charges_guarantees || credits ) %]
     <h3>Attention</h3>
     <ul>
         [% IF ( has_modifications ) %]
@@ -105,9 +106,9 @@
             </li>
         [% END %]
 
-        [% IF return_claims.count > ClaimReturnedWarningThreshold %]
+        [% IF return_claims_count > ClaimReturnedWarningThreshold %]
             <li class="return_claims blocker">
-                <span class="circ-hlt return-claims">Return claims:</span> Patron has [% return_claims.count | html %] RETURN CLAIMS
+                <span class="circ-hlt return-claims">Return claims:</span> Patron has [% return_claims_count | html %] RETURN CLAIMS
             </li>
         [% END %]
 
