@@ -381,6 +381,8 @@ modules:
             -
               columnname: holdings_itype
             -
+              columnname: holdings_holdings
+            -
               columnname: holdings_holdingbranch
             -
               columnname: holdings_homebranch
@@ -446,6 +448,8 @@ modules:
               columnname: otherholdings_cover_image
             -
               columnname: otherholdings_itype
+            -
+              columnname: otherholdings_holdings
             -
               columnname: otherholdings_holdingbranch
             -
