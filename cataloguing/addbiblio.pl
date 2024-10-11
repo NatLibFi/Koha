@@ -529,11 +529,11 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 $frameworkcode = &GetFrameworkCode($biblionumber)
   if ( $biblionumber and not( defined $frameworkcode) and $op ne 'cud-addbiblio' );
 
-if ($frameworkcode eq 'FA'){
+if ($frameworkcode and $frameworkcode eq 'FA'){
     $userflags = 'fast_cataloging';
 }
 
-$frameworkcode = '' if ( $frameworkcode eq 'Default' );
+$frameworkcode = '' if ( $frameworkcode and $frameworkcode eq 'Default' );
 
 # Set default values for global variable
 $tagslib           = &GetMarcStructure( 1, $frameworkcode );
@@ -568,7 +568,7 @@ if ($biblionumber) {
     }
 }
 
-if ($frameworkcode eq 'FA'){
+if ($frameworkcode and $frameworkcode eq 'FA'){
     # We need to grab and set some variables in the template for use on the additems screen
     $template->param(
         'circborrowernumber' => $fa_circborrowernumber,
