@@ -87,7 +87,6 @@ This function attempts to find duplicate records using a hard-coded, fairly simp
 
 sub FindDuplicate {
     my ($record) = @_;
-    my $dbh = C4::Context->dbh;
     my $result = TransformMarcToKoha({ record => $record });
     my $sth;
     my $query;
@@ -106,12 +105,15 @@ sub FindDuplicate {
         my $authorindex = 'au,ext';
         my $op = 'AND';
 
-        $result->{title} =~ s /\\//g;
-        $result->{title} =~ s /\"//g;
-        $result->{title} =~ s /\(//g;
-        $result->{title} =~ s /\)//g;
+        if   ( $result->{title} ) {
+            $result->{title} =~ s /\\//g;
+            $result->{title} =~ s /\"//g;
+            $result->{title} =~ s /\(//g;
+            $result->{title} =~ s /\)//g;
 
-        $query = "$titleindex:\"$result->{title}\"";
+            $query = "$titleindex:\"$result->{title}\"";
+        }
+
         if   ( $result->{author} ) {
             $result->{author} =~ s /\\//g;
             $result->{author} =~ s /\"//g;
@@ -1643,7 +1645,6 @@ Format results in a form suitable for passing to the template
 # building the HTML output for the template
 sub searchResults {
     my ( $search_context, $searchdesc, $hits, $results_per_page, $offset, $scan, $marcresults, $xslt_variables ) = @_;
-    my $dbh = C4::Context->dbh;
     my @newresults;
 
     require C4::Items;
@@ -1873,7 +1874,8 @@ sub searchResults {
                 $onloan_items->{$key}->{itemcallnumber} = $item->{itemcallnumber};
                 $onloan_items->{$key}->{description}    = $item->{description};
                 $onloan_items->{$key}->{imageurl} =
-                  getitemtypeimagelocation( $search_context->{'interface'}, $itemtypes{ $item->{itype} }->{imageurl} );
+                  getitemtypeimagelocation( $search_context->{'interface'}, $itemtypes{ $item->{itype} }->{imageurl} )
+                    if $item->{itype};
                 $onloan_items->{$key}->{collectioncode} = GetAuthorisedValueDesc('','',$item->{ccode},'','','CCODE');
 
                 # if something's checked out and lost, mark it as 'long overdue'
@@ -1966,7 +1968,7 @@ sub searchResults {
                     foreach (qw(withdrawn itemlost damaged branchname itemcallnumber)) {
                         $other_items->{$key}->{$_} = $item->{$_};
                     }
-                    $other_items->{$key}->{intransit} = ( $transfertwhen ne '' ) ? 1 : 0;
+                    $other_items->{$key}->{intransit} = ( $transfertwhen && $transfertwhen ne '' ) ? 1 : 0;
                     $other_items->{$key}->{recalled} = ($recallstatus) ? 1 : 0;
                     $other_items->{$key}->{onhold} = ($reservestatus) ? 1 : 0;
                     $other_items->{$key}->{notforloan} = GetAuthorisedValueDesc('','',$item->{notforloan},'','',$notforloan_authorised_value) if $notforloan_authorised_value and $item->{notforloan};

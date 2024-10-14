@@ -756,12 +756,12 @@ sub _convert_index_fields {
         # Lower case all field names
         my ( $f, $t ) = map(lc, split /,/);
         my $mc = '';
-        if ($f =~ /^mc-/) {
+        if ($f && $f =~ /^mc-/) {
             $mc = 'mc-';
             $f =~ s/^mc-//;
         }
         my $r = {
-            field => exists $index_field_convert{$f} ? $index_field_convert{$f} : $f,
+            field => $f && exists $index_field_convert{$f} ? $index_field_convert{$f} : $f,
             type  => $index_type_convert{ $t // '__default' }
         };
         $r->{field} = ($mc . $r->{field}) if $mc && $r->{field};
@@ -1177,7 +1177,8 @@ sub _fix_limit_special_cases {
         }
         else {
             my ( $field, $term ) = $l =~ /^\s*([\w,-]*?):(.*)/;
-            $field =~ s/,phr$//; #We are quoting all the limits as phrase, this prevents from quoting again later
+            $field =~ s/,phr$// #We are quoting all the limits as phrase, this prevents from quoting again later
+                if defined $field;
             if ( defined($field) && defined($term) ) {
                 push @new_lim, "$field:(\"$term\")";
             }
