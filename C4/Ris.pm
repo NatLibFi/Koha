@@ -449,7 +449,12 @@ Missing POD for normalize_author.
 sub normalize_author {
     my ( $rawauthora, $rawauthorb, $rawauthorc, $nametype ) = @_;
 
-    if ( $nametype == 0 ) {
+    if ( not defined $nametype or $nametype eq ' ' ) {
+
+        warn "\$nametype '" . ($nametype // '-undef-') ."' not recognized\n";
+        return $rawauthora || $rawauthorb || $rawauthorc;
+
+    } elsif ( $nametype == 0 ) {
 
         # ToDo: convert every input to Last[,(F.|First)[ (M.|Middle)[,Suffix]]]
         warn("name >>$rawauthora<< in direct order - leave as is") if $marcprint;
@@ -478,6 +483,10 @@ sub normalize_author {
     } elsif ( $nametype == 3 ) {
         return $rawauthora;
     }
+
+    warn "\$nametype '$nametype' not recognized\n";
+    return $rawauthora || $rawauthorb || $rawauthorc;
+
 }
 
 ##********************************************************************
