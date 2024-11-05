@@ -427,39 +427,49 @@ sub print_typetag {
 ## Returns: the normalized authorname
 ##********************************************************************
 sub normalize_author {
-    my($rawauthora, $rawauthorb, $rawauthorc, $nametype) = @_;
+    my ( $rawauthora, $rawauthorb, $rawauthorc, $nametype ) = @_;
 
-    if ($nametype == 0) {
-	# ToDo: convert every input to Last[,(F.|First)[ (M.|Middle)[,Suffix]]]
-	warn("name >>$rawauthora<< in direct order - leave as is") if $marcprint;
-	return $rawauthora;
+    if ( not defined $nametype or $nametype eq ' ' ) {
+
+        warn "\$nametype '" . ($nametype // '-undef-') ."' not recognized\n";
+        return $rawauthora || $rawauthorb || $rawauthorc;
+
+    } elsif( $nametype == 0 ) {
+
+        # ToDo: convert every input to Last[,(F.|First)[ (M.|Middle)[,Suffix]]]
+        warn("name >>$rawauthora<< in direct order - leave as is") if $marcprint;
+        return $rawauthora;
+
+    } elsif( $nametype == 1 ) {
+
+        ## start munging subfield a (the real name part)
+        ## remove spaces after separators
+        $rawauthora =~ s%([,.]+) *%$1%g;
+
+        ## remove trailing separators after spaces
+        $rawauthora =~ s% *[,;:/]*$%%;
+
+        ## remove periods after a non-abbreviated name
+        $rawauthora =~ s%(\w{2,})\.%$1%g;
+
+        ## start munging subfield b (something like the suffix)
+        ## remove trailing separators after spaces
+        $rawauthorb =~ s% *[,;:/]*$%%;
+
+        ## we currently ignore subfield c until someone complains
+        if( length($rawauthorb) > 0 ) {
+            return join ", ", ( $rawauthora, $rawauthorb );
+        } else {
+            return $rawauthora;
+        }
+
+    } elsif( $nametype == 3 ) {
+        return $rawauthora;
     }
-    elsif ($nametype == 1) {
-	## start munging subfield a (the real name part)
-	## remove spaces after separators
-	$rawauthora =~ s%([,.]+) *%$1%g;
 
-	## remove trailing separators after spaces
-	$rawauthora =~ s% *[,;:/]*$%%;
+    warn "\$nametype '$nametype' not recognized\n";
+    return $rawauthora || $rawauthorb || $rawauthorc;
 
-	## remove periods after a non-abbreviated name
-	$rawauthora =~ s%(\w{2,})\.%$1%g;
-
-	## start munging subfield b (something like the suffix)
-	## remove trailing separators after spaces
-	$rawauthorb =~ s% *[,;:/]*$%%;
-
-	## we currently ignore subfield c until someone complains
-	if (length($rawauthorb) > 0) {
-        return join ", ", ($rawauthora, $rawauthorb);
-	}
-	else {
-	    return $rawauthora;
-	}
-    }
-    elsif ($nametype == 3) {
-	return $rawauthora;
-    }
 }
 
 ##********************************************************************
