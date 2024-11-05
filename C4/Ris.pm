@@ -661,7 +661,13 @@ Missing POD for print_isbn.
 sub print_isbn {
     my ($isbnfield) = @_;
 
-    if ( !$isbnfield || length( $isbnfield->subfield('a') ) == 0 ) {
+    # if ($isbnfield) {
+    #     if(length($isbnfield->subfield('a') == 0)) {
+    #         warn "EQUAL ZERO\n";
+    #     }
+    # }
+
+    if ( !$isbnfield || length( $isbnfield->subfield('a') // '' ) == 0 ) {
         print "<marc>no isbn found (020\$a)\r\n" if $marcprint;
         warn("no isbn found")                    if $marcprint;
     } else {
