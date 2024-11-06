@@ -33,7 +33,7 @@ use 5.010;
 use Koha::Script -cron;
 use C4::Context;
 use C4::Overdues qw( Getoverdues CalcFine UpdateFine );
-use Getopt::Long qw( GetOptions );
+use Getopt::Long qw( GetOptions :config no_ignore_case );
 use Carp         qw( carp croak );
 use File::Spec;
 use Try::Tiny qw( catch try );
@@ -44,6 +44,7 @@ use Koha::Patrons;
 use C4::Log qw( cronlogaction );
 
 my $help;
+my $dry_run;
 my $verbose;
 my $output_dir;
 my $log;
@@ -51,17 +52,20 @@ my $maxdays;
 my $verify_issue;
 
 my $command_line_options = join( " ", @ARGV );
-cronlogaction( { info => $command_line_options } );
+# cronlogaction( { info => $command_line_options } );
 
 GetOptions(
     'h|help'        => \$help,
-    'v|verbose'     => \$verbose,
+    'v|verbose+'    => \$verbose,
     'l|log'         => \$log,
     'o|out:s'       => \$output_dir,
     'm|maxdays:i'   => \$maxdays,
     'i|verifyissue' => \$verify_issue,
+    'n|dry-run'     => \$dry_run,
 );
 my $usage = << 'ENDUSAGE';
+
+fines.pl - cron script to run nightly to calculate fines
 
 This script calculates and charges overdue fines
 to patron accounts.  The Koha system preference 'finesMode' controls
@@ -76,6 +80,7 @@ This script has the following parameters :
     -m --maxdays: how many days back of overdues to process
     -i --verifyissue: verify the issue before updating the fine in case the
                item is returned while the fines job is running
+    -n --dry-run: do not call UpdateFine, but imitate. For testing purposes
 
 ENDUSAGE
 
@@ -95,6 +100,12 @@ try {
     cronlogaction( { info => $message } );
     exit;
 };
+
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction({ info => $command_line_options });
+}
 
 my @borrower_fields = qw(cardnumber categorycode surname firstname email phone address citystate);
 my @item_fields     = qw(itemnumber barcode date_due);
@@ -170,6 +181,10 @@ for my $overdue ( @{$overdues} ) {
                 next;
             }
         }
+        if ( $dry_run ) {
+            print "Dry run: expected to update fine for borrower $overdue->{borrowernumber} for amount $amount.\n";
+        } else {
+
         UpdateFine(
             {
                 issue_id       => $overdue->{issue_id},
@@ -179,6 +194,8 @@ for my $overdue ( @{$overdues} ) {
                 due            => $datedue,
             }
         );
+
+        }
         $updated++;
     }
     my $borrower = $patron->unblessed;
@@ -203,6 +220,9 @@ EOM
     if ($filename) {
         say "Saved to $filename";
     }
+    if ( $dry_run ) {
+        $updated .= " (simulated)";
+    }
     print <<"EOM";
 Number of Overdue Items:
      counted $overdue_items
@@ -212,7 +232,8 @@ Number of Overdue Items:
 EOM
 }
 
-cronlogaction( { action => 'End', info => "COMPLETED" } );
+cronlogaction( { action => 'End', info => "COMPLETED" } )
+    unless $dry_run;
 
 sub set_holiday {
     my ( $branch, $dt ) = @_;
