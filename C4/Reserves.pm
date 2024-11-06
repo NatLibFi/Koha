@@ -1071,22 +1071,24 @@ This logic ensures that:
 
 sub CancelExpiredReserves {
     my $cancellation_reason = shift;
+    my $params = shift;
+
     my $today               = dt_from_string();
     my $cancel_on_holidays  = C4::Context->preference('ExpireReservesOnHolidays');
     my $expireWaiting       = C4::Context->preference('ExpireReservesMaxPickUpDelay');
 
     my $dtf    = Koha::Database->new->schema->storage->datetime_parser;
-    my $params = {
+    my $search_params = {
         -or => [
             { expirationdate         => { '<', $dtf->format_date($today) } },
             { patron_expiration_date => { '<' => $dtf->format_date($today) } }
         ]
     };
 
-    $params->{found} = [ { '!=', 'W' }, undef ] unless $expireWaiting;
+    $search_params->{found} = [ { '!=', 'W' }, undef ] unless $expireWaiting;
 
     # FIXME To move to Koha::Holds->search_expired (?)
-    my $holds = Koha::Holds->search($params);
+    my $holds = Koha::Holds->search($search_params);
 
     my $cache = Koha::Cache::Memory::Lite->get_instance();
 
@@ -1150,6 +1152,17 @@ sub CancelExpiredReserves {
             $cancel_params->{charge_cancel_fee} = 1;
         }
         $cancel_params->{autofill} = C4::Context->preference('ExpireReservesAutoFill');
+
+        if ($params->{verbose}) {
+            warn "Hold " . $hold->id . " found, in status: " . $hold->found
+                . ($cancel_params->{charge_cancel_fee} ? ' +charge_cancel_fee' : '' )
+                . ($cancel_params->{cancellation_reason} ? ' +'.$cancel_params->{cancellation_reason} : '' )
+                . "\n" if $hold->found;
+        }
+
+        $cancel_params->{verbose} = 1 if $params->{verbose};
+        $cancel_params->{dry_run} = 1 if $params->{dry_run};
+
         $hold->cancel($cancel_params);
     }
 }
