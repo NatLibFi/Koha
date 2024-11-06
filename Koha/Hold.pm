@@ -776,6 +776,21 @@ sub cancel {
                 );
 
                 my $account = Koha::Account->new( { patron_id => $self->borrowernumber } );
+
+                if($params->{verbose}) {
+                    warn "  ADD_DEBIT will be called for borrower: " . $self->borrowernumber .
+                         "\n  biblionumber: " . $self->biblionumber . ", itemnumber: " . $self->itemnumber .
+                         "\n  get_effective_expire_reserves_charge parameters:" .
+                         "\n    effective_itemtype = " . ($self->item->effective_itemtype//'-undef-') .
+                         "\n    GetReservesControlBranch = " . Koha::Policy::Holds->holds_control_library( $self->item, $self->borrower ) .
+                         "\n    categorycode = " . $self->borrower->categorycode .
+                         "\n    ccode = " . ($self->item->ccode//'-undef-') .
+                         "\n    location = " . ($self->item->location//'-undef-') .
+                         "\n  charge = " . $charge .
+                         "\n";
+                }
+                die "DRY_RUN: in sub cancel\n" if $params->{dry_run};
+
                 $account->add_debit(
                     {
                         amount     => $charge,
