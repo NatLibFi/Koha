@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#
+
 # Copyright (C) 2011 ByWater Solutions
 #
 # This file is part of Koha.
@@ -17,15 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-use strict;
-use warnings;
-
-# possible modules to use
-use Getopt::Long qw( GetOptions );
+use Modern::Perl;
+use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
+use Pod::Usage qw( pod2usage );
+use Time::HiRes;
 
 use Koha::Script;
 use C4::Context;
 use C4::Biblio qw( ModBiblio );
+use C4::Log qw( cronlogaction );
 use Koha::Biblios;
 use Pod::Usage qw( pod2usage );
 
@@ -38,25 +38,32 @@ sub usage {
 my $dbh = C4::Context->dbh;
 
 # Benchmarking variables
-my $startime   = time();
+my $startime;
 my $goodcount  = 0;
 my $badcount   = 0;
 my $totalcount = 0;
 
 # Options
+my $help = 0;
+my $dry_run;
 my $verbose;
 my $whereclause = '';
-my $help;
 my $outfile;
 
 GetOptions(
+    'h|?|help'   => \$help,
+    'v|verbose+' => \$verbose,
+    'n|dry-run'  => \$dry_run,
     'o|output:s' => \$outfile,
-    'v'          => \$verbose,
     'where:s'    => \$whereclause,
-    'help|h'     => \$help,
-);
-
+) or usage();
 usage() if $help;
+
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
+}
 
 if ($whereclause) {
     $whereclause = "WHERE $whereclause";
@@ -70,22 +77,72 @@ if ( defined $outfile ) {
     open( $fh, '>&', \*STDOUT ) || die("Couldn't duplicate STDOUT: $!");
 }
 
-my $sth1 = $dbh->prepare("SELECT biblionumber, frameworkcode FROM biblio $whereclause");
-$sth1->execute();
+# Let's estimate how big the task is:
+my $sth_ctr = $dbh->prepare("SELECT COUNT(*) AS total FROM biblio $whereclause");
+$sth_ctr->execute();
+my $res                = $sth_ctr->fetchrow_hashref;
+my $records_to_process = $res->{'total'};
+print $fh "$records_to_process records will be processed ...\n" if $verbose;
 
+my $sth_fetch = $dbh->prepare("SELECT biblionumber, frameworkcode FROM biblio $whereclause");
+$sth_fetch->execute();
+
+$startime = Time::HiRes::time();
+my $time_step_mark = $startime;
+my $notification_step = $verbose > 3 ? 10 : $verbose > 2 ? 100 : 1000;
 # fetch info from the search
-while ( my ( $biblionumber, $frameworkcode ) = $sth1->fetchrow_array ) {
+while ( my ( $biblionumber, $frameworkcode ) = $sth_fetch->fetchrow_array ) {
     my $biblio = Koha::Biblios->find($biblionumber);
     my $record = $biblio->metadata->record;
 
-    my $modok = ModBiblio( $record, $biblionumber, $frameworkcode, { skip_holds_queue => 1 } );
+    my $modok;
+    my $retry_count = 3;
+    while (1) {
+        if ( !$dry_run ) {
+            eval { $modok = ModBiblio( $record, $biblionumber, $frameworkcode, { skip_holds_queue => 1 } ); };
+            if ($@) {
+                warn "ERROR: $@";
+                if ( $@ =~ /Timed out while waiting for socket/ && $retry_count-- ) {
+                    print $fh "Timed out to connect to ES. Retrying. Reties left: $retry_count.\n";
+                    sleep 5;
+                    next;
+                }
+                die "UNEXPECTED ERROR in ModBiblio: $@\n";
+            }
+            $dbh->do( q|UPDATE biblio SET timestamp=NOW() WHERE biblionumber=?|,
+                undef, $biblionumber );
+        }
+        last;
+    }
 
-    if ($modok) {
-        $goodcount++;
-        print $fh "Touched biblio $biblionumber\n" if ( defined $verbose );
+    if ( $dry_run ) {
+        print $fh "Would have updated biblio $biblionumber\n" if $verbose && $verbose > 4;
     } else {
-        $badcount++;
-        print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        if ($modok) {
+            $goodcount++;
+            print $fh "Touched biblio $biblionumber\n" if $verbose && $verbose > 4;
+        } else {
+            $badcount++;
+            print $fh "ERROR WITH BIBLIO $biblionumber !!!!\n";
+        }
+    }
+
+    if ( $verbose && $totalcount && !( $totalcount % $notification_step ) ) {
+        my $total_timedelta = Time::HiRes::time() - $startime;
+        my $step_timedelta  = Time::HiRes::time() - $time_step_mark;
+        my $recs_left       = $records_to_process - $totalcount;
+        if ( $verbose > 1 ) {
+            printf $fh "Processed: %d. Rps speed, per %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
+              $totalcount,
+              $notification_step,
+              $step_timedelta / $notification_step,
+              $total_timedelta / $totalcount,
+              $recs_left,
+              $recs_left * $total_timedelta / $totalcount / 3600;
+        } else {
+            printf $fh "Processed: %d. Time left: %.2f hours.\n", $totalcount, $recs_left * $total_timedelta / $totalcount / 3600;
+        }
+        $time_step_mark = Time::HiRes::time();
     }
 
     $totalcount++;
@@ -94,13 +151,13 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth1->fetchrow_array ) {
 close($fh);
 
 # Benchmarking
-my $endtime     = time();
-my $time        = $endtime - $startime;
+my $endtime     = Time::HiRes::time();
+my $time        = int( $endtime - $startime );
 my $accuracy    = $totalcount ? ( $goodcount / $totalcount ) * 100 : 0;    # this is a percentage
 my $averagetime = 0;
-$averagetime = $time / $totalcount if $totalcount;
+$averagetime    = $time / $totalcount if $totalcount;
 print "Good: $goodcount, Bad: $badcount (of $totalcount) in $time seconds\n";
-printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if ( defined $verbose );
+printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if $verbose;
 print "You may wish to run the build_holds_queue.pl script now if you are using RealTimeHoldsQueue\n" if $goodcount;
 
 =head1 NAME

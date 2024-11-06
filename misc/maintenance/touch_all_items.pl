@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#
+
 # Copyright (C) 2011 ByWater Solutions
 #
 # This file is part of Koha.
@@ -17,16 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
-use strict;
-use warnings;
-
-# possible modules to use
-use Getopt::Long qw( GetOptions );
+use Modern::Perl;
+use Getopt::Long qw( GetOptions :config no_ignore_case bundling);
+use Pod::Usage qw( pod2usage );
+use Time::HiRes;
 
 use Koha::Script;
 use C4::Context;
+use C4::Log qw( cronlogaction );
 use Koha::Items;
-use Pod::Usage qw( pod2usage );
 
 sub usage {
     pod2usage( -verbose => 2 );
@@ -37,25 +36,32 @@ sub usage {
 my $dbh = C4::Context->dbh;
 
 # Benchmarking variables
-my $startime   = time();
+my $startime;
 my $goodcount  = 0;
 my $badcount   = 0;
 my $totalcount = 0;
 
 # Options
+my $help = 0;
+my $dry_run;
 my $verbose;
 my $whereclause = '';
-my $help;
 my $outfile;
 
 GetOptions(
+    'h|?|help'   => \$help,
+    'v|verbose+' => \$verbose,
+    'n|dry-run'  => \$dry_run,
     'o|output:s' => \$outfile,
-    'v'          => \$verbose,
     'where:s'    => \$whereclause,
-    'help|h'     => \$help,
-);
-
+) or usage();
 usage() if $help;
+
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction();
+}
 
 if ($whereclause) {
     $whereclause = "WHERE $whereclause";
@@ -69,9 +75,20 @@ if ( defined $outfile ) {
     open( $fh, '>&', \*STDOUT ) || die("Couldn't duplicate STDOUT: $!");
 }
 
+# Let's estimate how big the task is:
+my $sth_ctr = $dbh->prepare("SELECT COUNT(*) AS total FROM items $whereclause");
+$sth_ctr->execute();
+my $res                = $sth_ctr->fetchrow_hashref;
+my $records_to_process = $res->{'total'};
+print $fh "$records_to_process records will be processed ...\n" if $verbose;
+
 # FIXME Would be better to call Koha::Items->search here
 my $sth_fetch = $dbh->prepare("SELECT biblionumber, itemnumber, itemcallnumber FROM items $whereclause");
 $sth_fetch->execute();
+
+$startime = Time::HiRes::time();
+my $time_step_mark = $startime;
+my $notification_step = $verbose > 3 ? 10 : $verbose > 2 ? 100 : 1000;
 
 # fetch info from the search
 while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchrow_array ) {
@@ -79,19 +96,42 @@ while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchro
     my $item = Koha::Items->find($itemnumber);
     next unless $item;
 
-    for my $c (qw( itemcallnumber cn_source )) {
-        $item->make_column_dirty($c);
+    if ( $dry_run ) {
+        print $fh "Would have touched item $itemnumber\n" if $verbose && $verbose > 4;
+    } else {
+
+        for my $c (qw( itemcallnumber cn_source )) {
+            $item->make_column_dirty($c);
+        }
+
+        eval { $item->store };
+        my $modok = $@ ? 0 : 1;
+
+        if ($modok) {
+            $goodcount++;
+            print $fh "Touched item $itemnumber\n" if $verbose && $verbose > 2;
+        } else {
+            $badcount++;
+            print $fh "ERROR WITH ITEM $itemnumber !!!!\n";
+        }
     }
 
-    eval { $item->store };
-    my $modok = $@ ? 0 : 1;
-
-    if ($modok) {
-        $goodcount++;
-        print $fh "Touched item $itemnumber\n" if ( defined $verbose );
-    } else {
-        $badcount++;
-        print $fh "ERROR WITH ITEM $itemnumber !!!!\n";
+    if ( $verbose && $totalcount && !( $totalcount % $notification_step ) ) {
+        my $total_timedelta = Time::HiRes::time() - $startime;
+        my $step_timedelta  = Time::HiRes::time() - $time_step_mark;
+        my $recs_left       = $records_to_process - $totalcount;
+        if ( $verbose > 1 ) {
+            printf $fh "Processed: %d. Rps speed, per %d: %.3f, all: %.3f rps. %d recs left: %.2f hours.\n",
+              $totalcount,
+              $notification_step,
+              $step_timedelta / $notification_step,
+              $total_timedelta / $totalcount,
+              $recs_left,
+              $recs_left * $total_timedelta / $totalcount / 3600;
+        } else {
+            printf $fh "Processed: %d. Time left: %.2f hours.\n", $totalcount, $recs_left * $total_timedelta / $totalcount / 3600;
+        }
+        $time_step_mark = Time::HiRes::time();
     }
 
     $totalcount++;
@@ -100,13 +140,13 @@ while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchro
 close($fh);
 
 # Benchmarking
-my $endtime     = time();
-my $time        = $endtime - $startime;
-my $accuracy    = $totalcount ? ( $goodcount / $totalcount ) * 100 : 0;    # this is a percentage
+my $endtime     = Time::HiRes::time();
+my $time        = int( $endtime - $startime );
+my $accuracy    = $totalcount ? ( $goodcount / $totalcount ) * 100 : 0; # this is a percentage
 my $averagetime = 0;
-$averagetime = $time / $totalcount if $totalcount;
+$averagetime    = $time / $totalcount if $totalcount;
 print "Good: $goodcount, Bad: $badcount (of $totalcount) in $time seconds\n";
-printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if ( defined $verbose );
+printf "Accuracy: %.2f%%\nAverage time per record: %.6f seconds\n", $accuracy, $averagetime if $verbose;
 
 =head1 NAME
 
