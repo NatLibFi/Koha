@@ -1,6 +1,7 @@
 [% USE raw %]
 [% USE Asset %]
 [% USE Koha %]
+[% USE Frameworks %]
 [% USE HtmlTags %]
 [% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -645,21 +646,14 @@
                     [% END %]
 
                     <div class="btn-group">
-                        <button class="btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i> Settings <span class="caret"></span></button>
-                        <ul id="settings-menu" class="dropdown-menu">
-                            [% IF 0 && Koha.Preference( 'EnableAdvancedCatalogingEditor' ) == 1 && CAN_user_editcatalogue_advanced_editor %]
-                                <li><a href="#" id="switcheditor">Switch to advanced editor</a></li>
-                            [% END %]
-                            [% UNLESS advancedMARCEditor %]
-                                <li>
-                                    <a href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
-                                <li>
-                                    <a href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
-                                </li>
-                            [% END %]
-                            <li class="dropdown-header">Change framework</li>
+                        <button class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" title="Click to Change framework"><i class="fa fa-book"></i>
+                            <span style="text-overflow: ellipsis;max-width: 150px;overflow: hidden;white-space: nowrap;display: inline-block;vertical-align: bottom;">[% Frameworks.GetName(frameworkcode) | html %]</span>
+                            [% IF ( frameworkcode ) %]([% frameworkcode | html %])[% END %]
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="frameworks-menu" class="dropdown-menu">
                             <li>
-                                <a href="#" class="change-framework" data-frameworkcode="">
+                                <a class="dropdown-item change-framework" href="#" data-frameworkcode="">
                                     [% IF ( frameworkcode ) %]
                                        <i class="fa fa-fw">&nbsp;</i>
                                     [% ELSE %]
@@ -670,7 +664,7 @@
                             </li>
                             [% FOREACH framework IN frameworks%]
                                 <li>
-                                    <a href="#" class="change-framework" data-frameworkcode="[% framework.frameworkcode | html %]">
+                                    <a class="dropdown-item change-framework" href="#" data-frameworkcode="[% framework.frameworkcode | html %]">
                                         [% IF framework.frameworkcode == frameworkcode %]
                                             <i class="fa fa-fw fa-check"></i>
                                         [% ELSE %]
@@ -678,6 +672,22 @@
                                         [% END %]
                                         [% framework.frameworktext | html %]
                                     </a>
+                                </li>
+                            [% END %]
+                        </ul> <!-- /#frameworks-menu -->
+                    </div> <!-- /.btn-group -->
+
+                    <div class="btn-group">
+                        <button class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-cog"></i> Settings</button>
+                        <ul id="settings-menu" class="dropdown-menu">
+                            [% IF 0 && Koha.Preference( 'EnableAdvancedCatalogingEditor' ) == 1 && CAN_user_editcatalogue_advanced_editor %]
+                                <li><a class="dropdown-item" href="#" id="switcheditor">Switch to advanced editor</a></li>
+                            [% END %]
+                            [% UNLESS advancedMARCEditor %]
+                                <li>
+                                    <a class="dropdown-item" href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
+                                <li>
+                                    <a class="dropdown-item" href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
                                 </li>
                             [% END %]
                         </ul> <!-- /#settings-menu -->
