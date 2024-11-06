@@ -489,7 +489,7 @@ sub GetAuthorisedValues {
 
     # Is this cached already?
     my $branch_limit =
-      C4::Context->userenv ? C4::Context->userenv->{"branch"} : "";
+      C4::Context->userenv ? ( C4::Context->userenv->{"branch"} // "" ) : "";
     my $cache_key =
       "AuthorisedValues-$category-$opac-$branch_limit";
     my $cache  = Koha::Caches->get_instance();
