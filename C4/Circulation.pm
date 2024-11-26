@@ -3533,7 +3533,7 @@ sub AddRenewal {
 
             # Charge a new rental fee, if applicable
             my ( $charge, $type ) = GetIssuingCharges( $itemnumber, $borrowernumber );
-            if ( $charge > 0 ) {
+            if ( $charge && $charge > 0 ) {
                 AddIssuingCharge( $issue, $charge, 'RENT_RENEW' );
             }
 
