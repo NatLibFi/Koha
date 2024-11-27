@@ -633,6 +633,11 @@ $(document).ready(function() {
         }
 
         let item_ids = $(".checkin:checked:visible").map((i, c) => c.value);
+        if ( item_ids.length == 0 ) {
+            // Skip of no items to checkin otherwise we will die in .then below
+            alert( __("There is no items to checkin.") );
+            return false;
+        }
 
         checkin_all(item_ids, checkin).then(() => {
             // Refocus on barcode field if it exists
@@ -750,11 +755,12 @@ $(document).ready(function() {
                 $("#RenewChecked, #CheckinChecked").prop("disabled", true);
             });
 
-            // Prevent form submit
-            return false;
         } else {
             alert(_("There are no items to be renewed."));
         }
+
+        // Prevent form submit
+        return false;
     });
 
     $("#RenewAll").on("click",function(){
