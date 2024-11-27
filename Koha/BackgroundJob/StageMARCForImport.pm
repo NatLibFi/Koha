@@ -96,7 +96,7 @@ sub process {
         my ( $errors, $marcrecords );
         if ( $format eq 'MARCXML' ) {
             ( $errors, $marcrecords ) =
-              C4::ImportBatch::RecordsFromMARCXMLFile( $filepath, $encoding );
+              C4::ImportBatch::RecordsFromMARCXMLFile( $filepath, $record_type, $encoding );
         }
         elsif ( $format eq 'ISO2709' ) {
             ( $errors, $marcrecords ) =
