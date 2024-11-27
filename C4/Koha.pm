@@ -489,7 +489,7 @@ sub GetAuthorisedValues {
 
     # Is this cached already?
     my $branch_limit =
-      C4::Context->userenv ? C4::Context->userenv->{"branch"} : "";
+      C4::Context->userenv ? ( C4::Context->userenv->{"branch"} // "" ) : "";
     my $cache_key =
       "AuthorisedValues-$category-$opac-$branch_limit";
     my $cache  = Koha::Caches->get_instance();
@@ -686,8 +686,8 @@ sub GetNormalizedOCLCNumber {
 }
 
 sub _normalize_match_point {
-    my $match_point = shift;
-    (my $normalized_match_point) = $match_point =~ /([\d-]*[X]*)/;
+    my $match_point = shift // '';
+    my ($normalized_match_point) = $match_point =~ /([\d-]*[X]*)/;
     $normalized_match_point =~ s/-//g;
 
     return $normalized_match_point;
