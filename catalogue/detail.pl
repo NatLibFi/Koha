@@ -298,6 +298,12 @@ $template->param(
     ),
 );
 
+# Summary holdings
+my $summary_holdings;
+if (C4::Context->preference('SummaryHoldings')) {
+    $summary_holdings = $biblio->holdings;
+}
+
 # Get acquisition details
 if ( C4::Context->preference('AcquisitionDetails') ) {
     my $orders = Koha::Acquisition::Orders->search(
@@ -367,6 +373,7 @@ $template->param(
     MARCNOTES           => !$invalid_marc_record ? $biblio->get_marc_notes() : undef,
     z3950_search_params => C4::Search::z3950_search_args($dat),
     C4::Search::enabled_staff_search_views,
+    summary_holdings => $summary_holdings,
 );
 
 if ( C4::Context->preference("AlternateHoldingsField") && $items_to_display->count == 0 ) {

@@ -6,6 +6,7 @@
 [% USE Branches %]
 [% USE TablesSettings %]
 [% USE AuthorisedValues %]
+[% USE Holdings %]
 [% USE KohaPlugins %]
 [% USE SafeURL %]
 [% PROCESS 'i18n.inc' %]
@@ -628,6 +629,33 @@
                                     [% END %]
                                 [% END %]
                             [% END # IF itemloop.size %]
+                            [% IF summary_holdings %]
+                                [% FOREACH holding IN summary_holdings %]
+                                    [% UNLESS holding.suppress %]
+                                        [% holding_details = Holdings.GetDetails(holding) %]
+                                        [% IF holding_details.public_note || holding_details.summary || holding_details.supplements || holding_details.indexes %]
+                                            <span class="summary-holdings">
+                                                <br>
+                                                <strong>Additional information for [% Holdings.GetLocation(holding, 1) | html %]</strong>
+                                                <ul>
+                                                    [% IF holding_details.public_note %]
+                                                        <li>Public note: [% holding_details.public_note | html %]</li>
+                                                    [% END %]
+                                                    [% IF holding_details.summary %]
+                                                        <li>Summary: [% holding_details.summary | html %]</li>
+                                                    [% END %]
+                                                    [% IF holding_details.supplements %]
+                                                        <li>Supplements: [% holding_details.supplements | html %]</li>
+                                                    [% END %]
+                                                    [% IF holding_details.indexes %]
+                                                        <li>Indexes: [% holding_details.indexes | html %]</li>
+                                                    [% END %]
+                                                </ul>
+                                            </span>
+                                        [% END %]
+                                    [% END %]
+                                [% END %]
+                            [% END %]
                             [% PROCESS 'shelfbrowser.inc' %]
                             [% INCLUDE shelfbrowser tab='holdings' %]
                         [% END # /tab_panel#holdings %]
