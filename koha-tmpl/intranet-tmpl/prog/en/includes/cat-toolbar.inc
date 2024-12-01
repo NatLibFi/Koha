@@ -13,6 +13,10 @@
                     <li><a class="dropdown-item" id="newbiblio" href="/cgi-bin/koha/cataloguing/addbiblio.pl">New record</a></li>
                 [% END %]
 
+                [% IF ( Koha.Preference('SummaryHoldings') && CAN_user_editcatalogue_edit_items ) %]
+                 <li><a class="dropdown-item" id="newholding" href="/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=[% biblionumber | uri %]">New holdings record</a></li>
+                [% END %]
+
                 [% IF ( CAN_user_editcatalogue_edit_items ) %]
                     <li><a class="dropdown-item" id="newitem" href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% biblionumber | html %]#additema">New item</a></li>
                 [% END %]

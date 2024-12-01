@@ -104,6 +104,7 @@ use Koha::Biblio::Metadatas;
 use Koha::Holds;
 use Koha::ItemTypes;
 use Koha::MarcOverlayRules;
+use Koha::Holdings;
 use Koha::Plugins;
 use Koha::RecordProcessor;
 use Koha::SearchEngine;
@@ -545,6 +546,25 @@ sub DelBiblio {
 
         # Fix this to use a status the template can understand
         $error .= "This Biblio has items attached, please delete them first before deleting this biblio ";
+    }
+
+    # Check for attached holdings records
+    my $holdings = $biblio->holdings;
+    if ($holdings->count > 0) {
+        if (C4::Context->preference('SummaryHoldings')) {
+            # Fix this to use a status the template can understand
+            $error .= "This Biblio has holdings records attached, please delete them first before deleting this biblio ";
+        }
+        else {
+            # Summary holdings disabled, so just delete any existing holdings records. Use
+            # holdings record's delete method to mark the records deleted. Note that as long
+            # as biblios are deleted from the biblio table, the foreign key will cause the
+            # holdings records to be deleted as well, but this will allow things to work
+            # better in the future when biblios are no longer moved to another table.
+            while (my $holding = $holdings->next) {
+                $holding->delete;
+            }
+        }
     }
 
     return $error if $error;
@@ -1546,6 +1566,23 @@ sub GetAuthorisedValueDesc {
                 $cache->set_in_cache( $cache_key, $cn_sources );
             }
             return $cn_sources->{$value};
+        }
+
+        #---- holdings
+        if ( $tagslib->{$tag}->{$subfield}->{'authorised_value'} eq "holdings" ) {
+            my $holding = Koha::Holdings->find( $value );
+            if ( $holding ) {
+                my @parts;
+
+                push @parts, $value;
+                push @parts, $holding->holdingbranch() if $holding->holdingbranch();
+                push @parts, $holding->location() if $holding->location();
+                push @parts, $holding->ccode() if $holding->ccode();
+                push @parts, $holding->callnumber() if $holding->callnumber();
+
+                return join(' ', @parts);
+            }
+            return q||;
         }
 
         #---- "true" authorized value

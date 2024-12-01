@@ -399,6 +399,7 @@
                                             [% IF (cannotdelbiblio.itemcount) %]<li>[% cannotdelbiblio.itemcount | html %] item(s) attached.</li>[% END %]
                                             [% IF (cannotdelbiblio.subscriptions) %]<li>[% cannotdelbiblio.subscriptions | html %] subscription(s) attached.</li>[% END %]
                                             [% IF (cannotdelbiblio.countbiblio) %]<li>[% cannotdelbiblio.countbiblio | html %] order(s) attached.</li>[% END %]
+                                            [% IF (cannotdelbiblio.holdingscount) %]<li>[% cannotdelbiblio.holdingscount | html %] holdings record(s) attached.</li>[% END %]
                                             [% IF (cannotdelbiblio.othererror) %]<li>Unknown error.</li>[% END %]
                                         </ul>
                                     </li>
@@ -998,6 +999,9 @@
                                                             ><br />
                                                         [% ELSE %]
                                                             <span class="button" title="Can't delete catalog record, see constraints below">Can't cancel order and delete catalog record</span><br />
+                                                        [% END %]
+                                                        [% IF ( books_loo.holdings ) %]
+                                                            <strong title="Can't delete catalog record, because of [% books_loo.holdings | html %] existing holdings record(s)" >[% books_loo.holdings | html %] holdings record(s) left</strong><br>
                                                         [% END %]
                                                         [% IF ( books_loo.left_item ) %]
                                                             <strong title="Can't delete catalog record, because of [% books_loo.items | html %] existing hold(s)">[% books_loo.items | html %] item(s) left</strong><br />

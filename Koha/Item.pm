@@ -42,6 +42,7 @@ use Koha::Exceptions;
 use Koha::Exceptions::Checkin;
 use Koha::Exceptions::Item::Bundle;
 use Koha::Exceptions::Item::Transfer;
+use Koha::Holdings;
 use Koha::Item::Attributes;
 use Koha::Exceptions::Item::Bundle;
 use Koha::Item::Transfer::Limits;
@@ -488,6 +489,21 @@ sub biblioitem {
     my ($self) = @_;
     my $biblioitem_rs = $self->_result->biblioitem;
     return Koha::Biblioitem->_new_from_dbic($biblioitem_rs);
+}
+
+=head3 holding
+
+my $holding = $item->holding;
+
+Return the holdings record of this item
+
+=cut
+
+sub holding {
+    my ( $self ) = @_;
+    my $holding_rs = $self->_result->holding;
+    return unless $holding_rs;
+    return Koha::Holding->_new_from_dbic( $holding_rs );
 }
 
 =head3 checkout
@@ -2142,6 +2158,38 @@ sub move_to_biblio {
 
     my $from_biblionumber = $self->biblionumber;
     my $to_biblionumber   = $to_biblio->biblionumber;
+
+    # Own holdings record
+    my $holding = $self->holding;
+    # Check if our holdings record is already linked to the target biblio
+    if ($holding && $holding->biblionumber != $to_biblionumber) {
+        # Check if there's a suitable holdings record in the new biblio.
+        # This is not perfect, but at least we try.
+        my $candidates = Koha::Holdings->search(
+            {
+                biblionumber     => $to_biblionumber,
+                frameworkcode    => $holding->frameworkcode(),
+                holdingbranch    => $holding->holdingbranch(),
+                location         => $holding->location(),
+                callnumber       => $holding->callnumber(),
+                suppress         => $holding->suppress(),
+                deleted_on       => undef
+            }
+        );
+        my $newHolding = $candidates->next();
+        if (!$newHolding) {
+            # No existing holdings record, make a copy of the old one.
+            $newHolding = Koha::Holding->new({
+                biblionumber => $to_biblionumber,
+                frameworkcode => $holding->frameworkcode()
+            });
+            $newHolding->set_marc({ record => $holding->metadata()->record() });
+            $newHolding->store();
+        }
+        $self->set({
+            holding_id => $newHolding->holding_id()
+        });
+    }
 
     # Own biblionumber and biblioitemnumber
     $self->set(

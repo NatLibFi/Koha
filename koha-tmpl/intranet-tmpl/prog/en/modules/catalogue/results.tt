@@ -3,6 +3,7 @@
 [% USE Asset %]
 [% USE Koha %]
 [% USE Biblio %]
+[% USE Holdings %]
 [% USE KohaDates %]
 [% USE KohaPlugins %]
 [% USE ItemTypes %]
@@ -755,6 +756,18 @@
 
                                     <td>
                                         <div class="availability">
+                                            [% IF ( SEARCH_RESULT.summary_holdings ) %]
+                                                <div class="holdings">
+                                                    <strong>Holdings</strong>
+                                                    <ul>
+                                                    [% FOREACH holding IN SEARCH_RESULT.summary_holdings %]
+                                                        <li>
+                                                            [% Holdings.GetLocation(holding) | html %]
+                                                        </li>
+                                                    [% END %]
+                                                    </ul>
+                                                </div>
+                                            [% END %]
                                             [% IF ( SEARCH_RESULT.items_count ) %]
                                                 <div class="results_available_count">
                                                     [% IF MaxSearchResultsItemsPerRecordStatusCheck && SEARCH_RESULT.items_count > MaxSearchResultsItemsPerRecordStatusCheck %]
