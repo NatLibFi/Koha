@@ -97,27 +97,31 @@
 
             [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && (Koha.Preference('ShowQuickBranchSelector') ) %]
                 <ul id="branch-menu" class="nav navbar-nav">
-                    <li class="nav-item dropdown" id="quick-branch-dropdown"></span>
+                    <li class="nav-item dropdown" id="quick-branch-dropdown">
                         <!-- Button for the dropdown menu -->
                         <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="nav-link-icon"><i class="fa fa-fw fa-code-branch" title="Branches"></i></span>
+                            <span class="nav-link-icon"><i class="fa fa-fw fa-code-branch" title="Branches"></i>: [% Branches.GetLoggedInBranchcode | html %]</span>
                             <span class="nav-link-text" style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
                         </a>
                         <!-- Dropdown menu -->
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="quick-branch-toggle">
-
                             [% FOREACH l IN Branches.all() %]
-                            <li>
-                                [% IF l.selected %]
-                                <a class="dropdown-item active disabled" href="#" style="color: white; background-color: #408540;">
-                                    [% l.branchname | html %] (Current)
-                                </a>
-                                [% ELSE %]
-                                <a class="dropdown-item" href="#" data-branch="[% l.branchcode | html %]">
-                                    [% l.branchname | html %]
-                                </a>
-                                [% END %]
-                            </li>
+                                <li>
+                                    [% IF l.selected %]
+                                        <span class="dropdown-item active" style="background-color: #408540; color: white;">
+                                            [% l.branchname | html %] (Current)
+                                        </span>
+                                    [% ELSE %]
+                                        <form method="post" action="/cgi-bin/koha/circ/set-library.pl" class="dropdown-item m-0 p-0">
+                                            [% INCLUDE 'csrf-token.inc' %]
+                                            <input type="hidden" name="op" value="cud-set-library">
+                                            <input type="hidden" name="branch" value="[% l.branchcode | html %]">
+                                            <button type="submit" class="btn w-100 text-start" style="background: none; border: none; color: inherit; padding: 0.5rem 1rem;">
+                                                [% l.branchname | html %]
+                                            </button>
+                                        </form>
+                                    [% END %]
+                                </li>
                             [% END %]
                         </ul>
                     </li>
