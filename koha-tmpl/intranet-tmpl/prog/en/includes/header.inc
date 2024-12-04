@@ -101,10 +101,11 @@
                     <li class="nav-item dropdown" id="quick-branch-dropdown">
                         <!-- Button for the dropdown menu -->
                         <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
+                            <span class="nav-link-icon"><i class="fa fa-fw fa-code-branch" title="Branches"></i></span>
+                            <span class="nav-link-text" style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
                         </a>
                         <!-- Dropdown menu -->
-                        <ul class="dropdown-menu" aria-labelledby="quick-branch-toggle">
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="quick-branch-toggle">
 
                             [% FOREACH l IN Branches.all() %]
                             <li>
