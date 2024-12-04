@@ -95,21 +95,21 @@
                 [% END %]
             </ul>
 
-            [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && (            Koha.Preference('ShowQuickBranchSelector') ) %]
-
+            [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && (Koha.Preference('ShowQuickBranchSelector') ) %]
                 <ul id="branch-menu" class="nav navbar-nav">
-                    <li class="nav-item dropdown" id="quick-branch-dropdown">
+                    <li class="nav-item dropdown" id="quick-branch-dropdown"></span>
                         <!-- Button for the dropdown menu -->
-                        <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="           false">
-                            <span style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
+                        <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="nav-link-icon"><i class="fa fa-fw fa-code-branch" title="Branches"></i></span>
+                            <span class="nav-link-text" style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
                         </a>
                         <!-- Dropdown menu -->
-                        <ul class="dropdown-menu" aria-labelledby="quick-branch-toggle">
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="quick-branch-toggle">
 
                             [% FOREACH l IN Branches.all() %]
                             <li>
                                 [% IF l.selected %]
-                                <a class="dropdown-item active disabled" href="#" style="pointer-events: none; color: white; background-color: #408540;"            >
+                                <a class="dropdown-item active disabled" href="#" style="color: white; background-color: #408540;">
                                     [% l.branchname | html %] (Current)
                                 </a>
                                 [% ELSE %]
