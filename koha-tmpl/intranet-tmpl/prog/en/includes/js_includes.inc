@@ -68,44 +68,6 @@
         });
     </script>
 [% END %]
-[% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            document.querySelectorAll('#quick-branch-dropdown .dropdown-item').forEach(function (item) {
-                item.addEventListener('click', function (event) {
-                    event.preventDefault();
-
-                    const branchCode = this.getAttribute('data-branch');
-
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/cgi-bin/koha/circ/set-library.pl';
-
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrf_token';
-                    csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');;
-                    form.appendChild(csrfInput);
-
-                    const opInput = document.createElement('input');
-                    opInput.type = 'hidden';
-                    opInput.name = 'op';
-                    opInput.value = 'cud-set-library';
-                    form.appendChild(opInput);
-
-                    const branchInput = document.createElement('input');
-                    branchInput.type = 'hidden';
-                    branchInput.name = 'branch';
-                    branchInput.value = branchCode;
-                    form.appendChild(branchInput);
-
-                    document.body.appendChild(form);
-                    form.submit();
-                });
-            });
-        });
-    </script>
-[% END %]
 
 <script>
     var defaultPatronSearchFields = "[% Koha.Preference('DefaultPatronSearchFields') || 'firstname|preferred_name|middle_name|surname|othernames|cardnumber|userid' | html %]";
