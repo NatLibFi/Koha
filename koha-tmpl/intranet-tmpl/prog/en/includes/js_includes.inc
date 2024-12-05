@@ -84,7 +84,7 @@
                     const csrfInput = document.createElement('input');
                     csrfInput.type = 'hidden';
                     csrfInput.name = 'csrf_token';
-                    csrfInput.value = '[% Koha.GenerateCSRF | $raw %]';
+                    csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');;
                     form.appendChild(csrfInput);
 
                     const opInput = document.createElement('input');
