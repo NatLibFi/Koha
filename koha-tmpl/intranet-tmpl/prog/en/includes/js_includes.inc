@@ -85,6 +85,19 @@
         });
     </script>
 [% END %]
+[% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        $(document).ready(function() {
+            $(document).on('click', '#quick-branch-dropdown .dropdown-item', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+                $('#select_branches_form input[name="branch"]').val($(this).data('branchcode'));
+                console.log($('#select_branches_form input[name="branch"]').val());
+                $('#select_branches_form').submit();
+            });
+        });
+    </script>
+[% END %]
 [% IF ( PatronAutoComplete ) %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         // PatronAutoComplete
