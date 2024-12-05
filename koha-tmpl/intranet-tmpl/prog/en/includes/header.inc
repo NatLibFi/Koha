@@ -103,21 +103,21 @@
                             <span class="nav-link-text" style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="quick-branch-toggle">
+                            <form id="select_branches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
+                                [% INCLUDE 'csrf-token.inc' %]
+                                <input type="hidden" name="op" value="cud-set-library">
+                                <input type="hidden" name="branch" value="[% Branches.GetLoggedInBranchcode | html %]">
+                            </form>
                             [% FOREACH l IN Branches.all() %]
                                 <li>
                                     [% IF l.selected %]
                                         <span class="dropdown-item active" style="background-color: #408540; color: white;">
-                                            [% l.branchname | html %] (Current)
+                                            <i class="fa fa-fw fa-check"></i> [% l.branchname | html %]
                                         </span>
                                     [% ELSE %]
-                                        <form method="post" action="/cgi-bin/koha/circ/set-library.pl" class="dropdown-item m-0 p-0">
-                                            [% INCLUDE 'csrf-token.inc' %]
-                                            <input type="hidden" name="op" value="cud-set-library">
-                                            <input type="hidden" name="branch" value="[% l.branchcode | html %]">
-                                            <button type="submit" class="btn w-100 text-start" style="background: none; border: none; color: inherit; padding: 0.5rem 1rem;">
-                                                [% l.branchname | html %]
-                                            </button>
-                                        </form>
+                                        <a class="dropdown-item" href="#" data-branchcode="[% l.branchcode | html %]">
+                                            <i class="fa fa-fw">&nbsp;</i> [% l.branchname | html %]
+                                        </a>
                                     [% END %]
                                 </li>
                             [% END %]
