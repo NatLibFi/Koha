@@ -1038,6 +1038,7 @@ __PACKAGE__->add_columns(
     '+restricted'                        => { is_boolean => 0 },
     '+stack'                             => { is_boolean => 0 },
     '+withdrawn'                         => { is_boolean => 0 },
+    '+is_closed_stack'                   => { is_boolean => 1 },
 );
 
 # Relationship with orders via the aqorders_item table that not have foreign keys
