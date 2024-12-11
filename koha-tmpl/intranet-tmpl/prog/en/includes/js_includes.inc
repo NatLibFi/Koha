@@ -71,9 +71,38 @@
 [% END %]
 [% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
     <script>
-        $( document ).ready(function() {
-            $( document ).on( 'change', '#quick-branch', function() {
-                $( '#select_braches_form' ).submit();
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('#quick-branch-dropdown .dropdown-item').forEach(function (item) {
+                item.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    const branchCode = this.getAttribute('data-branch');
+
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/cgi-bin/koha/circ/set-library.pl';
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrf_token';
+                    csrfInput.value = '[% Koha.GenerateCSRF | $raw %]';
+                    form.appendChild(csrfInput);
+
+                    const opInput = document.createElement('input');
+                    opInput.type = 'hidden';
+                    opInput.name = 'op';
+                    opInput.value = 'cud-set-library';
+                    form.appendChild(opInput);
+
+                    const branchInput = document.createElement('input');
+                    branchInput.type = 'hidden';
+                    branchInput.name = 'branch';
+                    branchInput.value = branchCode;
+                    form.appendChild(branchInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                });
             });
         });
     </script>
