@@ -71,11 +71,29 @@
 [% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
     <script>
         $(document).ready(function() {
+            const el = $('#loginform #set-library-branch');
+            if (el.length > 0) {
+                const savedBranch = localStorage.getItem('selectedBranch');
+                if (savedBranch) {
+                    el.val(savedBranch);
+                }
+
+                $('#loginform').on('submit', function() {
+                    const branchCode = el.val();
+                    if (branchCode) {
+                        localStorage.setItem('selectedBranch', branchCode);
+                    }
+                });
+            }
+
             $(document).on('click', '#quick-branch-dropdown .dropdown-item', function(event) {
                 event.stopPropagation();
                 event.preventDefault();
-                $('#select_branches_form input[name="branch"]').val($(this).data('branchcode'));
-                console.log($('#select_branches_form input[name="branch"]').val());
+
+                const selectedBranchCode = $(this).data('branchcode');
+                localStorage.setItem('selectedBranch', selectedBranchCode);
+
+                $('#select_branches_form input[name="branch"]').val(selectedBranchCode);
                 $('#select_branches_form').submit();
             });
         });
