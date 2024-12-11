@@ -95,6 +95,35 @@
                 [% END %]
             </ul>
 
+            [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && (            Koha.Preference('ShowQuickBranchSelector') ) %]
+
+                <ul id="branch-menu" class="nav navbar-nav">
+                    <li class="nav-item dropdown" id="quick-branch-dropdown">
+                        <!-- Button for the dropdown menu -->
+                        <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="           false">
+                            <span style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
+                        </a>
+                        <!-- Dropdown menu -->
+                        <ul class="dropdown-menu" aria-labelledby="quick-branch-toggle">
+
+                            [% FOREACH l IN Branches.all() %]
+                            <li>
+                                [% IF l.selected %]
+                                <a class="dropdown-item active disabled" href="#" style="pointer-events: none; color: white; background-color: #408540;"            >
+                                    [% l.branchname | html %] (Current)
+                                </a>
+                                [% ELSE %]
+                                <a class="dropdown-item" href="#" data-branch="[% l.branchcode | html %]">
+                                    [% l.branchname | html %]
+                                </a>
+                                [% END %]
+                            </li>
+                            [% END %]
+                        </ul>
+                    </li>
+                </ul>
+            [% END %]
+
             <ul id="user-menu" class="nav navbar-nav">
                 [% IF ( loggedinusername ) %]
                     <li class="nav-item dropdown" id="logged-in-dropdown">
@@ -102,16 +131,6 @@
                             <span id="logged-in-info-brief">
                                 <i class="fa fa-user"></i>
                             </span>
-                            [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && ( Koha.Preference('ShowQuickBranchSelector') ) %]
-                            <form id="select_braches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
-                                [% INCLUDE 'csrf-token.inc' %]
-                                <input type="hidden" name="op" value="cud-set-library">
-                                Library:
-                                    <select name="branch" id="quick-branch" style="background: #352c2e; border: hidden; font-weight: bolder;">
-                                        [% PROCESS options_for_libraries libraries => Branches.all() %]
-                                    </select>
-                            </form>
-                            [% END %]
                             <span id="logged-in-info-full">
                                 [% SET is_superlibrarian = CAN_user_superlibrarian ? 'is_superlibrarian' : '' %]
                                 <span class="loggedinusername [% is_superlibrarian | html %]" data-loggedinusername="[% logged_in_user.userid | html %]" data-is-superlibrarian="[% is_superlibrarian | html %]"
