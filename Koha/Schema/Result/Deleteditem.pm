@@ -545,6 +545,7 @@ __PACKAGE__->add_columns(
     '+restricted'                        => { is_boolean => 0 },
     '+stack'                             => { is_boolean => 0 },
     '+withdrawn'                         => { is_boolean => 0 },
+    '+is_closed_stack'                   => { is_boolean => 1 },
 );
 
 =head2 koha_objects_class
