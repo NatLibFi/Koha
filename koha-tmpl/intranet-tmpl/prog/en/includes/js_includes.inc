@@ -86,6 +86,23 @@
                 });
             }
 
+            const libraryPanel = document.getElementById('setlibrary_panel');
+
+            if (libraryPanel) {
+                const observer = new MutationObserver(() => {
+                    if ($('#set-library-form').length > 0) {
+                        const form = $('#set-library-form');
+                        form.on('submit', function () {
+                            const branchCode = $('#set-library-branch').val();
+                            if (branchCode) {
+                                localStorage.setItem('selectedBranch', branchCode);
+                            }
+                        });
+                    }
+                });
+                observer.observe(libraryPanel, { childList: true });
+            }
+
             $(document).on('click', '#quick-branch-dropdown .quick-branch-selection-item', function(event) {
                 event.stopPropagation();
                 event.preventDefault();
