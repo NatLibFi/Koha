@@ -84,7 +84,7 @@
                 });
             }
 
-            const libraryPanel = document.getElementById('setlibrary_panel');
+            const libraryPanel = $('#setlibrary_panel')[0];
 
             if (libraryPanel) {
                 const observer = new MutationObserver(() => {
