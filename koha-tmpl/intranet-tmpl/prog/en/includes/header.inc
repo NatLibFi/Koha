@@ -115,7 +115,7 @@
                                             <i class="fa fa-fw fa-check"></i> [% l.branchname | html %]
                                         </span>
                                     [% ELSE %]
-                                        <a class="dropdown-item" href="#" data-branchcode="[% l.branchcode | html %]">
+                                        <a class="dropdown-item quick-branch-selection-item" href="#" data-branchcode="[% l.branchcode | html %]">
                                             <i class="fa fa-fw">&nbsp;</i> [% l.branchname | html %]
                                         </a>
                                     [% END %]
