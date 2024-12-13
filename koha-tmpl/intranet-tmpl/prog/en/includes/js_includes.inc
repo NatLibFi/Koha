@@ -84,17 +84,25 @@
             }
 
             const libraryPanel = $('#setlibrary_panel')[0];
+            const currentURL = window.location.pathname;
+
+            function handleSetLibraryForm() {
+                const form = $('#set-library-form');
+                if (form.length > 0) {
+                    form.on('submit', function () {
+                        saveSelectedBranch($('#set-library-branch').val());
+                    });
+                }
+            }
 
             if (libraryPanel) {
                 const observer = new MutationObserver(() => {
-                    if ($('#set-library-form').length > 0) {
-                        const form = $('#set-library-form');
-                        form.on('submit', function () {
-                           saveSelectedBranch($('#set-library-branch').val());
-                        });
-                    }
+                    handleSetLibraryForm();
                 });
                 observer.observe(libraryPanel, { childList: true });
+            }
+            if (currentURL === '/cgi-bin/koha/circ/set-library.pl') {
+                handleSetLibraryForm();
             }
 
             $(document).on('click', '#quick-branch-dropdown .quick-branch-selection-item', function(event) {
