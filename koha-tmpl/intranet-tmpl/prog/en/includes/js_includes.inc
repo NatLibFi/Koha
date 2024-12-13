@@ -86,7 +86,7 @@
                 });
             }
 
-            $(document).on('click', '#quick-branch-dropdown .dropdown-item', function(event) {
+            $(document).on('click', '#quick-branch-dropdown .quick-branch-selection-item', function(event) {
                 event.stopPropagation();
                 event.preventDefault();
 
