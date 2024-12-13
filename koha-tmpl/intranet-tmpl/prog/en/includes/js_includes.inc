@@ -79,10 +79,7 @@
                 }
 
                 $('#loginform').on('submit', function() {
-                    const branchCode = el.val();
-                    if (branchCode) {
-                        localStorage.setItem('selectedBranch', branchCode);
-                    }
+                    saveSelectedBranch(el.val());
                 });
             }
 
@@ -93,10 +90,7 @@
                     if ($('#set-library-form').length > 0) {
                         const form = $('#set-library-form');
                         form.on('submit', function () {
-                            const branchCode = $('#set-library-branch').val();
-                            if (branchCode) {
-                                localStorage.setItem('selectedBranch', branchCode);
-                            }
+                           saveSelectedBranch($('#set-library-branch').val());
                         });
                     }
                 });
@@ -108,12 +102,18 @@
                 event.preventDefault();
 
                 const selectedBranchCode = $(this).data('branchcode');
-                localStorage.setItem('selectedBranch', selectedBranchCode);
+                saveSelectedBranch(selectedBranchCode);
 
                 $('#select_branches_form input[name="branch"]').val(selectedBranchCode);
                 $('#select_branches_form').submit();
             });
         });
+
+        function saveSelectedBranch(branchCode) {
+            if (branchCode) {
+                localStorage.setItem('selectedBranch', branchCode);
+            }
+        }
     </script>
 [% END %]
 
