@@ -783,10 +783,18 @@
         [% WRAPPER breadcrumb_item %]
             <a href="/cgi-bin/koha/cataloguing/cataloging-home.pl">Cataloging</a>
         [% END %]
-        [% WRAPPER breadcrumb_item bc_active= 1 %]
-            [% IF ( biblionumber ) %]
-                <span>[% tp('Editing MARC record titled:', "Editing") | html %] [% title | html %] (Record number [% biblionumber | html %])</span>
-            [% ELSE %]
+        [% IF ( biblionumber ) %]
+            [% WRAPPER breadcrumb_item %]
+                <span>Editing <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | uri %]">
+                    <em>[% title | html %]</em> (Record number [% biblionumber | html %])</a>
+                    [% IF ( author ) %] by [% author | html %][% END %]
+                </span>
+            [% END %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>MARC record <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | uri %]"></span>
+            [% END %]
+        [% ELSE %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
                 [% IF ( circborrowernumber ) %]
                     <span>Add MARC record (fast cataloging)</span>
                 [% ELSE %]
