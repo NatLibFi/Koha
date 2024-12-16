@@ -72,57 +72,13 @@
 [% IF ( Koha.Preference('ShowQuickBranchSelector') ) %]
     <script>
         $(document).ready(function() {
-            const el = $('#loginform #set-library-branch');
-            if (el.length > 0) {
-                const savedBranch = localStorage.getItem('selectedBranch');
-                if (savedBranch) {
-                    el.val(savedBranch);
-                }
-
-                $('#loginform').on('submit', function() {
-                    saveSelectedBranch(el.val());
-                });
-            }
-
-            const libraryPanel = $('#setlibrary_panel')[0];
-            const currentURL = window.location.pathname;
-
-            function handleSetLibraryForm() {
-                const form = $('#set-library-form');
-                if (form.length > 0) {
-                    form.on('submit', function () {
-                        saveSelectedBranch($('#set-library-branch').val());
-                    });
-                }
-            }
-
-            if (libraryPanel) {
-                const observer = new MutationObserver(() => {
-                    handleSetLibraryForm();
-                });
-                observer.observe(libraryPanel, { childList: true });
-            }
-            if (currentURL === '/cgi-bin/koha/circ/set-library.pl') {
-                handleSetLibraryForm();
-            }
-
             $(document).on('click', '#quick-branch-dropdown .quick-branch-selection-item', function(event) {
                 event.stopPropagation();
                 event.preventDefault();
-
-                const selectedBranchCode = $(this).data('branchcode');
-                saveSelectedBranch(selectedBranchCode);
-
-                $('#select_branches_form input[name="branch"]').val(selectedBranchCode);
+                $('#select_branches_form input[name="branch"]').val($(this).data('branchcode'));
                 $('#select_branches_form').submit();
             });
         });
-
-        function saveSelectedBranch(branchCode) {
-            if (branchCode) {
-                localStorage.setItem('selectedBranch', branchCode);
-            }
-        }
     </script>
 [% END %]
 
