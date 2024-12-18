@@ -626,7 +626,7 @@ Reference to array of C<MARC::Record> objects to be converted to Elasticsearch d
 =cut
 
 sub marc_records_to_documents {
-    my ( $self, $records ) = @_;
+    my ( $self, $records, $record_ids ) = @_;
     my $rules                = $self->_get_marc_mapping_rules();
     my $control_fields_rules = $rules->{control_fields};
     my $data_fields_rules    = $rules->{data_fields};
@@ -641,7 +641,9 @@ sub marc_records_to_documents {
         %auth_match_headings = map { $_->authtypecode => $_->auth_tag_to_report } @auth_types;
     }
 
+    my $ri = 0;
     foreach my $record ( @{$records} ) {
+        my $record_id = $record_ids->[$ri++];
         my $record_document = {};
 
         if ( $self->index eq 'authorities' ) {
@@ -911,11 +913,15 @@ sub marc_records_to_documents {
                 #NOTE: Try to round-trip the record to prove it will work for retrieval after searching
                 my $decoded_usmarc_record;
                 eval { $decoded_usmarc_record = MARC::Record->new_from_usmarc($usmarc_record); };
-                if ( $@ || $decoded_usmarc_record->warnings() ) {
+                if ( $@ ) {
+                    #NOTE: This happens when UTF-8 conversion broken and MARC::File::USMARC::decode dies
+                    warn "Errors encountered while roundtripping a MARC record to/from USMARC, record id [$record_id]. Failing over to MARCXML.\n";
+                }
+                elsif ( $decoded_usmarc_record->warnings() ) {
 
                     #NOTE: We override the warnings since they're many and misleading
                     @warnings = (
-                        "Warnings encountered while roundtripping a MARC record to/from USMARC. Failing over to MARCXML.",
+                        "Warnings encountered while roundtripping a MARC record to/from USMARC, record id [$record_id]. Failing over to MARCXML.\n",
                     );
                 }
 
