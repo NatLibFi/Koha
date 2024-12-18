@@ -117,7 +117,7 @@ sub update_index {
         $index_record_ids = $record_ids;
     }
 
-    my $documents = $self->marc_records_to_documents($records);
+    my $documents = $self->marc_records_to_documents($records, $index_record_ids);
     my @body;
     for ( my $i = 0 ; $i < scalar @$index_record_ids ; $i++ ) {
         my $id       = $index_record_ids->[$i];
