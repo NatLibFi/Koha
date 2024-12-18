@@ -811,16 +811,23 @@ sub marc_records_to_documents {
         } else {
             my @warnings;
             {
-                # Temporarily intercept all warn signals (MARC::Record carps when record length > 99999)
-                local $SIG{__WARN__} = sub {
-                    push @warnings, $_[0];
+                my $usmarc_record;
+                my $decoded_usmarc_record;
+                eval {
+                    # Temporarily intercept all warn signals (MARC::Record carps when record length > 99999)
+                    local $SIG{__WARN__} = sub {
+                        push @warnings, $_[0];
+                    };
+                    $usmarc_record = $record->as_usmarc();
+
+                    #NOTE: Try to round-trip the record to prove it will work for retrieval after searching
+                    $decoded_usmarc_record = MARC::Record->new_from_usmarc($usmarc_record);
                 };
-                my $usmarc_record = $record->as_usmarc();
-
-                #NOTE: Try to round-trip the record to prove it will work for retrieval after searching
-                my $decoded_usmarc_record = MARC::Record->new_from_usmarc($usmarc_record);
-                if ( $decoded_usmarc_record->warnings() ) {
-
+                if ($@) {
+                    #NOTE: This happens when UTF-8 conversion broken and MARC::File::USMARC::decode dies
+                    warn "Errors encountered while roundtripping a MARC record to/from USMARC. Failing over to MARCXML.\n";
+                }
+                elsif ( $decoded_usmarc_record->warnings() ) {
                     #NOTE: We override the warnings since they're many and misleading
                     @warnings = (
                         "Warnings encountered while roundtripping a MARC record to/from USMARC. Failing over to MARCXML.",
