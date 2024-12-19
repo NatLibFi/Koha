@@ -155,6 +155,13 @@ sub metadata_record {
     my $patron = $params->{patron};
 
     my $record = $self->metadata->record;
+    # my $record = $self->metadata->record({ embed_items => $params->{embed_items} });
+    # ^^ this was wrong, leads to twice, doubled embedded items
+
+    if ( ! $params->{skip_holdings} && C4::Context->preference('SummaryHoldings') ) {
+        my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $self->biblionumber });
+        $record->insert_fields_ordered(@$holdings_fields) if ( @$holdings_fields );
+    }
 
     if ( $params->{embed_items} or $params->{interface} ) {
 

@@ -88,7 +88,6 @@ a.expandfield {
 }
 
 .toptabs {
-    margin-left: -5px;
     margin-top: 0;
 }
 
@@ -120,6 +119,10 @@ li.subfield_line label {
 
 .subfieldcode img {
     cursor: pointer;
+}
+
+.subfieldcode input {
+    border: 0;
 }
 
 .tag_title {
