@@ -16,7 +16,6 @@
 [% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
 [% INCLUDE 'calendar.inc' %]
-[% Asset.js("lib/hc-sticky/hc-sticky.js") | $raw %]
 [% Asset.js( "lib/sortable/Sortable.min.js" ) | $raw %]
 [% INCLUDE 'select2.inc' %]
 <script>
@@ -36,7 +35,6 @@
     $(window).load(function(){
         $("#loading").hide();
     });
-    var Sticky;
 
     $(document).ready(function() {
 
@@ -67,12 +65,6 @@
             hash = "#[% tab | html %]";
             selectTab( hash );
         [% END %]
-
-        Sticky = $("#toolbar");
-        Sticky.hcSticky({
-            stickTo: "#f",
-            stickyClass: "floating"
-        });
 
         /* check cookie to hide/show marcdocs*/
         if( Cookies.get("marcdocs_[% borrowernumber | html %]") == 'hide'){
@@ -521,7 +513,6 @@ $(document).ready(function(){
             }
             $("#check_errors").html( strAll );
             $('html, body').animate({ scrollTop: 0 }, 'fast');
-            Sticky.hcSticky('refresh');
             return false;
         } else if( !StrAlert && !StrWarning ){
             ToggleButtonsTo(true);
@@ -645,7 +636,7 @@ $(document).ready(function(){
                         <input type="hidden" name="original_op" value="[% op | html %]" />
                 [% END %]
 
-                <div id="toolbar" class="btn-toolbar">
+                <div id="toolbar" class="btn-toolbar sticky">
                     [% IF CAN_user_editcatalogue_edit_items %]
                         <div class="btn-group">
                             <button class="btn btn-primary" id="saverecord"><i class="fa fa-save"></i> Save</button>
