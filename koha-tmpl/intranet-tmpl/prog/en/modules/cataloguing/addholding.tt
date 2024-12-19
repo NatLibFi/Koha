@@ -16,7 +16,6 @@
 [% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
 [% INCLUDE 'calendar.inc' %]
-[% Asset.js("lib/hc-sticky/hc-sticky.js") | $raw %]
 [% Asset.js( "lib/sortable/Sortable.min.js" ) | $raw %]
 [% INCLUDE 'select2.inc' %]
 <script>
@@ -36,7 +35,6 @@
     $(window).load(function(){
         $("#loading").hide();
     });
-    var Sticky;
 
     $(document).ready(function() {
 
@@ -45,7 +43,7 @@
             $("#toolbar").hide();
         [% END %]
 
-        $("a[data-toggle='tab']").on("shown.bs.tab", function (e) {
+        $("a[data-bs-toggle='tab']").on("shown.bs.tab", function (e) {
             $( e.target.hash + " .input_marceditor:visible:eq(0)").focus();
         });
 
@@ -67,12 +65,6 @@
             hash = "#[% tab | html %]";
             selectTab( hash );
         [% END %]
-
-        Sticky = $("#toolbar");
-        Sticky.hcSticky({
-            stickTo: "#f",
-            stickyClass: "floating"
-        });
 
         /* check cookie to hide/show marcdocs*/
         if( Cookies.get("marcdocs_[% borrowernumber | html %]") == 'hide'){
@@ -521,7 +513,6 @@ $(document).ready(function(){
             }
             $("#check_errors").html( strAll );
             $('html, body').animate({ scrollTop: 0 }, 'fast');
-            Sticky.hcSticky('refresh');
             return false;
         } else if( !StrAlert && !StrWarning ){
             ToggleButtonsTo(true);
@@ -609,8 +600,7 @@ $(document).ready(function(){
 
     <div class="main container-fluid">
         <div class="row">
-            <div class="col-md-10 col-md-offset-1">
-
+            <div class="col-md-10 offset-md-1">
                 [% IF ( INVALID_METADATA ) %]
                     <div class="page-section bg-danger">
                         <h1>Errors found</h1>
@@ -629,8 +619,8 @@ $(document).ready(function(){
                     [% END %]
                 </h1>
 
-                [% IF ( error_items_exist ) %]<div class="dialog alert"><strong>This holdings record has items attached.</strong> Please delete them first.</div>[% END %]
-                [% IF ( error_delete_failed ) %]<div class="dialog alert"><strong>Error deleting the record.</strong></div>[% END %]
+                [% IF ( error_items_exist ) %]<div class="alert alert-warning"><strong>This holdings record has items attached.</strong> Please delete them first.</div>[% END %]
+                [% IF ( error_delete_failed ) %]<div class="alert alert-warning"><strong>Error deleting the record.</strong></div>[% END %]
 
                 [% IF ( done ) %]
                     <script>
@@ -645,17 +635,17 @@ $(document).ready(function(){
                         <input type="hidden" name="original_op" value="[% op | html %]" />
                 [% END %]
 
-                <div id="toolbar" class="btn-toolbar">
+                <div id="toolbar" class="btn-toolbar sticky">
                     [% IF CAN_user_editcatalogue_edit_items %]
                         <div class="btn-group">
                             <button class="btn btn-primary" id="saverecord"><i class="fa fa-save"></i> Save</button>
-                            <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><a id="saveandview" href="#">Save and view record</a></li>
-                                <li><a id="saveanditems" href="#">Save and edit items</a></li>
-                                <li><a id="saveandcontinue" href="#">Save and continue editing</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" id="saveandview" href="#">Save and view record</a></li>
+                                <li><a class="dropdown-item" id="saveanditems" href="#">Save and edit items</a></li>
+                                <li><a class="dropdown-item" id="saveandcontinue" href="#">Save and continue editing</a></li>
                             </ul>
                         </div>
                     [% END %]
@@ -693,16 +683,16 @@ $(document).ready(function(){
                     </div> <!-- /.btn-group -->
 
                     <div class="btn-group">
-                        <button class="btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i> Settings <span class="caret"></span></button>
+                        <button class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-cog"></i> Settings</button>
                         <ul id="settings-menu" class="dropdown-menu">
                             [% IF 0 && Koha.Preference( 'EnableAdvancedCatalogingEditor' ) == 1 && CAN_user_editcatalogue_advanced_editor %]
-                                <li><a href="#" id="switcheditor">Switch to advanced editor</a></li>
+                                <li><a class="dropdown-item" href="#" id="switcheditor">Switch to advanced editor</a></li>
                             [% END %]
                             [% UNLESS advancedMARCEditor %]
                                 <li>
-                                    <a href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
+                                    <a class="dropdown-item" href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
                                 <li>
-                                    <a href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
+                                    <a class="dropdown-item" href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
                                 </li>
                             [% END %]
                         </ul> <!-- /#settings-menu -->
@@ -743,7 +733,7 @@ $(document).ready(function(){
                 </div> <!-- /#toolbar.btn-toolbar -->
 
                 [% IF holding_doesnt_exist %]
-                    <div class="dialog alert">
+                    <div class="alert alert-warning">
                         The Holding record you are trying to edit doesn't exist.<br>
                         You can go back to biblio page:
                         <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | uri %]">
@@ -860,7 +850,7 @@ $(document).ready(function(){
                                                         <span class="handle">&#xf58e;</span>
                                                         <input type="text"
                                                                 title="[% subfield_loo.marc_lib | $raw %]"
-                                                                style=" [% IF ( subfield_loo.fixedfield ) %]display:none; [% END %]border:0;"
+                                                                style=" [% IF ( subfield_loo.fixedfield ) %]display:none; [% END %]"
                                                                 name="tag_[% subfield_loo.tag | html %]_code_[% subfield_loo.subfield | html %]_[% subfield_loo.index | html %]_[% subfield_loo.index_subfield | html %]"
                                                                 value="[% subfield_loo.subfield | html %]"
                                                                 size="2"
@@ -966,7 +956,7 @@ $(document).ready(function(){
                     [% END # /WRAPPER tab_panels %]
                 [% END # /WRAPPER tabs %]
             </form> <!-- /name=f -->
-        </div> <!-- /.col-md-10.col-md-offset-1 -->
+        </div> <!-- /.col-md-10.offset-md-1-->
     </div> <!-- /.row -->
 
 [% INCLUDE 'intranet-bottom.inc' %]
