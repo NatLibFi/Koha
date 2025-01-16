@@ -211,7 +211,7 @@ sub get_columns {
 sub _get_columns {
     my ($tablename,$cgi, $first) = @_;
     my $dbh         = C4::Context->dbh();
-    my $sth         = $dbh->prepare("show columns from $tablename");
+    my $sth         = $dbh->prepare("SHOW COLUMNS FROM " . $dbh->quote_identifier($tablename));
     $sth->execute();
     my @columns;
     my $columns = Koha::Database::Columns->columns;
