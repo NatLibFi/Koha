@@ -61,6 +61,7 @@ try {
     $es_record = $es->get_elasticsearch()->get({
         index => $es->index_name,
         id    => $biblionumber,
+        type  => '_doc',
     });
 }
 catch{
