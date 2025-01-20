@@ -225,7 +225,14 @@ Controller function that handles updating a Koha::Patron object
 =cut
 
 sub update {
-    my $c = shift->openapi->valid_input or return;
+    my $c = shift;
+    if($c->tx->req->headers->user_agent =~ /VuFind/) {
+        my $body = $c->req->json;
+        delete $body->{expired} if exists $body->{expired};
+        $c->req->body(JSON::encode_json($body));
+        warn "[HOTFIX!] VuFind detected, removing expired field from request body";
+    }
+    $c = $c->openapi->valid_input or return;
 
     my $patron = Koha::Patrons->find( $c->param('patron_id') );
 
