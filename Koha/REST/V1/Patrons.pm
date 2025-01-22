@@ -28,6 +28,8 @@ use List::MoreUtils qw(any);
 use Scalar::Util    qw( blessed );
 use Try::Tiny       qw( catch try );
 
+use JSON qw();
+
 =head1 NAME
 
 Koha::REST::V1::Patrons
@@ -238,12 +240,17 @@ Controller function that handles updating a Koha::Patron object
 
 sub update {
     my $c = shift;
-    if($c->tx->req->headers->user_agent =~ /VuFind/) {
-        my $body = $c->req->json;
-        delete $body->{expired} if exists $body->{expired};
-        $c->req->body(JSON::encode_json($body));
-        warn "[HOTFIX!] VuFind detected, removing expired field from request body";
+
+    # Forcibly Remove readOnly fields from the request body:
+    my $body = $c->req->json || {};
+    for my $field (qw(expired restricted anonymized)) {
+        if (exists $body->{$field}) {
+            delete $body->{$field};
+            # warn "[HOTFIX!] Removing read-only field '$field' from request body";
+        }
     }
+    $c->req->body(JSON::encode_json($body));
+
     $c = $c->openapi->valid_input or return;
 
     my $patron = Koha::Patrons->find( $c->param('patron_id') );
