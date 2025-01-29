@@ -1154,7 +1154,7 @@ $(document).ready(function(){
                                                                 style=" [% IF ( subfield_loo.fixedfield ) %]display:none; [% END %]"
                                                                 name="tag_[% subfield_loo.tag | html %]_code_[% subfield_loo.subfield | html %]_[% subfield_loo.index | html %]_[% subfield_loo.index_subfield | html %]"
                                                                 value="[% subfield_loo.subfield | html %]"
-                                                                size="1"
+                                                                size="2"
                                                                 maxlength="1"
                                                                 class="flat"
                                                                 tabindex="0" />
