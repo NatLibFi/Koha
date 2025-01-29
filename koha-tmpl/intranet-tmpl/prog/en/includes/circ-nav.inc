@@ -111,11 +111,11 @@
                 <a href="/cgi-bin/koha/circ/branchtransfers.pl" title="Transfer"><i class="fa-solid fa-right-left fa-fw" aria-hidden="true"></i><span class="menu-label">Transfer</span></a>
             </li>
         [% END %]
-        [% IF Koha.Preference('StockRotation') %]
+        [%# IF Koha.Preference('StockRotation') %]
             <li>
                 <a href="/cgi-bin/koha/circ/transfers_to_send.pl" title="Transfers to send"><i class="fa-solid fa-right-from-bracket fa-fw" aria-hidden="true"></i><span class="menu-label">Transfers to send</span></a>
             </li>
-        [% END %]
+        [%# END %]
         <li>
             <a href="/cgi-bin/koha/circ/transferstoreceive.pl" title="Transfers to receive"><i class="fa-solid fa-right-to-bracket fa-fw" aria-hidden="true"></i><span class="menu-label">Transfers to receive</span></a>
         </li>
