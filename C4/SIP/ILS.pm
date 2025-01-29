@@ -243,6 +243,7 @@ sub checkin {
         $circ->alert_type(99);
         $circ->ok( 0 );
         $circ->screen_msg('Invalid Item');
+        siplog( "LOG_DEBUG", "Invalid Item: '$item_id'" );
         return $circ;
     }
 
