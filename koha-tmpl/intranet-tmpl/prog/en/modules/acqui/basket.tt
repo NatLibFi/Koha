@@ -73,6 +73,8 @@
             <main>
                 [% INCLUDE 'messages.inc' %]
 
+                [% INCLUDE 'blocking_errors.inc' %]
+
                 [% IF (cannot_manage_basket) %]
                     <div class="alert alert-warning">You are not authorised to manage this basket.</div>
                 [% ELSE %]
