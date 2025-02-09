@@ -101,6 +101,24 @@ sub find {
     return $object;
 }
 
+=head3 Koha::Objects->update_or_create();
+
+my $object = Koha::Objects->update_or_create( $attrs );
+
+=cut
+
+sub update_or_create {
+    my ( $self, $params ) = @_;
+
+    my $result = $self->_resultset->update_or_create($params);
+
+    return unless $result;
+
+    my $object = $self->object_class->_new_from_dbic($result);
+
+    return $object;
+}
+
 =head3 Koha::Objects->find_or_create();
 
 my $object = Koha::Objects->find_or_create( $attrs );
