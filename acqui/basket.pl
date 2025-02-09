@@ -586,6 +586,8 @@ sub edi_close_and_order {
         if ( create_edi_order($edi_params) ) {
             #$template->param( edifile => 1 );
         }
+        # FIXME: uncaught exception 'Koha::Exceptions::Acquisition::Basket::AlreadyClosed'
+        # makes site 500 error and logs only  'Basket is already closed'
         Koha::Acquisition::Baskets->find($basketno)->close;
 
         # if requested, create basket group, close it and attach the basket
