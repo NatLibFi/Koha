@@ -92,14 +92,15 @@
             [% CASE 'success_on_delete' %]
                 <span>Library deleted successfully.</span>
             [% CASE 'cannot_delete_library' %]
-                <span>This library cannot be deleted. Patrons or items are still using it</span>
-                [% IF m.data.patrons_count and m.data.items_count %]
-                    <span>([% m.data.patrons_count | html %] patrons and [% m.data.items_count | html %] items).</span>
-                [% ELSIF m.data.patrons_count %]
-                    <span>([% m.data.patrons_count | html %] patrons).</span>
-                [% ELSIF m.data.items_count %]
-                    <span>([% m.data.items_count | html %] items).</span>
-                [% END %]
+                <span>This library cannot be deleted. Patrons or items or holdings are still using it</span>
+                <span>(
+                [%~ counters = [];
+                    IF m.data.patrons_count;    counters.push(m.data.patrons_count _ ' patrons');     END;
+                    IF m.data.items_count;      counters.push(m.data.items_count _ ' items');         END;
+                    IF m.data.holdings_count;   counters.push(m.data.holdings_count _ ' holdings');   END;
+                    counters.join(', ');
+                ~%]
+                ).</span>
             [% CASE %]
                 <span>[% m.code | html %]</span>
             [% END %]
@@ -516,7 +517,7 @@
         [% END %]
     [% END %]
 
-    [% IF op == 'delete_confirm' and not ( items_count or patrons_count ) %]
+    [% IF op == 'delete_confirm' and not ( items_count or patrons_count or holdings_count ) %]
         <div class="alert alert-warning">
             <form action="/cgi-bin/koha/admin/branches.pl" method="post">
                 [% INCLUDE 'csrf-token.inc' %]
