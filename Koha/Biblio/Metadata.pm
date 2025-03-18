@@ -282,7 +282,7 @@ sub _embed_items {
         # insert_fields_ordered with the reverse keeps 952s in right order
     } else {
         Koha::Exceptions::Metadata->throw(
-            'Koha::Biblio::Metadata->embed_item called on unhandled format: ' . $format );
+            'Koha::Biblio::Metadata->_embed_items called on unhandled format: ' . $format );
     }
 
     return $record;
