@@ -105,7 +105,8 @@ sub record {
 
     my $record      = $params->{record};
     my $embed_items = $params->{embed_items};
-    my $skip_holdings = $params->{skip_holdings};
+    my $embed_holdings = ! $params->{skip_holdings};
+    # my $embed_holdings = $params->{embed_holdings};
     my $format      = blessed($self) ? $self->format : $params->{format};
     $format ||= 'marcxml';
 
@@ -139,8 +140,13 @@ sub record {
     my ( $itemtag, $itemsubfield ) = C4::Biblio::GetMarcFromKohaField("items.itemnumber");
     $record->delete_field( ( $record->field($itemtag) ) );
 
+    if ( C4::Context->preference('SummaryHoldings') && $embed_holdings ) {
+        # TODO: in old logic it also updated only if there are NO items: !@$itemnumbers
+        $self->_embed_holdings({ %$params, format => $format, record => $record });
+    }
+
     if ($embed_items) {
-        $self->_embed_items( { %$params, format => $format, record => $record, skip_holdings => $skip_holdings } );
+        $self->_embed_items( { %$params, format => $format, record => $record } );
     }
 
     return $record;
@@ -217,6 +223,29 @@ sub record_source {
 
 =head2 Internal methods
 
+=head3 _embed_holdings
+
+=cut
+
+sub _embed_holdings {
+    my ( $self, $params ) = @_;
+
+    my $record       = $params->{record};
+    my $format       = $params->{format};
+    my $biblionumber = $params->{biblionumber} || $self->biblionumber;
+
+    if ( $format eq 'marcxml' ) {
+        my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $biblionumber });
+        $record->insert_fields_ordered(@$holdings_fields) if ( @$holdings_fields );
+    }
+    else {
+        Koha::Exceptions::Metadata->throw(
+            'Koha::Biblio::Metadata->_embed_holdings called on unhandled format: ' . $format );
+    }
+
+    return $record;
+}
+
 =head3 _embed_items
 
 =cut
@@ -252,14 +281,6 @@ sub _embed_items {
         $record->insert_fields_ordered( reverse @item_fields );
 
         # insert_fields_ordered with the reverse keeps 952s in right order
-
-        my $skip_holdings = $params->{skip_holdings} // 0;
-        if ( !$skip_holdings && C4::Context->preference('SummaryHoldings') && !@$itemnumbers ) {
-            my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields( { biblionumber => $biblionumber } );
-            $record->insert_fields_ordered(@$holdings_fields)
-                if @$holdings_fields;
-        }
-
     } else {
         Koha::Exceptions::Metadata->throw(
             'Koha::Biblio::Metadata->embed_item called on unhandled format: ' . $format );
