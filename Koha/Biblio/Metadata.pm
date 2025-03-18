@@ -284,7 +284,7 @@ sub _embed_items {
     }
     else {
         Koha::Exceptions::Metadata->throw(
-            'Koha::Biblio::Metadata->embed_item called on unhandled format: ' . $format );
+            'Koha::Biblio::Metadata->_embed_items called on unhandled format: ' . $format );
     }
 
     return $record;
