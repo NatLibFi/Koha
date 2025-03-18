@@ -191,6 +191,7 @@ sub get_biblio_marcxml {
             {
                 embed_items         => $with_items,
                 expand_coded_values => $expanded_avs,
+                embed_holdings      => 1,
                 interface           => 'opac'
             }
         );
