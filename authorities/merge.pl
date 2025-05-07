@@ -142,6 +142,7 @@ else {
 
             # Getting MARC Structure
             my $tagslib = GetTagsLabels( 1, $framework );
+            # note: let's use this in merge.pl for biblios as well? What the idea with " " in {tab}?
             foreach my $field ( keys %$tagslib ) {
                 if ( defined $tagslib->{$field}->{'tab'} && $tagslib->{$field}->{'tab'} eq ' ' ) {
                     $tagslib->{$field}->{'tab'} = 0;
