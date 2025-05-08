@@ -67,6 +67,8 @@ sub build_authorized_values_list {
 
     #---- branch
     if ( $tagslib->{$tag}->{$subfield}->{'authorised_value'} eq "branches" ) {
+        push @authorised_values, "";
+
         my $libraries = Koha::Libraries->search_filtered({}, {order_by => ['branchname']});
         while ( my $l = $libraries->next ) {
             push @authorised_values, $l->branchcode;
