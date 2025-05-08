@@ -80,6 +80,7 @@ sub filter {
     my $params = $self->params;
     my $interface     = $params->{options}->{interface} // 'opac';
     my $frameworkcode = $params->{options}->{frameworkcode} // q{};
+    my $extra_fields  = $params->{options}->{embed_extra_fields};
 
     foreach my $current_record (@records) {
         my $result        = $current_record;
@@ -102,6 +103,10 @@ sub filter {
                     result                => $result
                 }
             );
+        }
+
+        if ($extra_fields) {
+            $result->insert_fields_ordered(@$extra_fields);
         }
     }
     return;
