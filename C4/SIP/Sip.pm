@@ -231,7 +231,7 @@ sub siplog {
       : $level eq 'LOG_WARNING' ? 'warn'
       :                           'error';
 
-    my $message = @args ? sprintf($mask, @args) : $mask;
+    my $message = @args ? sprintf($mask, map { $_ // '-undef-' } @args) : $mask;
 
     $message = remove_password_from_message($message);
 

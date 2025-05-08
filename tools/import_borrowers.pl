@@ -101,9 +101,10 @@ if ($matchpoint) {
 my $createpatronlist = $input->param('createpatronlist') || 0;
 my $dt = dt_from_string();
 my $timestamp = $dt->ymd('-').' '.$dt->hms(':');
-my $patronlistname = $uploadborrowers . ' (' . $timestamp .')';
 
 if ( $op eq 'cud-import' && $uploadborrowers && length($uploadborrowers) > 0 ) {
+
+    my $patronlistname = $uploadborrowers . ' (' . $timestamp .')';
 
     my $handle   = $input->upload('uploadborrowers');
     my %defaults = $input->Vars;
