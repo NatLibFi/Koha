@@ -526,8 +526,12 @@ sub edit_form {
     # Overlay/add holdings defaults:
     if ( C4::Context->preference('SummaryHoldings') && $holding_id ) {
         my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields( { biblionumber => $biblionumber, holding_id => $holding_id } );
-        $marc_record->append_fields(@$holdings_fields)
-            if @$holdings_fields;
+        if (@$holdings_fields) {
+            # NOTE: we need to PREPEND the fields at the beginning of the record,
+            # so they will be taken into account first later in generate_subfield_form:
+            $marc_record->insert_fields_before( [$marc_record->fields]->[0], @$holdings_fields);
+            # OLD: $marc_record->append_fields(@$holdings_fields);
+        }
     }
 
     my @subfields;
