@@ -399,7 +399,12 @@ sub call {
                         env           => $env,
                         res           => $res,
                     },
-                    ''
+                    "message because of: " . join( ', ',
+                            $warns > 0 ? "$warns warns" : (),
+                            $is_long_gentime ? "long time: $total_timedelta s." : (),
+                            $is_big_memdelda ? "big memory delta: $memory_delta b." : (),
+                            $is_memory_overgrown ? "memory overgrown: $memory b." : (),
+                        ) . "\n"
                 ),
             }
         );
