@@ -158,12 +158,7 @@ sub metadata_record {
     # my $record = $self->metadata->record({ embed_items => $params->{embed_items} });
     # ^^ this was wrong, leads to twice, doubled embedded items
 
-    if ( ! $params->{skip_holdings} && C4::Context->preference('SummaryHoldings') ) {
-        my $holdings_fields = Koha::Holdings->get_embeddable_marc_fields({ biblionumber => $self->biblionumber });
-        $record->insert_fields_ordered(@$holdings_fields) if ( @$holdings_fields );
-    }
-
-    if ( $params->{embed_items} or $params->{interface} ) {
+    if ( $params->{embed_items} or $params->{interface} or $params->{embed_holdings} ) {
 
         # There's need for a RecordProcessor, let's do it!
         my @filters;
@@ -172,6 +167,7 @@ sub metadata_record {
             frameworkcode => $self->frameworkcode,
         };
 
+        my $items_counter;
         if ( $params->{embed_items} ) {
             push @filters, 'EmbedItems';
             if ( $params->{interface} && $params->{interface} eq 'opac' ) {
@@ -180,10 +176,19 @@ sub metadata_record {
             } else {
                 $options->{items} = $self->items->as_list;
             }
+            $items_counter = scalar @{ $options->{items} };
         }
 
         if ( $params->{interface} ) {
             push @filters, 'ViewPolicy';
+        }
+
+        if (  C4::Context->preference('SummaryHoldings')
+              && $params->{embed_holdings}
+              && ! ( $params->{skip_holdings_if_items} && $items_counter )
+        ) {
+            push @filters, 'EmbedHoldingsRecords';
+            $options->{biblionumber} = $self->biblionumber;
         }
 
         if ( $params->{expand_coded_fields} ) {

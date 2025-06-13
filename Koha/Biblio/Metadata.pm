@@ -105,8 +105,7 @@ sub record {
 
     my $record      = $params->{record};
     my $embed_items = $params->{embed_items};
-    my $embed_holdings = ! $params->{skip_holdings};
-    # my $embed_holdings = $params->{embed_holdings};
+    my $embed_holdings = $params->{embed_holdings};
     my $format      = blessed($self) ? $self->format : $params->{format};
     $format ||= 'marcxml';
 
