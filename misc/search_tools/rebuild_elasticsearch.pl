@@ -220,7 +220,7 @@ if ($index_biblios) {
         $next = sub {
             my $r = shift @biblionumbers;
             return () unless defined $r;
-            return ( $r, Koha::BiblioUtils->get_from_biblionumber( $r, item_data => 1 ) );
+            return ( $r, Koha::BiblioUtils->get_from_biblionumber( $r, item_data => 1, holdings_data => 1 ) );
         };
     } else {
         my $records = Koha::BiblioUtils->get_all_biblios_iterator(%iterator_options);
