@@ -21,6 +21,16 @@ return {
         );
         say $out "Updated deletedbiblioitems.place to text";
 
+
+        my @row = $dbh->selectrow_array(q{ SHOW INDEXES FROM biblioitems WHERE key_name='publishercode' });
+        $dbh->do(q{ ALTER TABLE `biblioitems` DROP INDEX `publishercode` }) if @row;
+        @row = $dbh->selectrow_array(q{ SHOW INDEXES FROM deletedbiblioitems WHERE key_name='publishercode' });
+        $dbh->do(q{ ALTER TABLE `deletedbiblioitems` DROP INDEX `publishercode` }) if @row;
+        $dbh->do(q{ ALTER TABLE `biblioitems` ADD INDEX `publishercode` (`publishercode`(191)) });
+        $dbh->do(q{ ALTER TABLE `deletedbiblioitems` ADD INDEX `publishercode` (`publishercode`(191)) });
+        say $out "Fixed indexes length for publishercode";
+
+
         if ( index_exists( 'biblioitems', 'publishercode' ) ) {
             $dbh->do(q{ALTER TABLE `biblioitems` DROP INDEX `publishercode`});
             say $out "Remove index on biblioitems.publishercode";
