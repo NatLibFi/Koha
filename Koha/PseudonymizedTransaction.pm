@@ -19,6 +19,8 @@ use Modern::Perl;
 use Crypt::Eksblowfish::Bcrypt qw( bcrypt );
 use List::MoreUtils            qw(any);
 
+use C4::Context;
+
 use Koha::Database;
 use Koha::Exceptions::Config;
 use Koha::Patrons;
@@ -71,6 +73,21 @@ sub create_from_statistic {
         }
     }
 
+    if ( any { $_ eq 'interface' } @t_fields_to_copy ) {
+        $values->{interface} = C4::Context->interface;
+    }
+
+    my $userenv = C4::Context->userenv;
+    if ( $userenv and $userenv->{number} and any { $_ eq 'operator' } @t_fields_to_copy ) {
+        if ( defined $userenv->{flags} ) {
+            $values->{operator} = $userenv->{number};
+        } elsif ( $statistic->borrowernumber != $userenv->{number} ) {
+            warn "Pseudonymization / new record: unflagged user tries to change another user: "
+                . $statistic->borrowernumber . " != "
+                . $userenv->{number} . "\n";
+        }
+    }
+
     # Remove fields we have already handled from the list
     @t_fields_to_copy = grep {
                $_ ne 'transaction_branchcode'
@@ -78,6 +95,8 @@ sub create_from_statistic {
             && $_ ne 'homebranch'
             && $_ ne 'transaction_type'
             && $_ ne 'itemcallnumber'
+            && $_ ne 'interface'
+            && $_ ne 'operator'
     } @t_fields_to_copy;
 
     # Populate the remaining columns
@@ -86,6 +105,13 @@ sub create_from_statistic {
     my $patron = Koha::Patrons->find( $statistic->borrowernumber );
     if ($patron) {
         my @p_fields_to_copy = split ',', C4::Context->preference('PseudonymizationPatronFields') || '';
+
+        if ( grep { $_ eq 'age' } @p_fields_to_copy ) {
+            $values->{age} = $patron->get_age;
+        }
+
+        @p_fields_to_copy = grep { $_ ne 'age' } @p_fields_to_copy;
+
         $values = { %$values, map { $_ => $patron->$_ } @p_fields_to_copy };
 
         $values->{branchcode}   = $patron->branchcode;  # FIXME Must be removed from the pref options, or FK removed (?)
