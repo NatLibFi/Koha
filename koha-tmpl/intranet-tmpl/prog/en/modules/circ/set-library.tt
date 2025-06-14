@@ -95,6 +95,17 @@
                 </ol>
             </fieldset>
         [% END %]
+
+        <fieldset class="rows">
+            <legend>Set default framework to be used for new biblio records</legend>
+            <ol>
+                <li><label for="desk">Framework:</label>
+                <select name="framework" id="framework">
+                    [% PROCESS options_for_frameworks frameworks => Frameworks.all(), selected => framework %]
+                </select></li>
+            </ol>
+        </fieldset>
+
         [% IF Koha.Preference('SummaryHoldings') %]
             <fieldset class="rows">
                 <legend>Set default holding framework to be used for new holdings</legend>
