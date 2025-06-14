@@ -227,7 +227,7 @@ sub _get_columns {
     # Sanitize input, just in case
     die sprintf( 'Invalid table name %s', $table_name ) unless exists $all_columns->{$table_name};
 
-    my $columns = $dbh->selectall_arrayref( sprintf( q{SHOW COLUMNS FROM %s}, $table_name ), { Slice => {} } );
+    my $columns = $dbh->selectall_arrayref( sprintf( q{SHOW COLUMNS FROM %s}, $dbh->quote_identifier($table_name) ), { Slice => {} } );
     return [
         map {
             my $column_name = $_->{Field};
