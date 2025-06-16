@@ -35,4 +35,4 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        acquisition: 1
+        acquisition: "*"
