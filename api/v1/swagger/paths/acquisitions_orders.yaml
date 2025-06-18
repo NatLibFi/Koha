@@ -70,6 +70,7 @@
             - items
             - items+strings
             - subscription
+            - biblio.holdings
         collectionFormat: csv
     responses:
       "200":
