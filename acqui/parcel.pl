@@ -167,6 +167,8 @@ for my $order (@orders) {
     $subtotal_for_funds->{ $line{budget_name} }{ecost}     += get_rounded_price( $order->{ecost} ) * $order->{quantity};
     $subtotal_for_funds->{ $line{budget_name} }{unitprice} += $order->{total};
 
+    $line{biblio} = $order_object->biblio;
+
     push @loop_received, \%line;
 }
 push @book_foot_loop, map { $_ } values %foot;
