@@ -274,7 +274,7 @@ if ( $template_type eq 'advsearch' ) {
     my $expanded = $cgi->param('expanded_options');
     if ( $cgi->param('edit_search') ) {
         @operands  = $cgi->multi_param('q');
-        @operators = $cgi->multi_param('op');
+        @operators = grep { $_ ne 'cud-login' } $cgi->multi_param('op');
         @indexes   = $cgi->multi_param('idx');
         $template->param(
             sort => scalar $cgi->param('sort_by'),
@@ -370,7 +370,7 @@ $template->param( 'sort_by' => $sort_by[0] );
 
 # operators include boolean and proximity operators and are used
 # to evaluate multiple operands
-my @operators = map uri_unescape($_), $cgi->multi_param('op');
+my @operators = grep { $_ ne 'cud-login' } map uri_unescape($_), $cgi->multi_param('op');
 
 # indexes are query qualifiers, like 'title', 'author', etc. They
 # can be single or multiple parameters separated by comma: kw,right-Truncation
