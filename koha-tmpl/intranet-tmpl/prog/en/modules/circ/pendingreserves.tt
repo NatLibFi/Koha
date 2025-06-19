@@ -293,19 +293,43 @@
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     <script>
-        function get_options(column){
-            let regex = /(<([^>]+)>)/ig; // Remove html tags
-            let options = [... new Set(column
+        /**
+         * Build a list of distinct filter options for a DataTables column.
+         *
+         * @param {DataTables.Api} column – DataTables column API object.
+         * @returns {Array<Object>}      – Array of objects `{ _id, _str }`
+         *                                 understood by _dt_add_filters().
+         */
+        function get_options(column) {
+            // Collect HTML strings from the column, convert each to plain text
+            // (this strips all tags such as <li>, <br>, <td>, …), then split
+            // into lines so every <li> becomes a separate string.
+            const rawValues = column
                 .data()
                 .toArray()
-                .map(d => d.replace(regex, '').trim().split(/\n/gi).flat())
-                .flat()
-                .sort())];
+                .flatMap(html => {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = html;               // strip HTML
+                    return tmp.textContent.split('\n'); // one line per <li>
+                })
+                .map(s => s.trim())                   // remove leading/trailing spaces
+                .filter(Boolean);                     // drop blank lines
 
-            return options
-                .map(e => {
-                    return {_id: e, _str: e}
-                });
+            // Remove duplicates and sort alphabetically for a nicer dropdown.
+            const uniqueSorted = [...new Set(rawValues)].sort();
+
+            // Return objects required by _dt_add_filters():
+            //  • _str – what user sees in the <select>
+            //  • _id  – regex used by DataTables filtering; we allow the value
+            //           to appear anywhere inside the cell, hence `.* … .*`
+            return uniqueSorted.map(value => {
+                // Escape regex-special characters inside the label itself.
+                const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                return {
+                    _id: `.*${escaped}.*`, // regex pattern
+                    _str: value            // human-readable text
+                };
+            });
         }
 
         $(document).ready(function() {
