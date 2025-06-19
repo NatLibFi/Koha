@@ -62,6 +62,7 @@ my (
     $report,
     $sql,
     $params_needed,
+    $export_holdings,
     $help
 );
 
@@ -89,6 +90,7 @@ GetOptions(
     'embed_see_from_headings' => \$embed_see_from_headings,
     'report_id=s'             => \$report_id,
     'report_param=s'          => \@report_params,
+    'holdings'                => \$export_holdings,
     'h|help|?'                => \$help
 ) || pod2usage(1);
 
@@ -139,6 +141,11 @@ if ($report_id) {
     my $params_needed = ( $sql =~ s/(<<[^>]+>>)/\?/g );
     die( "You supplied " . scalar @report_params . " parameter(s) and $params_needed are required by the report" )
         if scalar @report_params != $params_needed;
+}
+
+my $marcFlavour = C4::Context->preference('marcflavour') || 'MARC21';
+if ( $export_holdings and ( $record_type ne 'bibs' or $marcFlavour ne 'MARC21' ) ) {
+    pod2usage(q|--holdings can only be used with MARC 21 biblios|);
 }
 
 $start_accession = dt_from_string($start_accession) if $start_accession;
@@ -335,6 +342,7 @@ if ($deleted_barcodes) {
             format                  => $output_format,
             csv_profile_id          => $csv_profile_id,
             export_items            => ( not $dont_export_items ),
+            export_holdings         => $export_holdings,
             clean                   => $clean                   || 0,
             embed_see_from_headings => $embed_see_from_headings || 0,
         }
@@ -348,7 +356,7 @@ export records - This script exports record (biblios or authorities)
 
 =head1 SYNOPSIS
 
-export_records.pl [-h|--help] [--format=format] [--date=datetime] [--record-type=TYPE] [--dont_export_items] [--deleted_barcodes] [--clean] [--id_list_file=PATH] --filename=outputfile
+export_records.pl [-h|--help] [--format=format] [--date=datetime] [--record-type=TYPE] [--holdings] [--dont_export_items] [--deleted_barcodes] [--clean] [--id_list_file=PATH] --filename=outputfile
 
 =head1 OPTIONS
 
@@ -372,6 +380,11 @@ Print a brief help message.
 =item B<--record-type>
 
  --record-type=TYPE     TYPE is 'bibs' or 'auths'.
+
+=item B<--holdings>
+
+ --holdings             Export MARC 21 holdings records interleaved with bibs. Used only if TYPE
+                        is 'bibs' and FORMAT is 'xml' or 'marc'.
 
 =item B<--dont_export_items>
 
