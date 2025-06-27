@@ -72,6 +72,7 @@ my $sourcetag;
 my $sourcesubfield;
 my $idmapfl;
 my $dedup_barcode;
+my $import_holdings;
 my $framework = '';
 my $localcust;
 my $marc_mod_template    = '';
@@ -116,14 +117,18 @@ GetOptions(
     'marcmodtemplate:s'   => \$marc_mod_template,
     'si|skip_indexing'    => \$skip_indexing,
     'sk|skip_bad_records' => \$skip_bad_records,
+    'holdings'            => \$import_holdings,
 );
 
 $biblios ||= !$authorities;
 $insert  ||= !$update;
 my $writemode = ($append) ? "a" : "w";
+my $marc_flavour = C4::Context->preference('marcflavour') || 'MARC21';
 
 pod2usage( -msg => "\nYou must specify either --biblios or --authorities, not both.\n", -exitval )
     if $biblios && $authorities;
+
+pod2usage( -msg => "\nHoldings only supported for MARC 21 biblios.\n", -exitval ) if $import_holdings && (!$biblios || $marc_flavour ne 'MARC21');
 
 if ($all) {
     $insert = 1;
@@ -232,6 +237,8 @@ if ($delete) {
         $dbh->do("ALTER TABLE biblio AUTO_INCREMENT = 1");
         $dbh->do("DELETE FROM biblioitems");
         $dbh->do("ALTER TABLE biblioitems AUTO_INCREMENT = 1");
+        $dbh->do("DELETE FROM holdings");
+        $dbh->do("ALTER TABLE holdings AUTO_INCREMENT = 1");
         $dbh->do("DELETE FROM items");
         $dbh->do("ALTER TABLE items AUTO_INCREMENT = 1");
     } else {
@@ -246,7 +253,6 @@ if ($test_parameter) {
 }
 
 my $batch;
-my $marc_flavour = C4::Context->preference('marcflavour') || 'MARC21';
 
 # The definition of $searcher must be before MARC::Batch->new
 my $searcher = Koha::SearchEngine::Search->new(
@@ -289,6 +295,7 @@ if ( defined $format && $format =~ /XML/i ) {
 
 $batch->warnings_off();
 $batch->strict_off();
+my $holdings_count = 0;
 my $commitnum = $commit ? $commit : 50;
 my $yamlhash;
 
@@ -319,6 +326,7 @@ if ($logfile) {
     print $loghandle "id;operation;status\n";
 }
 
+my $biblionumber;
 my $record_number     = 0;
 my $records_exhausted = 0;
 my $logger            = Koha::Logger->get;
@@ -396,6 +404,13 @@ RECORD: while () {
                 $isbn =~ s/-//g;
                 $field->update( 'a' => $isbn );
             }
+        }
+
+        # check for holdings records
+        my $holdings_record = 0;
+        if ($biblios && $marc_flavour eq 'MARC21') {
+            my $leader = $record->leader();
+            $holdings_record = $leader =~ /^.{6}[uvxy]/;
         }
 
         # search for duplicates (based on Local-number)
@@ -539,6 +554,27 @@ RECORD: while () {
                 if ($indexer) {
                     push @search_engine_record_ids, $authid;
                     push @search_engine_records,    $record;
+                }
+            } elsif ($holdings_record) {
+                if ($import_holdings) {
+                    if (!defined $biblionumber) {
+                        warn "ERROR: Encountered holdings record without preceding biblio record\n";
+                    } else {
+                        if ($insert) {
+                            my $holding = Koha::Holding->new({ biblionumber => $biblionumber });
+                            $holding->set_marc({ record => $record });
+                            my $branchcode = $holding->holdingbranch();
+                            if (defined $branchcode && !Koha::Libraries->find({ branchcode => $branchcode})) {
+                                printlog( { id => 0, op => 'insert', status => "warning : library $branchcode not defined, holdings record skipped" } ) if ($logfile);
+                            } else {
+                                $holding->store();
+                                ++$holdings_count;
+                                printlog( { id => $holding->holding_id(), op => 'insert', status => 'ok' } ) if ($logfile);
+                            }
+                        } else {
+                            printlog( { id => 0, op => 'update', status => 'warning : not in database' } ) if ($logfile);
+                        }
+                    }
                 }
             } else {
                 my ( $biblioitemnumber, $itemnumbers_ref, $errors_ref, $record_id );
@@ -749,7 +785,11 @@ delete $ENV{OVERRIDE_SYSPREF_CataloguingLog};
 delete $ENV{OVERRIDE_SYSPREF_AuthoritiesLog};
 
 my $timeneeded = gettimeofday - $starttime;
-print "\n$record_number MARC records done in $timeneeded seconds\n";
+if ($import_holdings) {
+    printf("\n%i MARC bibliographic records and %i holdings records done in %0.3f seconds\n", $record_number, $holdings_count, $timeneeded);
+} else {
+    printf("\n%i MARC records done in %0.3f seconds\n", $record_number, $timeneeded);
+}
 if ($logfile) {
     print $loghandle "file : $input_marc_file\n";
     print $loghandle "$record_number MARC records done in $timeneeded seconds\n";
@@ -904,6 +944,11 @@ Type of import: authority records
 
 The I<FILE> to import
 
+=item B<-holdings>
+
+Import MARC 21 holdings records when interleaved with bibliographic records
+(insert only, update not supported). Used only with -biblios.
+
 =item  B<-v, --verbose>
 
 Verbose mode. 1 means "some infos", 2 means "MARC dumping"
@@ -949,7 +994,7 @@ I<UNIMARC> are supported. MARC21 by default.
 =item B<-d, --delete>
 
 Delete EVERYTHING related to biblio in koha-DB before import. Tables: biblio,
-biblioitems, items
+biblioitems, items, holdings
 
 =item B<-m>=I<FORMAT>
 
