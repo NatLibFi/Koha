@@ -33,7 +33,7 @@
 
 [% SET aside = Koha.Preference('CircSidebar') ? 'circ-nav' : '' %]
 [% WRAPPER 'main-container.inc' aside=aside %]
-    <h1>Transfers made to your library as of [% show_date | $KohaDates %]</h1>
+    <h1>Transfers made to your library as of [% show_date | $KohaDates with_hours => 1 %]</h1>
     [% IF ( branchesloop ) %]
         <p>Your library is the destination for the following transfer(s)</p>
         [% IF ( latetransfers ) %]<p>Transfers are <span class="error">considered late</span> after [% TransfersMaxDaysWarning | html %] days.</p>[% END %]
