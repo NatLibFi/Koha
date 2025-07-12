@@ -130,7 +130,7 @@ my $biblio = Koha::Biblios->find($biblionumber);
 my $op             = $input->param('op') || q{};
 my $hostitemnumber = $input->param('hostitemnumber');
 my $marcflavour    = C4::Context->preference("marcflavour");
-my $searchid       = $input->param('searchid');
+my $searchid       = $input->param('searchid') // q{};
 
 # fast cataloguing datas
 my $fa_circborrowernumber  = $input->param('circborrowernumber');
