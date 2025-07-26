@@ -7,6 +7,9 @@
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
+
+[% SET ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
+
 <title
     >[% FILTER collapse %]
         [% IF ( invoiceclosedate ) %]
@@ -246,6 +249,26 @@
                                             >)
                                         [% END %]
                                         <br />
+
+                                        <br />
+                                        [% IF ( ShowSummaryHoldings ) %]
+                                            [% SET holdings = order.biblio.holdings %]
+                                            [% IF holdings %]
+                                                <strong>Holdings: [% holdings.count() %]</strong>
+                                                <ul>
+                                                [% FOREACH holding IN holdings %]
+                                                    <li><a class="btn btn-default btn-xs previewData" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding.holding_id | html %]">
+                                                    [% IF holding.callnumber %]
+                                                        [% holding.callnumber | html %]
+                                                    [% ELSE %]
+                                                        ? [% holding.holding_id | html %]
+                                                    [% END %]
+                                                    </a></li>
+                                                [% END %]
+                                                </ul>
+                                            [% END %]
+                                        [% END # /IF ShowSummaryHoldings %]
+
                                         [% IF ( order.order_internalnote ) %]
                                             <p class="ordernote"
                                                 ><strong>Internal note: </strong>[% order.order_internalnote | html %] [<a
@@ -407,7 +430,8 @@
                     "biblio.suggestions.suggester",
                     "fund",
                     "current_item_level_holds+count",
-                    "items"
+                    "items",
+                    "biblio.holdings"
                 ],
                 "columns": [
                     { "data": "basket.name",
@@ -489,6 +513,24 @@
                                     }
                                 }
                                 result += '</p>';
+
+                                [% IF ( ShowSummaryHoldings ) %]
+                                var holdings_records = row.biblio.holdings;
+                                if ( holdings_records != null && holdings_records.length > 0 ) {
+                                    result += "<strong>" + _("Holdings: ") + "</strong><ul>";
+                                    for (var i = 0; i < holdings_records.length; i++) {
+                                        var holdings_record = holdings_records[i];
+                                        result += '<li><a class="btn btn-default btn-xs previewData" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=' + encodeURIComponent(holdings_record.holding_id) + '">';
+                                        if ( holdings_record.callnumber != null ) {
+                                            result += escape_str(holdings_record.callnumber);
+                                        } else {
+                                            result += '? ' + encodeURIComponent(holdings_record.holding_id) + '';
+                                        }
+                                        result += '</a></li>';
+                                    }
+                                    result += '</ul>';
+                                }
+                                [% END # /IF ShowSummaryHoldings %]
                             }
 
                             var internal_note = row.internal_note;
