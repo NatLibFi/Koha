@@ -173,7 +173,7 @@ sub get_items_that_can_fill {
     return Koha::Items->search(
         {
             -or             => \@bibs_or_items,
-            itemnumber      => { -not_in => [ @branchtransfers, @waiting_holds, @pending_recalls ] },
+            'me.itemnumber' => { -not_in => [ @branchtransfers, @waiting_holds, @pending_recalls ] },
             onloan          => undef,
             notforloan      => 0,
             is_closed_stack => 0,
