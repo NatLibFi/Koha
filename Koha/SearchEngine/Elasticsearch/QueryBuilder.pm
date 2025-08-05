@@ -1302,7 +1302,7 @@ any field prefixes and quoted strings.
 
 =cut
 
-my $tokenize_split_re = qr/((?:${field_name_pattern}${multi_field_pattern}:)?"[^"]+"|\s+)/;
+my $tokenize_split_re = qr/((?:${field_name_pattern}${multi_field_pattern}:)?(?<!\\)".+?(?<!\\)"|\s+)/;
 
 sub _split_query {
     my ( $self, $query ) = @_;
