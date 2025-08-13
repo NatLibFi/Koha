@@ -40,6 +40,9 @@ my $status = '400 Bad Request';
 if ( C4::Context->is_internal_PSGI_request() ) {
     $status = '200 OK';
 }
+# if ( any { /(^psgi\.|^plack\.)/i } keys %ENV ) {
+#     $status = '200 OK';
+# }
 
 #NOTE: We're not setting/updating the cookie here
 $cookie = '';
