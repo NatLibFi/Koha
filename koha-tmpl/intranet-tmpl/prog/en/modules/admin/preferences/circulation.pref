@@ -561,6 +561,11 @@ Circulation:
                   open: "extend the loan period and set the checkout to be due at the library's open time."
                   close: "shorten the loan period and set the checkout to be due at the library's close time."
                   ignore: "do not consider the library's opening hours."
+        -
+            - "[BETA] Set the global hard limit of number of checkouts to"
+            - pref: MaxCheckoutsHardLimit
+              class: integer
+            - which any borrower can have in total, overlapping any other values calculated by other means or rules.
     Lost item policy:
         -
             - By default, set the <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=LOST">LOST</a> value of an item to
