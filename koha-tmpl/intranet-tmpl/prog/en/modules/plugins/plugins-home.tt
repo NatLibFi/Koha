@@ -182,6 +182,7 @@
                                             <td>
                                                 [% plugin.metadata.description | html %]
 
+                                                [%# TODO: compared versoins not float, but multi-level dotted: need special tricks %]
                                                 [% IF ( plugin.metadata.minimum_version && koha_version < plugin.metadata.minimum_version ) %]
                                                     <div class="alert alert-warning"> Warning: This plugin was written for a newer version of Koha. Use at your own risk. </div>
                                                 [% END %]
