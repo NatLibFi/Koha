@@ -235,7 +235,8 @@ sub build_query {
     }
 
     # Add a tie breaker in case of equally relevant records
-    push @{ $res->{sort} }, { 'local-number' => { order => 'desc' } };
+    # push @{ $res->{sort} }, { 'local-number' => { order => 'desc' } };
+    push @{ $res->{sort} }, { 'local-number.raw' => { order => 'desc' } };
 
     unless ( $options{skip_facets} ) {
 
