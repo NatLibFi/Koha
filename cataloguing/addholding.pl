@@ -695,6 +695,25 @@ if ($op eq 'cud-addholding') {
         exit;
     }
 }
+elsif ( $op eq 'cud-delete' ) {
+    # Enforce POST
+    if ( uc( $input->request_method // '' ) ne 'POST' ) {
+        print $input->redirect("/cgi-bin/koha/errors/403.pl");
+        exit;
+    }
+
+    output_and_exit( $input, $cookie, $template, 'insufficient_permission' )
+        unless $logged_in_patron->has_permission( { editcatalogue => 'edit_items' } );
+
+    if ($holding->items()->count()) {
+        $template->param( error_items_exist => 1 );
+    } elsif ( !$holding->delete() ) {
+        $template->param( error_delete_failed => 1 );
+    } else {
+        print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber&amp;searchid=$searchid");
+        exit;
+    }
+}
 
 #----------------------------------------------------------------------------
 # If we're in a duplication case, we have to clear the holding_id
