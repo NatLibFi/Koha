@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+OPAC_ALLOW_BE_DISABLED=1
 
 die()
 {
@@ -304,10 +305,10 @@ is_plack_enabled()
     fi
 
     # remember 0 means success/true in bash.
-    if [ "$enabledopac" != "$enabledintra" ] ; then
+    if [ -z "$OPAC_ALLOW_BE_DISABLED" ] && [ "$enabledopac" != "$enabledintra" ] ; then
         echo "$site has a plack configuration error. Enable or disable plack to correct this."
         return 0
-    elif [ "$enabledopac" = "1" ] ; then
+    elif [ "$enabledintra" = "1" ] ; then
         return 0
     else
         return 1
