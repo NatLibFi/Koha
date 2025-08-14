@@ -233,6 +233,7 @@
                                         [% INCLUDE 'biblio-title.inc' biblio=order link = 1 %]
                                         [% IF ( order.author ) %]/ [% order.author | html %][% END %]
                                         [% IF ( order.isbn ) %]- [% order.isbn | html %][% END %]
+                                        [% IF ( order.issn ) %] - [% order.issn | html %][% END %]
                                         [% IF ( order.publishercode ) %]
                                             <br />Publisher: [% order.publishercode | html %]
                                             [%- IF    ( order.publicationyear > 0) -%]
@@ -425,6 +426,12 @@
                     ],
                     pagingType: "full",
                 });
+
+                $('#receivedt_wrapper .dataTables_filter input').off().on('keyup', function() {
+                    // Draw the table to execute the search plugin
+                    receivedt.DataTable().draw();
+                });
+
             }
 
             var options = {
@@ -476,9 +483,109 @@
                         }
                     },
                     {
-                        [% SET summary_fields = "biblio.title:biblio.author:biblio.isbn:biblio.publisher:me.internal_note:me.vendor_note" %]
+                        [% SET summary_fields = "biblio.title:biblio.author:biblio.isbn:biblio.issn:biblio.publisher:me.internal_note:me.vendor_note" %]
                         [% IF Koha.Preference('marcflavour')=='UNIMARC' %][% SET summary_fields = summary_fields _ ":biblio.ean" %][% END %]
                         "data": "[% summary_fields | html %]",
+                        "searchExpander": function(attr, value) {
+                            let variations = [];
+
+                            if ( !attr.match(/\.(isbn|issn)$/) ) {
+                                return [];
+                            }
+                            if (value.match(/^\s*\d+[-\d+]*\s*$/)) {
+                                value = value.replace(/\D/g, '');
+                                variations.push(value);
+
+                                // variations:
+                                let templates = [
+                                    'X-XX-XX-XXXX-X',
+                                    'X-XX-XXX-XXX-X',
+                                    'X-XX-XXXXX-X',
+                                    'X-XX-XXXXXX-X',
+                                    'X-XXX-XX-XXX-X',
+                                    'X-XXX-XXXXX-X',
+                                    'X-XXX-XXX-XX-X',
+                                    'X-XXX-XXXX-X',
+                                    'X-XXX-XXXXXX-X',
+                                    'X-XXXX-XXX-X',
+                                    'X-XXXX-XXXX-X',
+                                    'X-XXXX-XXXXX',
+                                    'X-XXXXX-XX-X',
+                                    'X-XXXXX-XXXX-X',
+                                    'X-XXXXX-XXX-X',
+                                    'X-XXXXXX-XX-X',
+                                    'X-XXXXXXX-X-X',
+                                    'X-XXXXXXXX-X',
+                                    'XX-X-XXXXXX-X',
+                                    'XX-XX-XXXXX-X',
+                                    'XX-XXX-XXXX-X',
+                                    'XX-XXXX-XXX-X',
+                                    'XX-XXXX-XXXX',
+                                    'XX-XXXXX-XX-X',
+                                    'XX-XXXXX-XXX',
+                                    'XX-XXXXXX-X-X',
+                                    'XX-XXXXXXX-X',
+                                    'XXX-X-XX-XXXXXX-X',
+                                    'XXX-X-XXX-XXXXXX',
+                                    'XXX-X-XXX-XXXXX-X',
+                                    'XXX-X-XXXX-XXXX-X',
+                                    'XXX-X-XXXXX-XXX-X',
+                                    'XXX-X-XXXXXX-XX-X',
+                                    'XXX-X-XXXXXXX-X-X',
+                                    'XXX-X-XXXXXXXX-XX',
+                                    'XXX-XX-X-XXXXXX-X',
+                                    'XXX-XX-XX-XXXXX-X',
+                                    'XXX-XX-XXX-XXXX-X',
+                                    'XXX-XX-XXXX-XXX-X',
+                                    'XXX-XX-XXXXX-XX-X',
+                                    'XXX-XX-XXXXXX-X-X',
+                                    'XXX-XX-XXXXXXX-X',
+                                    'XXX-XXX-X-XXXXX-X',
+                                    'XXX-XXX-XX-XXXX-X',
+                                    'XXX-XXX-XXX-XXX-X',
+                                    'XXX-XXX-XXXX-XX-X',
+                                    'XXX-XXX-XXXX-XXX',
+                                    'XXX-XXX-XXXXX-X-X',
+                                    'XXX-XXX-XXXXXX-X',
+                                    'XXX-XXXX-X-XXXX-X',
+                                    'XXX-XXXX-XX-XXX-X',
+                                    'XXX-XXXX-XXX-XX-X',
+                                    'XXX-XXXX-XXXX-X-X',
+                                    'XXX-XXXX-XXXXX-X',
+                                    'XXX-XXXXX-X-XXX-X',
+                                    'XXX-XXXXX-XXXX-X',
+                                    'XXX-XXXXXX-X-XX-X',
+                                    'XXX-XXXXXX-XXX-X',
+                                    'XXX-XXXXXXXXXX',
+                                    'XXXX-X-XXXX-X',
+                                    'XXXX-XX-XXX-X',
+                                    'XXXX-XXX-XX-X',
+                                    'XXXX-XXXX-X-X',
+                                    'XXXX-XXXXX-X',
+                                    'XXXXX-XX-XX-X'
+                                ];
+
+                                // loop over templates and replace X with digits,
+                                // even if there's not enough digits to fill so cut on that point (incomplete):
+                                for (let template of templates) {
+                                    let variation = '';
+                                    let i = 0;
+                                    for (let c of template) {
+                                        if (i >= value.length) {
+                                            break;
+                                        }
+                                        if (c === 'X') {
+                                            variation += value[i];
+                                            i++;
+                                        } else {
+                                            variation += c;
+                                        }
+                                    }
+                                    variations.push(variation);
+                                }
+                            }
+                            return variations;
+                        },
                         "render": function(data, type, row, meta) {
                             var result = '';
                             if ( row && row.biblio_id != null ) {
@@ -487,6 +594,8 @@
                                     result += _(" by ") + escape_str(row.biblio.author);
                                 if ( row.biblio.isbn != null )
                                     result += " &ndash; " + escape_str(row.biblio.isbn);
+                                if ( row.biblio.issn != null )
+                                    result += " &ndash; " + escape_str(row.biblio.issn);
                                 [% IF Koha.Preference('marcflavour')=='UNIMARC' %]
                                     if ( row.biblio.ean != null )
                                         result += " &ndash; EAN:" + escape_str(row.biblio.ean);
@@ -724,6 +833,33 @@
             let table_settings = [% TablesSettings.GetTableSettings( 'acqui', 'parcel', 'pending_orders', 'json' ) | $raw %];
 
             var pending_orders_table = $("#pending_orders").kohaTable(options, table_settings, 1, { "basket.vendor_id": [% booksellerid | html %] });
+
+            $.fn.dataTable.ext.search.push(
+                function( settings, searchData, index, rowData, counter ) {
+                    let term = $(settings.nTableWrapper).find('.dataTables_filter input').val();
+                    if (term === '') {
+                        return true;
+                    }
+                    var row = searchData.join(' ');
+                    if (term.match(/^\s*\d+[-\d+]*\s*$/)) {
+                        let new_term = term.replace(/-/g, '').trim();
+                        row = row.replace(/\b\d[\d-]{7,}\d\b/g,
+                            (match) => {
+                                return match.replace(/-/g,'');
+                            });
+                        term=new_term;
+                    }
+                    if (row.match(new RegExp(term, 'i'))) {
+                        return true;
+                    }
+                    return false;
+                }
+            );
+
+            $('#pending_orders_wrapper .dataTables_filter input').off().on('keyup', function() {
+                // Draw the table to execute the search plugin
+                pending_orders_table.DataTable().draw();
+            });
 
             var api = pending_orders_table.api();
             api.on('draw', function () {
