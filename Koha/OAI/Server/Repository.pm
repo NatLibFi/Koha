@@ -99,6 +99,7 @@ mode. A configuration file koha-oai.conf can look like that:
       xsl_file: /usr/local/koha/koha-tmpl/intranet-tmpl/xslt/UNIMARCslim2OAIDC.xsl
 
 Note the 'include_items' parameter which is the only mean to return item-level info.
+If summary holdings are enabled, 'include_items' includes their location information too.
 
 =cut
 
@@ -198,6 +199,7 @@ sub get_biblio_marcxml {
             {
                 embed_items         => $with_items,
                 expand_coded_fields => $expanded_avs,
+                embed_holdings      => 1,
                 interface           => 'opac'
             }
         );

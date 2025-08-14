@@ -7,6 +7,9 @@
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
+
+[% SET ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
+
 <title
     >[% FILTER collapse %]
         [% IF ( invoiceclosedate ) %]
@@ -246,6 +249,34 @@
                                             >)
                                         [% END %]
                                         <br />
+
+                                        <br />
+                                        [% IF ( ShowSummaryHoldings ) %]
+                                            [% SET holdings = order.biblio.holdings %]
+                                            [% IF holdings %]
+                                                <strong>Holdings: [% holdings.count() %]</strong>
+                                                <ul>
+                                                    [% FOREACH holding IN holdings %]
+                                                        <li
+                                                            ><a class="previewData" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding.holding_id | html %]">
+                                                                [% IF holding.callnumber %]
+                                                                    [% holding.callnumber | html %]
+                                                                [% ELSE %]
+                                                                    ? [% holding.holding_id | html %]
+                                                                [% END %]
+                                                            </a>
+                                                            [%
+                                                                INCLUDE 'copy-to-clipboard-button.inc'
+                                                                value = holding.callnumber
+                                                                label = ''
+                                                                class = 'btn btn-xs btn-light'
+                                                            %]
+                                                        </li>
+                                                    [% END %]
+                                                </ul>
+                                            [% END %]
+                                        [% END # /IF ShowSummaryHoldings %]
+
                                         [% IF ( order.order_internalnote ) %]
                                             <p class="ordernote"
                                                 ><strong>Internal note: </strong>[% order.order_internalnote | html %] [<a
@@ -349,6 +380,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/acquisitions-menu.js") | $raw %]
+    [% Asset.js("js/copyToClipboard.js") | $raw %]
     [% INCLUDE 'datatables.inc' %]
     <style>
         fieldset.action {
@@ -407,7 +439,8 @@
                     "biblio.suggestions.suggester",
                     "fund",
                     "current_item_level_holds+count",
-                    "items"
+                    "items",
+                    "biblio.holdings"
                 ],
                 "columns": [
                     { "data": "basket.name",
@@ -489,6 +522,29 @@
                                     }
                                 }
                                 result += '</p>';
+
+                                [% IF ( ShowSummaryHoldings ) %]
+                                var holdings_records = row.biblio.holdings;
+                                if ( holdings_records != null && holdings_records.length > 0 ) {
+                                    result += "<strong>" + _("Holdings: ") + "</strong><ul>";
+                                    for (var i = 0; i < holdings_records.length; i++) {
+                                        var holdings_record = holdings_records[i];
+                                        result += '<li>';
+                                        result += '<a class="previewData" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=' + encodeURIComponent(holdings_record.holding_id) + '">';
+                                        let hr;
+                                        if ( holdings_record.callnumber != null ) {
+                                            hr = escape_str(holdings_record.callnumber);
+                                        } else {
+                                            hr = '? ' + escape_str(holdings_record.holding_id);
+                                        }
+                                        result += hr;
+                                        result += '</a>';
+                                        result += `<button onClick="copyValueToClipboard(this, '${hr}')" title="Copy to clipboard" class="btn btn-xs btn-light" data-bs-delay='{"show":0,"hide":2000}'><i class="fa-solid fa-clipboard"></i></button>`;
+                                        result += '</li>';
+                                    }
+                                    result += '</ul>';
+                                }
+                                [% END # /IF ShowSummaryHoldings %]
                             }
 
                             var internal_note = row.internal_note;
