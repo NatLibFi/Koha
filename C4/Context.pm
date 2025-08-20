@@ -572,7 +572,8 @@ sub _new_Zconn {
     $syntax         = 'xml';
     $elementSetName = 'marcxml';
 
-    my $host       = _common_config( $server, 'listen' )->{content};
+    # need to have '' default if no <listen ...> directive in config file present
+    my $host       = _common_config( $server, 'listen' )->{content} // '';
     my $serverinfo = _common_config( $server, 'serverinfo' );
     my $user       = $serverinfo->{user};
     my $password   = $serverinfo->{password};
