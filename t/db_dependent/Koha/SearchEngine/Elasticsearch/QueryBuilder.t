@@ -1134,7 +1134,7 @@ subtest "Handle search filters" => sub {
 };
 
 subtest "_convert_sort_fields() tests" => sub {
-    plan tests => 3;
+    plan tests => 6;
 
     my $qb;
 
@@ -1143,7 +1143,37 @@ subtest "_convert_sort_fields() tests" => sub {
         'Creating new query builder object for biblios'
     );
 
-    my @sort_by = $qb->_convert_sort_fields(qw( call_number_asc author_dsc ));
+    my @sort_by = $qb->_convert_sort_fields(qw( relevance ));
+    is_deeply(
+        \@sort_by,
+        [],
+        "sort_by parsing test for 'relevance'"
+    );
+
+    @sort_by = $qb->_convert_sort_fields(qw( author_az author_za author_asc author_desc ));
+    is_deeply(
+        \@sort_by,
+        [
+            { field => 'author', direction => 'asc' },
+            { field => 'author', direction => 'desc' },
+            { field => 'author', direction => 'asc' },
+            { field => 'author', direction => 'desc' },
+        ],
+        "sort_by parsing test for 'author_az author_za author_asc author_desc'"
+    );
+
+    @sort_by = $qb->_convert_sort_fields(qw( title_asc title_dsc title_desc ));
+    is_deeply(
+        \@sort_by,
+        [
+            { field => 'title', direction => 'asc' },
+            { field => 'title', direction => 'desc' },
+            { field => 'title', direction => 'desc' },
+        ],
+        "sort_by parsing test for 'title_asc title_dsc'"
+    );
+
+    @sort_by = $qb->_convert_sort_fields(qw( call_number_asc author_dsc ));
     is_deeply(
         \@sort_by,
         [

@@ -77,6 +77,8 @@ sub GetCriteriumDesc {
     if ( $displayby =~ /suggestedby/ || $displayby =~ /managedby/ || $displayby =~ /acceptedby/ ) {
         my $patron = Koha::Patrons->find($criteriumvalue);
         return "" unless $patron;
+        return $patron->surname unless $patron->firstname;
+        return $patron->firstname unless $patron->surname;
         return $patron->surname . ", " . $patron->firstname;
     }
     if ( $displayby =~ /budgetid/ ) {
@@ -122,12 +124,12 @@ foreach my $key ( keys %$suggestion_ref ) {
     delete $suggestion_ref->{$key} if ( !$suggestion_ref->{$key} && ( $op eq 'else' ) );
     delete $suggestion_ref->{$key} if $key =~ m{^DataTables_acqui_suggestions_suggestions};
 }
-delete $suggestion_only->{branchcode} if $suggestion_only->{branchcode} eq '__ANY__';
-delete $suggestion_only->{budgetid}   if $suggestion_only->{budgetid} eq '__ANY__';
+delete $suggestion_only->{branchcode} if defined $suggestion_only->{branchcode} and $suggestion_only->{branchcode} eq '__ANY__';
+delete $suggestion_only->{budgetid}   if defined $suggestion_only->{budgetid}   and $suggestion_only->{budgetid} eq '__ANY__';
 
 unless ( $op eq 'cud-save' ) {
     while ( my ( $k, $v ) = each %$suggestion_only ) {
-        delete $suggestion_only->{$k} if $v eq '';
+        delete $suggestion_only->{$k} if ! defined $v or $v eq '';
     }
 }
 
@@ -208,7 +210,7 @@ if ( $op =~ /cud-save/ ) {
         }
 
         my $otherreason = $input->param('other_reason');
-        if ( $suggestion_only->{reason} eq 'other' && $otherreason ) {
+        if ( $suggestion_only->{reason} && $suggestion_only->{reason} eq 'other' && $otherreason ) {
             $suggestion_only->{reason} = $otherreason;
         }
 
@@ -293,12 +295,16 @@ if ( $op =~ /cud-save/ ) {
     $suggestion_ref = &GetSuggestion( $$suggestion_ref{'suggestionid'} );
     $suggestion_ref->{reasonsloop} = $reasonsloop;
     my $other_reason = 1;
-    foreach my $reason ( @{$reasonsloop} ) {
-        if ( $suggestion_ref->{reason} eq $reason->{lib} ) {
-            $other_reason = 0;
+    unless ( $suggestion_ref->{reason} ) {
+        $other_reason = 0;
+    }
+    else {
+        foreach my $reason ( @{$reasonsloop} ) {
+            if ( $suggestion_ref->{reason} eq $reason->{lib} ) {
+                $other_reason = 0;
+            }
         }
     }
-    $other_reason = 0 unless $suggestion_ref->{reason};
     $template->param( other_reason => $other_reason );
     Init($suggestion_ref);
     $op = 'save';
@@ -452,7 +458,8 @@ if ( $op eq 'else' ) {
     }
     for my $f (qw (branchcode budgetid)) {
         delete $search_params->{$f}
-            if $search_params->{$f} eq '__ANY__'
+            if ! defined $search_params->{$f}
+            || $search_params->{$f} eq '__ANY__'
             || $search_params->{$f} eq '';
     }
     for my $bi (qw (title author isbn publishercode copyrightdate collectiontitle)) {
