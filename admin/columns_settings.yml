@@ -504,6 +504,8 @@ modules:
             -
               columnname: itype
             -
+              columnname: holdings
+            -
               columnname: holdingbranch
             -
               columnname: homebranch
@@ -576,6 +578,8 @@ modules:
               columnname: cover_image
             -
               columnname: itype
+            -
+              columnname: holdings
             -
               columnname: holdingbranch
             -
