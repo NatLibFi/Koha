@@ -7,6 +7,6 @@ return {
         my ($args) = @_;
         my ($dbh, $out) = @$args{qw(dbh out)};
 
-        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type) VALUES ('AllowSIPRenewal', '0', NULL, 'Allow loan renewal via SIP', 'YesNo') });
+        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type) VALUES ('AllowSIPRenewal', '1', NULL, 'Allow loan renewal via SIP', 'YesNo') });
     },
 };
