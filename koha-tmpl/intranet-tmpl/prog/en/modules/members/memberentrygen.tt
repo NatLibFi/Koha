@@ -852,6 +852,7 @@
 
                                             [% IF minlength_cardnumber == maxlength_cardnumber %]
                                                 <input
+                                                    pattern=".*\S.*"
                                                     type="text"
                                                     id="cardnumber"
                                                     name="cardnumber"
@@ -867,6 +868,7 @@
                                                 <div class="hint">Card number must be exactly [% minlength_cardnumber | html %] characters.</div>
                                             [% ELSIF minlength_cardnumber && maxlength_cardnumber %]
                                                 <input
+                                                    pattern=".*\S.*"
                                                     type="text"
                                                     id="cardnumber"
                                                     name="cardnumber"
@@ -879,16 +881,16 @@
                                                     <span class="required">Required</span>
                                                 [% END %]
                                                 <span id="cn_max" class="required">Card number must not be more than [% maxlength_cardnumber | html %] characters.</span>
-                                                <div class="hint">Card number must be between [% minlength_cardnumber | html %] and [% maxlength_cardnumber | html %] characters.</div>
+                                                <div class="hint">Card number msut be between [% minlength_cardnumber | html %] and [% maxlength_cardnumber | html %] characters.</div>
                                             [% ELSIF maxlength_cardnumber %]
-                                                <input type="text" id="cardnumber" name="cardnumber" size="20" value="[% borrower_data.cardnumber | html %]" maxlength="[% maxlength_cardnumber | html %]" />
+                                                <input pattern=".*\S.*" type="text" id="cardnumber" name="cardnumber" size="20" value="[% borrower_data.cardnumber | html %]" maxlength="[% maxlength_cardnumber | html %]" />
                                                 [% IF mandatorycardnumber %]
                                                     <span class="required">Required</span>
                                                 [% END %]
                                                 <span id="cn_max" class="required">Card number must not be more than [% maxlength_cardnumber | html %] characters.</span>
                                                 <div class="hint">Card number can be up to [% maxlength_cardnumber | html %] characters.</div>
                                             [% ELSE %]
-                                                <input type="text" id="cardnumber" name="cardnumber" size="20" value="[% borrower_data.cardnumber | html %]" />
+                                                <input pattern=".*\S.*" type="text" id="cardnumber" name="cardnumber" size="20" value="[% borrower_data.cardnumber | html %]" />
                                                 [% IF mandatorycardnumber %]
                                                     <span class="required">Required</span>
                                                 [% END %]
