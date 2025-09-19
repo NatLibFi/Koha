@@ -26,6 +26,16 @@ function check_form_borrowers(nav) {
         }
     }
 
+    // prohibit whitespace-only in cardnumber
+    if (statut != 1) {
+        var el = document.form.cardnumber;
+        if (el && el.value.length > 0 && ! /\S/.test(el.value)) {
+            message_champ += (message_champ ? "\n" : "") +
+                __("Card number must contain at least one non-space character.");
+            statut = 1;
+        }
+    }
+
     if (statut == 1) {
         //alert if at least 1 error
         alert(message + "\n" + message_champ);
