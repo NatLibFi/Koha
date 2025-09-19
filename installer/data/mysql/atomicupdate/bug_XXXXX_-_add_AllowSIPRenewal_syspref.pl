@@ -7,6 +7,6 @@ return {
         my ($args) = @_;
         my ($dbh, $out) = @$args{qw(dbh out)};
 
-        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value) VALUES ('AllowSIPRenewal', '0') });
+        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value) VALUES ('AllowSIPRenewal', '1') });
     },
 };
