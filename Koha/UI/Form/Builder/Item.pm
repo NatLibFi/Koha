@@ -511,6 +511,18 @@ sub edit_form {
     }
 
     my $item                = $self->{item};
+
+    if ( C4::Context->preference('SummaryHoldings') && !$item->{itemnumber} && $holding_id ) {
+        my $holding = Koha::Holdings->find($holding_id);
+        if ($holding) {
+            $item->{homebranch}     = $holding->holdingbranch;
+            $item->{holdingbranch}  = $holding->holdingbranch;
+            $item->{location}       = $holding->location;
+            $item->{ccode}          = $holding->ccode;
+            $item->{itemcallnumber} = $holding->callnumber;
+        }
+    }
+
     my $marc_more_subfields = $item->{more_subfields_xml}
         ?
 
