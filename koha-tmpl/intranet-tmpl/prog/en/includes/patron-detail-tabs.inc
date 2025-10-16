@@ -237,6 +237,7 @@
                     <div id="closed-stack-requests" role="tabpanel" class="tab-pane">
                         <form action="/cgi-bin/koha/reserve/modrequest.pl" method="post">
                             <input type="hidden" name="from" value="circ" />
+                            [% INCLUDE 'csrf-token.inc' %]
 
                             <table id="closed-stack-requests-table">
                                 <thead>
