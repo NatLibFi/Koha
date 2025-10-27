@@ -55,6 +55,11 @@ $(document).ready(function () {
         }
     });
 
+    $("#add_duplicate_submit").click(function () {
+        // force to scroll to form if we're in duplicate action
+        $("#f").attr('action', $("#f").attr('action').replace(/(#\w+)?$/g, '#additema'));
+    });
+
     // Skip the first column
     table_settings["columns"].unshift({ cannot_be_toggled: "1" });
 
