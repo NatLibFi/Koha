@@ -476,7 +476,13 @@
                                     [% IF CAN_user_editcatalogue_edit_items %]
                                         <td class="actions">
                                             <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&amp;biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]"><i class="fa fa-pencil"></i> Edit</a>
-                                            <a class="btn btn-default btn-xs delete" href="/cgi-bin/koha/cataloguing/addholding.pl?op=delete&amp;biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]"><i class="fa fa-eraser"></i> Delete</a>
+                                            <form class="inline deleteholding" method="post" action="/cgi-bin/koha/cataloguing/addholding.pl" style="display:inline">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="op" value="cud-delete" />
+                                                <input type="hidden" name="biblionumber" value="[% holding.biblionumber | html %]" />
+                                                <input type="hidden" name="holding_id" value="[% holding.holding_id | html %]" />
+                                                <button type="submit" class="btn btn-default btn-xs"><i class="fa fa-eraser"></i> Delete</button>
+                                            </form>
                                             <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]#additema"><i class="fa fa-plus"></i> Add item</a>
                                             <a class="btn btn-default btn-xs previewMARC" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding.holding_id | uri %]&amp;viewas=html" title="MARC">Show MARC</a>
                                         </td>
@@ -1320,6 +1326,19 @@
     [%# The following PROCESS needs: %]
     [%# can_edit_items_from item_type_image_locations %]
     [% PROCESS build_items_table_js biblio => biblio %]
+    <script>
+      $(function(){
+        $(document)
+          .off('submit.deleteHolding', 'form.deleteholding')
+          .on('submit.deleteHolding', 'form.deleteholding', function(e){
+            if (!window.confirm(_("Holding record deletion:") + ' ' + _("Are you sure?"))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            }
+          });
+      });
+    </script>
 
     [% IF ( Koha.Preference('CatalogConcerns') ) %]
         <script>
