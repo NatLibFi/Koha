@@ -28,10 +28,15 @@ return {
             }, undef, $local_number_map_id
             );
 
-            my $index_name = $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX;
-            my $indexer    = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $index_name } );
-            $indexer->update_mappings();
-            say $out "Updated ES mappings to make local-number sortable";
+            if(C4::Context->preference('SearchEngine') eq 'Elasticsearch') {
+                my $index_name = $Koha::SearchEngine::BIBLIOS_INDEX;
+                my $indexer    = Koha::SearchEngine::Indexer->new( { index => $index_name } );
+                $indexer->update_mappings();
+                say $out "Updated ES mappings to make local-number sortable";
+            }
+            else {
+                say_warning( $out, "local-number mapping updated, please reindex your Zebra index to apply the change." );
+            }
         } elsif ( !defined $local_number_map_id ) {
             say_warning( $out, "No mapping defined for local-number" );
         } else {
