@@ -31,6 +31,12 @@ or if a Stomp server is not active it will poll the database every 10s for new j
 You can specify some queues only (using --queue, which is repeatable) if you want to run several workers that will handle their own jobs.
 
 --m --max-processes specifies how many jobs to process simultaneously
+--process_new_and_quit        get all new jobs from DB directly,
+                              process them, then exit,
+                              don't get from the RabbitMQ queue
+--process_new_on_start        get all new jobs from DB directly,
+                              process them, then continue
+--drain_not_found_jobs        drain not found in DB queue jobs
 
 Max processes will be set from the command line option, the environment variable MAX_PROCESSES, or the koha-conf file, in that order of precedence.
 By default the script will only run one job at a time.
@@ -47,6 +53,11 @@ The different values available are:
 
     default
     long_tasks
+
+=item B<--process_new_and_quit>
+
+Get all new jobs from DB directly, process them, then exit.
+Does not intercommunicates with RabbitMQ dispatcher at all.
 
 =back
 
@@ -67,6 +78,10 @@ use C4::Context;
 
 $SIG{'PIPE'} = 'IGNORE';    # See BZ 35111; added to ignore PIPE error when connection lost on Ubuntu.
 
+my $process_new_and_quit;
+my $process_new_on_start;
+my $drain_not_found_jobs;
+
 my ( $help, @queues );
 
 my $max_processes = $ENV{MAX_PROCESSES};
@@ -79,6 +94,9 @@ my $not_found_retries = {};
 my $max_retries       = $ENV{MAX_RETRIES} || 10;
 
 GetOptions(
+    'process_new_and_quit' => \$process_new_and_quit,
+    'process_new_on_start' => \$process_new_on_start,
+    'drain_not_found_jobs' => \$drain_not_found_jobs,
     'm|max-processes=i' => \$max_processes,
     'h|help'            => \$help,
     'queue=s'           => \@queues,
@@ -88,6 +106,29 @@ pod2usage(0) if $help;
 
 unless (@queues) {
     push @queues, 'default';
+}
+
+if ( $process_new_on_start || $process_new_and_quit ) {
+    die "Cannot use --process_new_on_start and --process_new_and_quit at the same time" if $process_new_on_start && $process_new_and_quit;
+
+    # check for extra lost jobs:
+    my $jobs = Koha::BackgroundJobs->search({ status => 'new', queue => \@queues });
+    if($jobs->count()) {
+        warn "Found unprocessed jobs in DB: " . $jobs->count() . ", processing...\n";
+        while ( my $j = $jobs->next ) {
+            warn " - processing job " . $j->id . ", " . $j->type() . ".\n";
+            my $args = try {
+                $j->json->decode($j->data);
+            } catch {
+                Koha::Logger->get({ interface => 'worker' })->warn(sprintf "Cannot decode data for job id=%s", $j->id);
+                $j->status('failed')->store;
+                next;
+            };
+            process_job( $j, { job_id => $j->id, %$args } );
+        }
+    }
+    exit
+        unless $process_new_on_start;
 }
 
 my $notification_method = C4::Context->preference('JobsNotificationMethod') // 'STOMP';
@@ -175,6 +216,16 @@ while (1) {
         }
 
         unless ($job) {
+
+            if ($drain_not_found_jobs) {
+                Koha::Logger->get( { interface => 'worker' } )
+                    ->warn( sprintf "Job %s drained.", $args->{job_id} );
+
+                # nack without requeue, we do not want to process this frame again
+                $conn->nack( { frame => $frame, requeue => 'false' } );
+                next;
+            }
+
             $not_found_retries->{ $args->{job_id} } //= 0;
             if ( ++$not_found_retries->{ $args->{job_id} } >= $max_retries ) {
                 Koha::Logger->get( { interface => 'worker' } )
@@ -193,6 +244,10 @@ while (1) {
             Time::HiRes::sleep(0.5);
             next;
         }
+        elsif ($drain_not_found_jobs) {
+            break;
+        }
+
         $conn->ack( { frame => $frame } );
 
         $pm->start and next;
