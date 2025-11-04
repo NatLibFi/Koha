@@ -564,7 +564,7 @@
                             [% END %]
                         </table>
                         [% IF ComponentParts.size == Koha.Preference('MaxComponentRecords') %]
-                            <p>Only [% ComponentParts.size | html %] results are shown: <a href="/cgi-bin/koha/catalogue/search.pl?q=[% ComponentPartsQuery | url %]">show all component parts</a></p>
+                            <p>Only [% ComponentParts.size | html %] results are shown: <a href="/cgi-bin/koha/catalogue/search.pl?q=[% ComponentPartsQuery | uri %]&amp;sort_by=[% ComponentPartsQuerySort | uri %]">show all component parts</a></p>
                         [% END %]
                     </div>
                     <!-- /.content_set -->
