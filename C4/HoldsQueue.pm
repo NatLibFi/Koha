@@ -849,6 +849,16 @@ sub MapItemsToHoldRequests {
         if ( defined( $request->{itemnumber} ) ) {
 
             # fill it if possible; if not skip it
+
+            unless ($request->{branchcode}) {
+                warn "PROBLEM: branchcode undefined in reserve_id $request->{reserve_id}! Skipping this hold.\n";
+                next;
+            }
+            unless ($libraries->{ $request->{branchcode} }) {
+                warn "PROBLEM: no such branchcode $request->{branchcode} in branches list in reserve_id $request->{reserve_id}! Skipping this hold.\n";
+                next;
+            }
+
             if (    exists $items_by_itemnumber{ $request->{itemnumber} }
                 and not exists $allocated_items{ $request->{itemnumber} }
                 and _can_item_fill_request( $items_by_itemnumber{ $request->{itemnumber} }, $request, $libraries ) )
