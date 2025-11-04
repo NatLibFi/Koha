@@ -1532,6 +1532,12 @@ Circulation:
                   1: Send
                   0: Don't send
             - OPAC patron messages in the SIP2 screen message field.
+        -
+            - Allow loan renewal via SIP
+            - pref: AllowSIPRenewal
+              choices:
+                  1: Yes
+                  0: No
 
     Curbside pickup module:
         -
