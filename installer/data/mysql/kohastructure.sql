@@ -3670,7 +3670,7 @@ CREATE TABLE `identity_providers` (
   `protocol` enum('OAuth','OIDC','LDAP','CAS') NOT NULL COMMENT 'Protocol provider speaks',
   `config` longtext NOT NULL COMMENT 'Configuration of the provider in JSON format',
   `mapping` longtext NOT NULL COMMENT 'Configuration to map provider data to Koha user',
-  `matchpoint` enum('email','userid','cardnumber') NOT NULL COMMENT 'The patron attribute to be used as matchpoint',
+  `matchpoint` enum('email','phone','userid','cardnumber') NOT NULL COMMENT 'The patron attribute to be used as matchpoint',
   `icon_url` varchar(255) DEFAULT NULL COMMENT 'Provider icon URL',
   PRIMARY KEY (`identity_provider_id`),
   UNIQUE KEY `code` (`code`),
