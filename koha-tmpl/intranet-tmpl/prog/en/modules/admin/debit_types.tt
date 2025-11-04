@@ -208,7 +208,7 @@
                                     [% END %]
                                 </td>
                                 <td>
-                                    [% IF debit_type.library_limits.count > 0 %]
+                                    [% IF debit_type.library_limits AND debit_type.library_limits.count > 0 %]
                                         [% library_limits_str = "" %]
                                         [% FOREACH library IN debit_type.library_limits %]
                                             [%- IF loop.first -%]

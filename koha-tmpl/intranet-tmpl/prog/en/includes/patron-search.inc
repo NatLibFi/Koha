@@ -579,6 +579,11 @@
                                     "searchable": true,
                                     "orderable": true,
                                     "render": function( data, type, row, meta ) {
+                                        if ( ! categories_map[data.toLowerCase()] ) {
+                                            console.error('Uknown category:', data);
+                                            // console.log('Known categories:', categories_map);
+                                            return 'Unknown category: <b class="text-danger">'+data+'</b>';
+                                        }
                                         let r = '<div class="address"><ul>';
                                         r += $format_address(row, { no_line_break: true, include_li: true });
                                         r += '</div></ul>';

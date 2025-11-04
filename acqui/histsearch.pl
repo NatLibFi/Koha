@@ -60,7 +60,6 @@ use Koha::DateUtils qw( dt_from_string );
 my $input     = CGI->new;
 my $do_search = $input->param('do_search') || 0;
 
-my $dbh = C4::Context->dbh;
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
         template_name => "acqui/histsearch.tt",
@@ -132,7 +131,7 @@ my $bp_loop       = $budgetperiods;
 for my $bp ( @{$budgetperiods} ) {
     my $hierarchy = C4::Budgets::GetBudgetHierarchy( $$bp{budget_period_id}, undef, undef, 1 );
     for my $budget ( @{$hierarchy} ) {
-        $$budget{budget_display_name} = sprintf( "%s", ">" x $$budget{depth} . $$budget{budget_name} );
+        $$budget{budget_display_name} = sprintf( "%s", "> " x $$budget{budget_level} . $$budget{budget_name} );
     }
     $$bp{hierarchy} = $hierarchy;
 }
