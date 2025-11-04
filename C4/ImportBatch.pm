@@ -1625,13 +1625,24 @@ sub RecordsFromISO2709File {
 
     open my $fh, '<', $input_file or die "$0: cannot open input file $input_file: $!\n";
     my @marc_records;
+    my $count = 0;
     $/ = "\035";
     while (<$fh>) {
         s/^\s+//;
         s/\s+$//;
         next unless $_;    # skip if record has only whitespace, as might occur
                            # if file includes newlines between each MARC record
+        ++$count;
         my ( $marc_record, $charset_guessed, $char_errors ) = MarcToUTF8Record( $_, $marc_type, $encoding );
+        # Ignore holdings records
+        if ($record_type eq 'biblio' && $marc_type eq 'MARC21') {
+            my $leader = $marc_record->leader();
+            if ($leader =~ /^.{6}[uvxy]/) {
+                push @errors, "Ignoring record $count (holdings record)";
+                next;
+            }
+        }
+
         push @marc_records, $marc_record;
         if ( $charset_guessed ne $encoding ) {
             push @errors,
@@ -1644,7 +1655,7 @@ sub RecordsFromISO2709File {
 
 =head2 RecordsFromMARCXMLFile
 
-    my ($errors, $records) = C4::ImportBatch::RecordsFromMARCXMLFile($input_file, $encoding);
+    my ($errors, $records) = C4::ImportBatch::RecordsFromMARCXMLFile($input_file, $record_type, $encoding);
 
 Creates MARC::Record-objects out of the given MARCXML-file.
 
@@ -1656,15 +1667,28 @@ Returns two array refs.
 =cut
 
 sub RecordsFromMARCXMLFile {
-    my ( $filename, $encoding ) = @_;
+    my ( $filename, $record_type, $encoding ) = @_;
+
+    my $marcflavour = C4::Context->preference('marcflavour');
     my $batch = MARC::File::XML->in($filename);
     my ( @marcRecords, @errors, $record );
+    my $count = 0;
     do {
+        ++$count;
         eval { $record = $batch->next($encoding); };
         if ($@) {
             push @errors, $@;
         }
-        push @marcRecords, $record if $record;
+        # Ignore holdings records
+        my $valid = 1;
+        if ($record && $record_type eq 'biblio' && $marcflavour eq 'MARC21') {
+            my $leader = $record->leader();
+            if ($leader =~ /^.{6}[uvxy]/) {
+                push @errors, "Ignoring record $count (holdings record)";
+                $valid = 0;
+            }
+        }
+        push @marcRecords, $record if $record && $valid;
     } while ($record);
     return ( \@errors, \@marcRecords );
 }

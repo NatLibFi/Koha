@@ -4,10 +4,11 @@
 <xsl:stylesheet version="1.0"
   xmlns:marc="http://www.loc.gov/MARC21/slim"
   xmlns:items="http://www.koha-community.org/items"
+  xmlns:holdings="http://www.koha-community.org/holdings"
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:exsl="http://exslt.org/common"
   xmlns:str="http://exslt.org/strings"
-  exclude-result-prefixes="marc items str" extension-element-prefixes="exsl">
+  exclude-result-prefixes="marc items str holdings" extension-element-prefixes="exsl">
     <xsl:import href="MARC21slimUtils.xsl"/>
     <xsl:output method = "html" indent="yes" omit-xml-declaration = "yes" encoding="UTF-8"/>
 
@@ -1302,7 +1303,7 @@
             <span class="label">Availability: </span>
 
             <xsl:choose>
-                <!-- When there are no items, try alternate holdings -->
+                <!-- When there are no items, try alternate holdings and holdings records -->
                 <xsl:when test="$itemcount=0">
                     <xsl:choose>
                         <xsl:when test="string-length($AlternateHoldingsField)=3 and marc:datafield[@tag=$AlternateHoldingsField]">
@@ -1315,7 +1316,21 @@
                         </xsl:for-each>
                         (<xsl:value-of select="$AlternateHoldingsCount"/>)
                         </xsl:when>
-                        <xsl:otherwise><span class="noitems">No items available.</span> </xsl:otherwise>
+                        <xsl:otherwise>
+                            <span class="noitems">No items available.</span>
+                            <xsl:if test="//holdings:holdings/holdings:holding/holdings:suppress[.='0']"> Locations:
+                                <xsl:for-each select="//holdings:holdings/holdings:holding[./holdings:suppress='0']">
+                                    <xsl:if test="position() > 1">; </xsl:if>
+                                    <xsl:value-of select="./holdings:holdingbranch"/>
+                                    <xsl:if test="string-length(./holdings:location) > 0">
+                                    - <xsl:value-of select="./holdings:location"/>
+                                    </xsl:if>
+                                    <xsl:if test="string-length(./holdings:callnumber) > 0">
+                                    - <xsl:value-of select="./holdings:callnumber"/>
+                                    </xsl:if>
+                                </xsl:for-each>
+                            </xsl:if>
+                        </xsl:otherwise>
                     </xsl:choose>
                 </xsl:when>
 

@@ -64,7 +64,7 @@ subtest 'RecordsFromMARCXMLFile' => sub {
         my $dup_err;
         local *STDERR;
         open STDERR, ">>", \$dup_err;
-        ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'UTF-8' );
+        ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'biblio', 'UTF-8' );
         close STDERR;
     }
     is( @$recs, 0, 'No records from empty marcxml file' );
@@ -75,13 +75,13 @@ subtest 'RecordsFromMARCXMLFile' => sub {
         my $dup_err;
         local *STDERR;
         open STDERR, ">>", \$dup_err;
-        ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'UTF-8' );
+        ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'biblio', 'UTF-8' );
         close STDERR;
     }
     is( @$recs, 0, 'Garbage returns no records' );
 
     $file = create_file( { two => 1, format => 'marcxml' } );
-    ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'UTF-8' );
+    ( $errors, $recs ) = C4::ImportBatch::RecordsFromMARCXMLFile( $file, 'biblio', 'UTF-8' );
     is( @$recs, 2, 'File has two records' );
 
 };

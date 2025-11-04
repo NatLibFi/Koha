@@ -2175,7 +2175,7 @@ subtest 'Tests for relationship between item and item_orders via aqorders_item' 
 };
 
 subtest 'move_to_biblio() tests' => sub {
-    plan tests => 16;
+    plan tests => 20;
 
     $schema->storage->txn_begin;
 
@@ -2187,14 +2187,29 @@ subtest 'move_to_biblio() tests' => sub {
     my $source_biblionumber = $source_biblio->biblionumber;
     my $target_biblionumber = $target_biblio->biblionumber;
 
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $source_holding = $builder->build_sample_holdings_record(
+        {
+            biblionumber => $source_biblionumber,
+            library      => $library->branchcode,
+        }
+    );
+    my $standalone_holding = $builder->build_sample_holdings_record(
+        {
+            biblionumber => $source_biblionumber,
+            library      => $library->branchcode,
+        }
+    );
+
     my $item1 = $builder->build_sample_item( { biblionumber => $source_biblionumber } );
+    $item1->set( { holding_id => $source_holding->holding_id() } )->store();
     my $item2 = $builder->build_sample_item( { biblionumber => $source_biblionumber } );
+    $item2->set( { holding_id => $source_holding->holding_id() } )->store();
     my $item3 = $builder->build_sample_item( { biblionumber => $source_biblionumber } );
 
     my $itemnumber1 = $item1->itemnumber;
     my $itemnumber2 = $item2->itemnumber;
-
-    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
 
     my $patron = $builder->build_object(
         {
@@ -2357,6 +2372,13 @@ subtest 'move_to_biblio() tests' => sub {
     is( $get_item2->biblionumber, $source_biblionumber, 'item2 is not moved' );
     my $get_item3 = Koha::Items->find( $item3->itemnumber );
     is( $get_item3->biblionumber, $source_biblionumber, 'item3 is not moved' );
+
+    my $target_holdings = $target_biblio->holdings();
+    is($target_holdings->count, 1, 'Holdings record should have been created in target biblio');
+
+    is($get_item1->holding->holding_id, $target_holdings->next->holding_id, 'holding_id updated in the moved item');
+    is($get_item2->holding->holding_id, $source_holding->holding_id, 'holding_id not updated in the unmoved item');
+    is($get_item3->holding, undef, 'item 3 does not have a holding_id');
 
     $aq_order1->discard_changes;
     $aq_order2->discard_changes;
