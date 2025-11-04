@@ -767,6 +767,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('SpineLabelFormat','<itemcallnumber><copynumber>','30|10','This preference defines the format for the quick spine label printer. Just list the fields you would like to see in the order you would like to see them, surrounded by <>, for example <itemcallnumber>.','Textarea'),
 ('SpineLabelShowPrintOnBibDetails','0','','If turned on, a \"Print label\" link will appear for each item on the bib details page in the staff interface.','YesNo'),
 ('staffClientBaseURL','',NULL,'Specify the base URL of the staff interface starting with http:// or https://. Do not include a trailing slash in the URL. (This must be filled in correctly for CAS, svc, and load_testing to work.)','free'),
+('ShowQuickBranchSelector', '0', NULL, 'Quick dropdown branches selector', 'YesNo'),
 ('StaffHighlightedWords','1','','Highlight search terms on staff interface','YesNo'),
 ('StaffInterfaceLanguages','en',NULL,'Set the default language in the staff interface.','Languages'),
 ('StaffLangSelectorMode','footer','top|both|footer','Select the location to display the language selector in staff interface','Choice'),
