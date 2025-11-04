@@ -170,6 +170,7 @@ if ($error) {
             -attachment => "$file_pre$file_id.$format"
         );
     } elsif ( $format eq 'isbd' ) {
+        binmode STDOUT, ':encoding(UTF-8)';
         print $query->header(
             -type       => 'text/plain',
             -charset    => 'utf-8',
