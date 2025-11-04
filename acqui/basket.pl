@@ -411,12 +411,16 @@ if ( $op eq 'list' ) {
         }
     }
 
-    # if the basket is closed, calculate estimated delivery date
+    # if the EstimateDeliveryByBasketDate is 1/'Yes' which is assumed for 'Opening date',
+    # calculate estimated delivery date based on when basket was opened, otherwise 'Closing date'
     my $estimateddeliverydate;
-    if ( $basket->{closedate} ) {
-        my ( $year, $month, $day ) = ( $basket->{closedate} =~ /(\d+)-(\d+)-(\d+)/ );
-        ( $year, $month, $day ) = Add_Delta_Days( $year, $month, $day, $bookseller->deliverytime );
-        $estimateddeliverydate = sprintf( "%04d-%02d-%02d", $year, $month, $day );
+    if ( C4::Context->preference("EstimateDeliveryByBasketDate") ) {
+        $estimateddeliverydate = calculate_delivery_date( $basket->{creationdate}, $bookseller->deliverytime );
+    } else {
+        # if the basket is closed, calculate estimated delivery date
+        if( $basket->{closedate} ) {
+            $estimateddeliverydate = calculate_delivery_date( $basket->{closedate}, $bookseller->deliverytime );
+        }
     }
 
     # if new basket, pre-fill infos
@@ -546,6 +550,14 @@ if ( $op eq 'list' ) {
 
 $template->param( messages => \@messages );
 output_html_with_http_headers $query, $cookie, $template->output;
+
+sub calculate_delivery_date {
+    my ($date, $delivery_time) = @_;
+
+    my ($year, $month, $day) = ($date =~ /(\d+)-(\d+)-(\d+)/);
+    ($year, $month, $day) = Add_Delta_Days($year, $month, $day, $delivery_time);
+    return sprintf( "%04d-%02d-%02d", $year, $month, $day );
+}
 
 sub get_order_infos {
     my $order      = shift;
