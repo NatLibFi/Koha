@@ -68,7 +68,7 @@ return {
 
         $dbh->do(q{
             INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
-                ('SummaryHoldings', '0', NULL, 'If ON, enables support for holdings records.', 'YesNo');
+                ('SummaryHoldings', '0', NULL, 'Use Summary Holdings records (MFHD, MARC holdings) as an intermediate layer between bibliographic records and items, storing summary holdings and location information and overlaying selected MFHD fields into bibliographic records and item editor defaults.', 'YesNo');
         });
 
         $dbh->do(q{
