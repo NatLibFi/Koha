@@ -409,13 +409,13 @@ Cataloging:
             - "All values of repeating tags and subfields will be printed with the given RIS tag."
             - "<br/>"
             - "Use of TY ( record type ) as a key will <em>replace</em> the default TY with the field value of your choosing."
-    Holdings:
+    Holdings Records:
         -
             - pref: SummaryHoldings
               choices:
-                  1: Use
+                  1: "Use"
                   0: "Don't use"
-            - summary holdings records.
+            - Summary holdings records, or MFHD (MARC Format for Holdings Data), as an intermediate layer between bibliographic records and items, storing summary holdings and location information and overlaying selected MFHD fields into bibliographic records and item editor defaults.
         -
             - pref: SummaryHoldingsEmbedTagsInBiblio
               default_value: "583,852"
