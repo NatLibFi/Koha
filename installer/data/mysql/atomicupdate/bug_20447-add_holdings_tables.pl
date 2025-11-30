@@ -77,6 +77,11 @@ return {
         });
 
         $dbh->do(q{
+            INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
+                ('SummaryHoldingsEmbedTagsInBiblio', '583,852', '', 'Comma-separated list of MFHD MARC tags to embed into bibliographic records (e.g. "583,852"), used by OAI-PMH, and providing this data to search index, when MFHD is enabled. Leave empty to embed none. Use the special value "all" to embed all data tags (i.e. except control fields 00X and 999) from the MFHD holdings record.', 'Free');
+        });
+
+        $dbh->do(q{
             INSERT IGNORE INTO `biblio_framework` VALUES ('HLD', 'Default holdings framework');
         });
 
