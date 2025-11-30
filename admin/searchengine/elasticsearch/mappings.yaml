@@ -1009,6 +1009,18 @@ biblios:
     opac: 1
     staff_client: 1
     type: ''
+  action-note:
+    label: action-note
+    mandatory: ~
+    mappings:
+    - facet: ''
+      marc_field: '583'
+      marc_type: marc21
+      sort: 1
+      suggestible: ''
+    opac: 1
+    staff_client: 1
+    type: ''
   acqsource:
     label: acqsource
     mandatory: ~
@@ -3061,6 +3073,11 @@ biblios:
       suggestible: ''
     - facet: ''
       marc_field: '563'
+      marc_type: marc21
+      sort: 1
+      suggestible: ''
+    - facet: ''
+      marc_field: '583'
       marc_type: marc21
       sort: 1
       suggestible: ''
