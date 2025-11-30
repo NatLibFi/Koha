@@ -26,6 +26,8 @@ use C4::Biblio;
 use C4::Charset qw( SetMarcUnicodeFlag );
 use C4::Context;
 
+use List::Util qw(any);
+
 use Koha::Holding;
 
 use base qw(Koha::Objects);
@@ -46,32 +48,68 @@ Koha::Holdings - Koha Holdings object set class
 
 Returns an arrayref of MARC::Field objects taken from the MARC holdings (MFHD) records
 attached to the given biblionumber.
+The list of tags to embed is controlled by the SummaryHoldingsEmbedTagsInBiblio system preference
+(comma-separated list of three-digit tags, e.g. "583,852").
 
 =cut
 
 sub get_embeddable_marc_fields {
     my ( $class, $params ) = @_;
 
-    my @holdings_fields;
-
     if ( not defined $params->{biblionumber} ) {
         carp('get_embeddable_marc_fields called with undefined biblionumber');
-        return \@holdings_fields;
+        return [];
     }
 
-    my ($holdingstag, $holdingssubfield) = Koha::Holding->get_marc_field_mapping({ field => 'holdings.holdingbranch' });
+    # Read preference:
+    #   undef  -> use default: "852" only
+    #   ''     -> explicitly no embedding
+    #   'all'  -> embed all MFHD data fields (except control fields 00X and 999)
+    my $pref = C4::Context->preference('SummaryHoldingsEmbedTagsInBiblio') // '852';
+
+    $pref =~ s/^\s+//;
+    $pref =~ s/\s+$//;
+
+    # Empty string => explicitly no embedding
+    return [] if $pref eq '';
+
+    my @parts = split /\s*,\s*/, $pref;
+
+    my $embed_all = any { lc($_) eq 'all' } @parts;
+
+    my @tags;
+    unless ($embed_all) {
+        @tags = grep { /^\d{3}$/ } @parts;
+        return [] unless @tags;
+    }
+
     my $holdings = $class->search({
         biblionumber => $params->{biblionumber},
-        ($params->{holding_id} ? (holding_id => $params->{holding_id}) : ()),
-        deleted_on => undef })->unblessed();
-    foreach my $holding (@$holdings) {
-        my $mungedholding = {
-            map {
-                defined($holding->{$_}) && $holding->{$_} ne '' ? ("holdings.$_" => $holding->{$_}) : ()
-            } keys %{ $holding }
-        };
-        my $marc = $class->_holding_to_marc($mungedholding);
-        push @holdings_fields, $marc->field($holdingstag);
+        ( $params->{holding_id} ? ( holding_id => $params->{holding_id} ) : () ),
+        deleted_on => undef,
+    });
+
+    my @holdings_fields;
+    while ( my $holding = $holdings->next ) {
+        next unless $holding->metadata;
+
+        my $full_marc = $holding->metadata->record;
+        next unless $full_marc;
+
+        if ($embed_all) {
+            my @f = grep {
+                my $tag = $_->tag;
+                #  skip control fields 00X (001–009) and Koha internal 999 from MFHD
+                $tag =~ /^\d{3}$/ && $tag >= 10 && $tag != 999;
+            } $full_marc->fields;
+            push @holdings_fields, @f if @f;
+        }
+        else {
+            for my $tag (@tags) {
+                my @f = $full_marc->field($tag);
+                push @holdings_fields, @f if @f;
+            }
+        }
     }
 
     return \@holdings_fields;
