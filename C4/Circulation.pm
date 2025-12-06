@@ -3292,13 +3292,20 @@ sub CanBookBeRenewed {
                 }
             )->as_list;
 
-            return ( 0, "on_reserve" ) if @fillable_holds && ( scalar @other_items < scalar @fillable_holds );
-
             my %matched_items;
             foreach my $possible_hold (@fillable_holds) {
                 my $fillable            = 0;
                 my $patron_with_reserve = Koha::Patrons->find( $possible_hold->{borrowernumber} );
 
+                if ( C4::Context->preference("UseBranchTransferLimits") == 1 ) {
+                    if ( C4::Context->preference("item-level_itypes") && C4::Context->preference("BranchTransferLimitsType") eq 'itemtype' ) {
+                        if ( ! IsBranchTransferAllowed( $possible_hold->{branchcode}, $item->homebranch, $item->itype ) ) {
+                            next;
+                        }
+                    } elsif ( ! IsBranchTransferAllowed( $possible_hold->{branchcode}, $item->homebranch, $item->ccode ) ) {
+                        next;
+                    }
+                }
                 foreach my $other_item (@other_items) {
                     next if defined $matched_items{ $other_item->itemnumber };
                     next if $other_item->holds->filter_by_found->count;
