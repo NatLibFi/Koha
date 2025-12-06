@@ -117,6 +117,7 @@ my $conflicting_attribute = 0;
 
 foreach my $attr (@$attributes) {
     my $attribute = Koha::Patron::Attribute->new($attr);
+    $attribute->do_trim_value_if_needed;
     if ( !$attribute->unique_ok ) {
         my $attr_type = Koha::Patron::Attribute::Types->find( $attr->{code} );
         $template->param(
