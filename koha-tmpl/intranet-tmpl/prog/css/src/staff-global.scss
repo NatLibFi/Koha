@@ -4888,7 +4888,7 @@ div .suggestion_note {
     position: fixed;
     bottom: 40px;
     right: 40px;
-    z-index: $zindex-tooltip;
+    z-index: 1080;
 }
 
 @media only screen and ( max-width: 1200px ) {
