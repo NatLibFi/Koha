@@ -637,7 +637,7 @@ sub _copy_move_field {
         if ( $regex and $regex->{search} ) {
             for my $subfield ( $new_field->subfields ) {
                 my $value = $subfield->[1];
-                ($value) = _modify_values( { values => [$value], regex => $regex } );
+                ($value) = _modify_values( { values => [$value], regex => $regex, record => $record, current_tag => $from_field, } );
                 $new_field->update( $subfield->[0], $value );
             }
         }
@@ -669,7 +669,10 @@ sub _copy_move_subfield {
     if (@$field_numbers) {
         @values = map { $_ <= @values ? $values[ $_ - 1 ] : () } @$field_numbers;
     }
-    _modify_values( { values => \@values, regex => $regex } );
+    _modify_values( { values => \@values, regex => $regex, record => $record,
+            current_tag      => $fromFieldName,
+            current_subfield => "\$".$fromSubfieldName,
+    } );
     my $dont_erase = $action eq 'copy' ? 1 : 0;
 
     # Find which source fields actually have the subfield to determine target field numbers
@@ -714,13 +717,149 @@ sub _copy_move_subfield {
     }
 }
 
+# ----------------------------------------------------------------------
+# _parse_candidate – resolve inheritance of tag/subfield and slice
+# ----------------------------------------------------------------------
+sub _parse_candidate {
+    my ($cand,$default_tag,$default_subf) = @_;
+    # Regex parts are optional thanks to inheritance
+    $cand =~ m/^(?:(\d{3}))?(?:\$?(\w))?(?:\[(\d*)(?::(\d*))?\])?(?:(["'])(.*?)\5)?$/
+      or return (undef,undef,undef,undef,undef);
+
+    my $tag   = $1;
+    my $subf  = $2;
+    my $start = $3;
+    my $end   = $4;
+    my $delimiter = $6;
+
+    return (undef,undef,undef,undef,$delimiter)
+        if !defined $tag && !defined $subf && !defined $start && !defined $end;
+
+    $tag   //= $default_tag;
+    $subf  = defined $subf ? "\$".$subf : $default_subf; # ensure leading $
+    $delimiter //= ' \x{2021}'; # default delimiter
+    $delimiter =~ s/\\n/\n/g;
+    $delimiter =~ s/\\r/\r/g;
+    $delimiter =~ s/\\t/\t/g;
+    return ($tag,$subf,$start,$end,$delimiter);
+}
+
+# ----------------------------------------------------------------------
+# _fetch_value – get value(s) from record with slice handling
+# ----------------------------------------------------------------------
+sub _fetch_value {
+    my ($record,$tag,$subf,$start,$end,$delimiter) = @_;
+    return unless $tag;
+
+    my @vals;
+    if ($subf) {
+        foreach my $fld ($record->field($tag)) {
+            push @vals, $fld->subfield(substr($subf,1));
+        }
+    } else {
+        foreach my $fld ($record->field($tag)) {
+            push @vals, $fld->as_string();
+        }
+    }
+    return unless @vals;
+
+    # slice handling
+    if ( defined $start || defined $end ) {
+        $start = ($start eq '' ? 1 : $start);
+        $end   = defined $end ? ($end eq '' ? scalar @vals : $end) : $start;
+        @vals  = @vals[$start-1 .. $end-1] if $start <= $end && $end <= @vals;
+    }
+
+    return join $delimiter, @vals;
+}
+
 sub _modify_values {
     my ($params) = @_;
     my $values   = $params->{values};
     my $regex    = $params->{regex};
+    my $record   = $params->{record};
+    my $current_tag      = $params->{current_tag};
+    my $current_subfield = $params->{current_subfield};
 
     if ( $regex and $regex->{search} ) {
         my $replace = $regex->{replace};
+
+        # -- BEGIN new block --------------------------------------------------
+        # Expand {{FIELD$subfield}} placeholders if the /T modifier is present.
+        # Syntax examples:
+        #   {{509$a}}           – required, warns if missing
+        # Advanced syntax:
+        #   {{509$a?}}                – optional value (removed if missing)
+        #   {{509$a[1]}}              – first occurrence of $a
+        #   {{509$a[2:]}}             – occurrences from 2 to end
+        #   {{509$a[:3]}}             – occurrences 1–3
+        #   {{509$a[1:3]}}            – occurrences 1–3
+        #   {{509$a[1]?509$a[2]}}     – fallback: use 1st, else 2nd occurrence
+        #   {{509$a?510$a}}           – fallback field/subfield chain
+        #   {{856$u}}{{856$z?}} – can be chained within the same replacement
+        # ---------------------------------------------------------------------
+        if ( $regex->{modifiers} && $regex->{modifiers} =~ /T/ ) {
+            my $max_iterations  = 30;
+            my $iteration_count = 0;
+            while ( $replace =~ /\{\{([^{}]+)\}\}/ ) {
+                die "MARC modification templates: Exceeded $max_iterations placeholder '$1' expansions\n" if ++$iteration_count > $max_iterations;
+
+                my $full_placeholder = $&;   # '{{…}}'
+                my $inner            = $1;   # '509$a[1]?509$a[2]?b?c[1:]'
+
+                # Split on first-level ?  (keeps ? as tokens to preserve order)
+                my @raw = split(/(\?(?![^\[]*\]))/, $inner);
+                my @cands;
+                foreach my $tok (@raw) { push @cands, $tok unless $tok eq '?'; }
+
+                my $prev_tag  = $current_tag;
+                my $prev_subf = $current_subfield;
+                my $resolved;
+
+                CAND: for my $cand (@cands) {
+                    my ($tag,$subf,$slice_start,$slice_end,$delimiter) = _parse_candidate($cand,$prev_tag,$prev_subf);
+
+                    warn "[$inner] CAND: $cand - ".($tag//'-undef-').",".($subf//'-undef-').",".($delimiter//'-undef-')."\n";
+
+                    unless ($tag) {
+                        if ( defined $delimiter ) {
+                            $resolved = $delimiter;
+                        } else {
+                            warn "Mistake in template? Can't resolve '$cand'";
+                        }
+                        last CAND;
+                    }
+
+                    # save for inheritance
+                    $prev_tag  = $tag  if defined $tag;
+                    $prev_subf = $subf if defined $subf;
+
+                    $resolved = _fetch_value($record,$tag,$subf,$slice_start,$slice_end,$delimiter);
+                    last CAND if defined $resolved && $resolved ne '';
+                }
+
+                if ( defined $resolved ) {
+                    if ( length $resolved ) {
+                      $replace =~ s/\Q$full_placeholder\E/$resolved/g;
+                    } else {
+                        # whitespace‑aware substitution of empty value
+                        $replace =~ s{(\s*)\Q$full_placeholder\E(\s*)}{
+                            ($1 =~ /\n/ || $2 =~ /\n/) ? "\n"
+                            : ($1 =~ /\s/ || $2 =~ /\s/) ? ' ' : ''
+                        }eg;
+                    }
+                } else {
+                    # Remove unresolved optional placeholder or warn
+                    if ( $inner =~ /\?$/ ) {
+                        $replace =~ s/\Q$full_placeholder\E//g;
+                    } else {
+                        die "MARC modification templates: Placeholder $inner not found and is not optional\n";
+                    }
+                }
+            }
+        }
+        # -- END new block ----------------------------------------------------
+
         $replace =~ s/"/\\"/g;              # Protection from embedded code
         $replace = '"' . $replace . '"';    # Put in a string for /ee
         $regex->{modifiers} //= q||;
