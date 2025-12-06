@@ -1011,6 +1011,14 @@ to ensure those parts are correct.
 
 =cut
 
+my $crazy_char="\x{02BA}";
+
+sub _replace_all_quotes {
+    my $s = shift;
+    $s =~ s/"/$crazy_char/g;
+    return $s;
+}
+
 sub clean_search_term {
     my ( $self, $term ) = @_;
 
@@ -1023,12 +1031,17 @@ sub clean_search_term {
 
     $term = $self->_convert_index_strings_freeform($term);
 
-    # Remove unbalanced quotes
-    my $unquoted = $term;
-    my $count    = ( $unquoted =~ tr/"/ / );
-    if ( $count % 2 == 1 ) {
-        $term = $unquoted;
-    }
+    $term =~ s/((?:\W|^)")((?:\w"|[^"])+)(\w")/$1._replace_all_quotes($2).$3/ge;
+    $term =~ s/(\w)"(\w)/$1$crazy_char$2/g;
+    while($term =~ s/^([^"]*\w)"/$1$crazy_char/) {};
+
+    # # Remove unbalanced quotes
+    # my $unquoted = $term;
+    # my $count    = ( $unquoted =~ tr/"/ / );
+    # if ( $count % 2 == 1 ) {
+    #     $term =~ s/"/\\"/g;
+    #     # $term = $unquoted;
+    # }
     $term = $self->_query_regex_escape_process($term);
 
     # because of _truncate_terms and if QueryAutoTruncate enabled
