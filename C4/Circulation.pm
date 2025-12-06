@@ -3735,11 +3735,32 @@ sub GetRenewCount {
             rules        => [ 'renewalsallowed', 'unseen_renewals_allowed' ]
         }
     );
-    $renewsallowed = $rules ? $rules->{renewalsallowed} : 0;
-    $unseenallowed =
-          $rules->{unseen_renewals_allowed}
-        ? $rules->{unseen_renewals_allowed}
-        : 0;
+    # multi-rules requests makes $rules defined no matter present or not the value
+    # of rule itself as key/value pair in cirtulation_rules table (!).
+    # and viceversa. BTW, now database flooded with empty sting unseen_renewals_allowed. Needs to be re-thought.
+    if($rules) {
+        # so no reason to check if($rules) to prevent NULLs in renewalsallowed because of unseen_renewals_allowed
+        $renewsallowed = $rules->{renewalsallowed} || 0
+            if exists $rules->{renewalsallowed};
+        $unseenallowed = $rules->{unseen_renewals_allowed} || 0
+            if exists $rules->{unseen_renewals_allowed};
+    }
+    # DISABLED THIS FOR A MOMENT, but unseen_renewals_allowed == '' in DB and should be fixed
+    # (see File: admin/smart-rules.pl:272)
+    # warn "Rule present in DB but rules->{renewalsallowed} undefined for set "
+    #         . " categorycode: " . ($patron->categorycode//'-undef-')
+    #         . " itemtype: " . ($item->effective_itemtype//'-undef-')
+    #         . " branchcode: " . ($branchcode//'-undef-')
+    #         . " ccode: " . ($item->ccode//'-undef-')
+    #         . " shelving_location: " . ($item->location//'-undef-')
+    #     if $rules and ! exists $rules->{renewalsallowed};
+    # warn "Rule present in DB but rules->{unseen_renewals_allowed} undefined for set "
+    #         . " categorycode: " . ($patron->categorycode//'-undef-')
+    #         . " itemtype: " . ($item->effective_itemtype//'-undef-')
+    #         . " branchcode: " . ($branchcode//'-undef-')
+    #         . " ccode: " . ($item->ccode//'-undef-')
+    #         . " shelving_location: " . ($item->location//'-undef-')
+    #     if $rules and ! exists $rules->{unseen_renewals_allowed};
     $renewsleft = $renewsallowed - $renewcount;
     $unseenleft = $unseenallowed - $unseencount;
     if ( $renewsleft < 0 ) { $renewsleft = 0; }
