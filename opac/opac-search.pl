@@ -414,7 +414,7 @@ unless (@servers) {
 
 # operators include boolean and proximity operators and are used
 # to evaluate multiple operands
-my @operators = $cgi->multi_param('op');
+my @operators = grep { $_ ne 'cud-login' } $cgi->multi_param('op');
 @operators = map { uri_unescape($_) } @operators;
 
 # indexes are query qualifiers, like 'title', 'author', etc. They
