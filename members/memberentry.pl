@@ -333,7 +333,7 @@ my $extended_patron_attributes;
 if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
 
     # If the cardnumber is blank, treat it as null.
-    $newdata{'cardnumber'} = undef if $newdata{'cardnumber'} =~ /^\s*$/;
+    $newdata{'cardnumber'} = undef if defined $newdata{'cardnumber'} and $newdata{'cardnumber'} =~ /^\s*$/;
 
     my $new_barcode = $newdata{'cardnumber'};
     Koha::Plugins->call( 'patron_barcode_transform', \$new_barcode );
@@ -363,7 +363,7 @@ if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
         my $patron = Koha::Patron->new( { dateofbirth => $dateofbirth } );
         my $age    = $patron->get_age;
         my ( $low, $high ) = ( $category->dateofbirthrequired, $category->upperagelimit );
-        if ( ( $high && ( $age > $high ) ) or ( $age < $low ) ) {
+        if ( ( $high && ( $age > $high ) ) or $low && ( $age < $low ) ) {
             push @errors, 'ERROR_age_limitations';
             $template->param( age_low  => $low );
             $template->param( age_high => $high );
@@ -380,8 +380,8 @@ if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
 
     # Bug 32426 removed the userid unique-check here. Postpone it to patron->store.
 
-    my $password  = $input->param('password');
-    my $password2 = $input->param('password2');
+    my $password  = $input->param('password') // '';
+    my $password2 = $input->param('password2') // '';
     push @errors, "ERROR_password_mismatch" if ( $password ne $password2 );
 
     if ( $password and $password ne '****' ) {

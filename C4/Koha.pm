@@ -736,8 +736,8 @@ sub GetNormalizedOCLCNumber {
 }
 
 sub _normalize_match_point {
-    my $match_point = shift;
-    ( my $normalized_match_point ) = $match_point =~ /([\d-]*[X]*)/;
+    my $match_point = shift // '';
+    my ( $normalized_match_point ) = $match_point =~ /([\d-]*[X]*)/;
     $normalized_match_point =~ s/-//g;
 
     return $normalized_match_point;
