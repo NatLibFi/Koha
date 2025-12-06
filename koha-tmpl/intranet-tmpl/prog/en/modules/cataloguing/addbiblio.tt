@@ -1,6 +1,7 @@
 [% USE raw %]
 [% USE Asset %]
 [% USE Koha %]
+[% USE Frameworks %]
 [% USE HtmlTags %]
 [% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -933,6 +934,38 @@
                         <div class="btn-group"><a href="#" id="saveandview" class="btn btn-default"><i class="fa fa-save"></i> Save</a></div>
                     [% END # /IF CAN_user_editcatalogue_edit_items %]
 
+                    <div class="btn-group">
+                        <button class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" title="Click to Change framework"><i class="fa fa-book"></i>
+                            <span style="text-overflow: ellipsis;max-width: 150px;overflow: hidden;white-space: nowrap;display: inline-block;vertical-align: bottom;">[% Frameworks.GetName(frameworkcode) | html %]</span>
+                            [% IF ( frameworkcode ) %]([% frameworkcode | html %])[% END %]
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="frameworks-menu" class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item change-framework" href="#" data-frameworkcode="">
+                                    [% IF ( frameworkcode ) %]
+                                       <i class="fa fa-fw">&nbsp;</i>
+                                    [% ELSE %]
+                                        <i class="fa fa-fw fa-check"></i>
+                                    [% END %]
+                                    Default
+                                </a>
+                            </li>
+                            [% FOREACH framework IN frameworks%]
+                                <li>
+                                    <a class="dropdown-item change-framework" href="#" data-frameworkcode="[% framework.frameworkcode | html %]">
+                                        [% IF framework.frameworkcode == frameworkcode %]
+                                            <i class="fa fa-fw fa-check"></i>
+                                        [% ELSE %]
+                                            <i class="fa fa-fw">&nbsp;</i>
+                                        [% END %]
+                                        [% framework.frameworktext | html %]
+                                    </a>
+                                </li>
+                            [% END %]
+                        </ul> <!-- /#frameworks-menu -->
+                    </div> <!-- /.btn-group -->
+
                     [% UNLESS (circborrowernumber) %][%# Hide in fast cataloging %]
                         [% IF biblionumber %]
                             <div class="btn-group"><a class="btn btn-default" href="#" id="z3950search"><i class="fa fa-search"></i> Replace record via Z39.50/SRU search</a></div>
@@ -955,29 +988,6 @@
                                     <a class="dropdown-item" href="#" id="marcDocsSelect"><i class="fa fa-check-square"></i> Show MARC tag documentation links</a>
                                 <li>
                                     <a class="dropdown-item" href="#" id="marcTagsSelect"><i class="fa fa-check-square"></i> Show tags</a>
-                                </li>
-                            [% END %]
-                            <li><h6 class="dropdown-header">Change framework</h6></li>
-                            <li>
-                                <a class="dropdown-item change-framework" href="#" data-frameworkcode="">
-                                    [% IF ( frameworkcode ) %]
-                                       <i class="fa fa-fw">&nbsp;</i>
-                                    [% ELSE %]
-                                        <i class="fa fa-fw fa-check"></i>
-                                    [% END %]
-                                    Default
-                                </a>
-                            </li>
-                            [% FOREACH framework IN frameworks%]
-                                <li>
-                                    <a class="dropdown-item change-framework" href="#" data-frameworkcode="[% framework.frameworkcode | html %]">
-                                        [% IF framework.frameworkcode == frameworkcode %]
-                                            <i class="fa fa-fw fa-check"></i>
-                                        [% ELSE %]
-                                            <i class="fa fa-fw">&nbsp;</i>
-                                        [% END %]
-                                        [% framework.frameworktext | html %]
-                                    </a>
                                 </li>
                             [% END %]
                         </ul> <!-- /#settings-menu -->
