@@ -26,6 +26,16 @@ es_indexer_daemon.pl - Worker script that will process background Elasticsearch 
 Options:
 
    -b --batch_size          how many jobs to commit (default: 10)
+   --process_new_and_quit   get all new jobs from DB directly,
+                            process them, then exit,
+                            don't get from the RabbitMQ queue
+   --process_new_on_start   get all new jobs from DB directly,
+                            process them, then continue
+   --drain_not_found_jobs   drain not found in DB queue jobs
+   --redo_since_seconds_ago how many seconds to go back when reindexing,
+                            re-doing all job statuses
+   --redo_since_since_date  reindex from a specific date,
+                            re-doing all job statuses
    --help                   brief help message
 
 =head1 OPTIONS
@@ -39,6 +49,19 @@ Print a brief help message and exits.
 =item B<--batch_size>
 
 How many jobs to commit per batch. Defaults to 10, will commit after .1 seconds if no more jobs incoming.
+
+=item B<--process_new_and_quit>
+
+Get all new jobs from DB directly, process them, then exit.
+Does not intercommunicates with RabbitMQ dispatcher at all.
+
+=item B<--redo_since_seconds_ago>
+
+How many seconds to go back when reindexing, re-doing all job statuses
+
+=item B<--redo_since_since_date>
+
+Reindex from a specific date, re-doing all job statuses
 
 =back
 
@@ -64,6 +87,12 @@ use Koha::BackgroundJobs;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
 
+my $process_new_and_quit;
+my $process_new_on_start;
+my $drain_not_found_jobs;
+my $redo_since_seconds_ago;
+my $redo_since_since_date;
+
 my $help;
 my $batch_size = 10;
 
@@ -71,6 +100,11 @@ my $not_found_retries = {};
 my $max_retries       = $ENV{MAX_RETRIES} || 10;
 
 GetOptions(
+    'process_new_and_quit' => \$process_new_and_quit,
+    'process_new_on_start' => \$process_new_on_start,
+    'drain_not_found_jobs' => \$drain_not_found_jobs,
+    'redo_since_seconds_ago=i' => \$redo_since_seconds_ago,
+    'redo_since_since_date=s' => \$redo_since_since_date,
     'h|help'         => \$help,
     'b|batch_size=s' => \$batch_size
 ) || pod2usage(1);
@@ -80,6 +114,49 @@ pod2usage(0) if $help;
 warn "Not using Elasticsearch" unless C4::Context->preference('SearchEngine') eq 'Elasticsearch';
 
 my $logger = Koha::Logger->get( { interface => 'worker' } );
+
+my $biblio_indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+my $auth_indexer   = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::AUTHORITIES_INDEX } );
+my $config         = $biblio_indexer->get_elasticsearch_params;
+my $at_a_time      = $config->{chunk_size} // 5000;
+
+if ( $process_new_on_start || $process_new_and_quit || $redo_since_seconds_ago || $redo_since_since_date ) {
+    die "Cannot use --redo_since_seconds_ago and --redo_since_since_date at the same time" if $redo_since_seconds_ago && $redo_since_since_date;
+    die "Cannot use --process_new_on_start and --process_new_and_quit at the same time" if $process_new_on_start && $process_new_and_quit;
+
+    # check for extra lost jobs:
+    my @jobs;
+    if( ! $redo_since_since_date && ! $redo_since_seconds_ago ) {
+        if(my @more_jobs = Koha::BackgroundJobs->search({ status => 'new', queue => 'elastic_index' } )->as_list) {
+            warn "Found in DB unprocessed elastic_index jobs: " . scalar(@jobs) . ", processing...\n";
+            push @jobs, @more_jobs;
+        }
+    }
+
+    my $from_time;
+    if($redo_since_since_date) {
+        $from_time = $redo_since_since_date;
+    } elsif($redo_since_seconds_ago) {
+        $from_time = Koha::Database->new->schema->storage->datetime_parser->format_datetime(
+            DateTime->now()->subtract(seconds => $redo_since_seconds_ago)
+        );
+    }
+
+    if($from_time) {
+        if(my @more_jobs = Koha::BackgroundJobs->search({ enqueued_on => { '>=' => $from_time }, queue => 'elastic_index' } )->as_list) {
+            warn "Found in DB elastic_index jobs >= '$from_time': " . scalar(@more_jobs) . ", processing...\n";
+            push @jobs, @more_jobs;
+        }
+    }
+
+    while(@jobs) { # split jobs by $batch_size
+        my @jobs_batch = splice(@jobs, 0, $batch_size);
+        warn "Processing ".scalar(@jobs_batch)." jobs ...\n";
+        commit(@jobs_batch);
+    }
+    exit
+        unless $process_new_on_start;
+}
 
 my $notification_method = C4::Context->preference('JobsNotificationMethod') // 'STOMP';
 
@@ -106,10 +183,6 @@ if ($conn) {
         }
     );
 }
-my $biblio_indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-my $auth_indexer   = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::AUTHORITIES_INDEX } );
-my $config         = $biblio_indexer->get_elasticsearch_params;
-my $at_a_time      = $config->{chunk_size} // 5000;
 
 my @jobs = ();
 
@@ -169,6 +242,16 @@ while (1) {
         }
 
         unless ($job) {
+
+            if ($drain_not_found_jobs) {
+                Koha::Logger->get( { interface => 'worker' } )
+                    ->warn( sprintf "Job %s drained.", $args->{job_id} );
+
+                # nack without requeue, we do not want to process this frame again
+                $conn->nack( { frame => $frame, requeue => 'false' } );
+                next;
+            }
+
             $not_found_retries->{ $args->{job_id} } //= 0;
             if ( ++$not_found_retries->{ $args->{job_id} } >= $max_retries ) {
                 Koha::Logger->get( { interface => 'worker' } )
@@ -187,6 +270,10 @@ while (1) {
             Time::HiRes::sleep(0.5);
             next;
         }
+        elsif ($drain_not_found_jobs) {
+            break;
+        }
+
         $conn->ack( { frame => $frame } );
 
         push @jobs, $job;
