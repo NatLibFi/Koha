@@ -500,7 +500,7 @@
                     <input type="hidden" name="hold_borrower" value="[% resborrowernumber | html %]" />
                     <input type="hidden" name="hold_itemnumber" value="[% item.itemnumber | html %]" />
                     <input type="hidden" name="stickyduedate" value="[% stickyduedate | html %]" />
-                    <button class="btn btn-default print" type="submit" onclick="Dopop('hold-transfer-slip.pl?reserve_id=[% reserve_id | uri %]&itemnumber=[% item.id | html %]');this.form.submit();"
+                    <button class="btn btn-default print" type="submit" accesskey="p" onclick="Dopop('hold-transfer-slip.pl?reserve_id=[% reserve_id | uri %]&itemnumber=[% item.id | html %]');this.form.submit();"
                         ><i class="fa fa-print"></i> Don't check out, confirm hold, and print slip (P)</button
                     >
                 </form>
@@ -508,7 +508,7 @@
 
             [% IF ( RECALLED ) %]
                 <form method="get" action="/cgi-bin/koha/circ/circulation.pl">
-                    <button class="btn btn-default print" type="submit" onclick="Dopop('/cgi-bin/koha/recalls/recall_pickup_slip.pl?recall_id=[% RECALLED.id | html %]');this.form.submit();"
+                    <button class="btn btn-default print" type="submit" accesskey="p" onclick="Dopop('/cgi-bin/koha/recalls/recall_pickup_slip.pl?recall_id=[% RECALLED.id | html %]');this.form.submit();"
                         ><i class="fa fa-print"></i> Don't check out and print slip (P)</button
                     >
                 </form>
