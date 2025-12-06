@@ -2833,6 +2833,7 @@ CREATE TABLE `deleteditems` (
   `stocknumber` varchar(80) DEFAULT NULL COMMENT 'inventory number (MARC21 952$i)',
   `new_status` varchar(32) DEFAULT NULL COMMENT '''new'' value, you can put whatever free-text information. This field is intended to be managed by the automatic_item_modification_by_age cronjob.',
   `exclude_from_local_holds_priority` tinyint(1) DEFAULT NULL COMMENT 'Exclude this item from local holds priority',
+  `holding_id` int(11) DEFAULT NULL COMMENT 'foreign key from holdings table used to link this item to the right holdings record',
   PRIMARY KEY (`itemnumber`),
   KEY `delitembarcodeidx` (`barcode`),
   KEY `delitemstocknumberidx` (`stocknumber`),
@@ -3514,6 +3515,56 @@ CREATE TABLE `hold_fill_targets` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `holdings`
+--
+
+DROP TABLE IF EXISTS `holdings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `holdings` (
+  `holding_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique identifier assigned to each holdings record',
+  `biblionumber` int(11) NOT NULL DEFAULT 0 COMMENT 'foreign key from biblio table used to link this record to the right bib record',
+  `frameworkcode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'foreign key from the biblio_framework table to identify which framework was used in cataloging this record',
+  `holdingbranch` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'foreign key from the branches table for the library that owns this record (MARC21 852$a)',
+  `location` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the shelving location for this record (MARC21 852$b)',
+  `ccode` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the collection code associated with this item (MARC21 852$g)',
+  `callnumber` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'call number (852$h+$i in MARC21)',
+  `suppress` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Boolean indicating whether the record is suppressed in OPAC',
+  `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time this record was last touched',
+  `datecreated` date NOT NULL COMMENT 'the date this record was added to Koha',
+  `deleted_on` datetime DEFAULT NULL COMMENT 'the date this record was deleted',
+  PRIMARY KEY (`holding_id`),
+  KEY `hldnoidx` (`holding_id`),
+  KEY `hldbibnoidx` (`biblionumber`),
+  KEY `timestamp` (`timestamp`),
+  KEY `holdings_ibfk_2` (`holdingbranch`),
+  CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`holdingbranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `holdings_metadata`
+--
+
+DROP TABLE IF EXISTS `holdings_metadata`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `holdings_metadata` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `holding_id` int(11) NOT NULL,
+  `format` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `schema` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `metadata` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `deleted_on` datetime DEFAULT NULL COMMENT 'the date this record was deleted',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `holdings_metadata_uniq_key` (`holding_id`,`format`,`schema`),
+  KEY `hldnoidx` (`holding_id`),
+  CONSTRAINT `holdings_metadata_fk_1` FOREIGN KEY (`holding_id`) REFERENCES `holdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `housebound_profile`
 --
 
@@ -4154,6 +4205,7 @@ CREATE TABLE `items` (
   `stocknumber` varchar(80) DEFAULT NULL COMMENT 'inventory number (MARC21 952$i)',
   `new_status` varchar(32) DEFAULT NULL COMMENT '''new'' value, you can put whatever free-text information. This field is intended to be managed by the automatic_item_modification_by_age cronjob.',
   `exclude_from_local_holds_priority` tinyint(1) DEFAULT NULL COMMENT 'Exclude this item from local holds priority',
+  `holding_id` int(11) DEFAULT NULL COMMENT 'foreign key from holdings table used to link this item to the right holdings record',
   PRIMARY KEY (`itemnumber`),
   UNIQUE KEY `itembarcodeidx` (`barcode`),
   KEY `itemstocknumberidx` (`stocknumber`),
@@ -4166,10 +4218,12 @@ CREATE TABLE `items` (
   KEY `items_ccode` (`ccode`),
   KEY `itype_idx` (`itype`),
   KEY `timestamp` (`timestamp`),
+  KEY `hldid_idx` (`holding_id`),
   CONSTRAINT `items_ibfk_1` FOREIGN KEY (`biblioitemnumber`) REFERENCES `biblioitems` (`biblioitemnumber`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `items_ibfk_2` FOREIGN KEY (`homebranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE,
   CONSTRAINT `items_ibfk_3` FOREIGN KEY (`holdingbranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE,
-  CONSTRAINT `items_ibfk_4` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `items_ibfk_4` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `items_ibfk_5` FOREIGN KEY (`holding_id`) REFERENCES `holdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
