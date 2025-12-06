@@ -186,6 +186,15 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
             for my $i ( 0 .. $#subf ) {
                 $subf[$i][0] = "@" unless defined $subf[$i][0];
                 my $sf = $tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] };
+
+                if( not defined $sf ) {
+                    warn "[NTWIP] Undefined but expected tag/subfield "
+                        . $fields[$x_i]->tag()
+                        . $subf[$i][0]
+                        . " for biblio $biblionumber";
+                    next;
+                }
+
                 next
                     if ( $sf->{tab} // q{} ) ne $tabloop;    # Note: defaulting to '0' changes behavior!
                 next
