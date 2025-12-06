@@ -10,6 +10,7 @@
 [% USE Frameworks %]
 [% USE Price %]
 [% USE TablesSettings %]
+[% USE Holdings %]
 [% PROCESS 'i18n.inc' %]
 [% PROCESS 'html_helpers/tables/items/catalogue_detail.inc' %]
 [% SET CoverImagePlugins = KohaPlugins.get_plugins_intranet_cover_images %]
@@ -21,6 +22,8 @@
 [% END %]
 
 [% SET plugins_intranet_catalog_biblio_tabs = KohaPlugins.get_plugins_intranet_catalog_biblio_tab({ biblio => biblio, biblio_id => biblionumber }) %]
+
+[% SET ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
 
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -324,17 +327,22 @@
             [% IF Koha.Preference('SeparateHoldings') %]
                 [% IF items_to_display_count - ( other_holdings_count || 0 ) %]
                     [% WRAPPER tab_item tabname= "holdings" %]
-                        <span>[% Branches.GetLoggedInBranchname | html %] holdings ([% items_to_display_count - ( other_holdings_count || 0 ) - ( hidden_count || 0 ) || 0 | html %])</span>
+                        <span>[% Branches.GetLoggedInBranchname | html %] [% IF (ShowSummaryHoldings) %]items[% ELSE %]holdings[% END %] ([% items_to_display_count - ( other_holdings_count || 0 ) - ( hidden_count || 0 ) || 0 | html %])</span>
                     [% END %]
                 [% END %]
                 [% IF other_holdings_count %]
                     [% WRAPPER tab_item tabname= "otherholdings" %]
-                        <span>Other holdings ([% other_holdings_count || 0 | html %])</span>
+                        <span>Other [% IF (ShowSummaryHoldings) %]items[% ELSE %]holdings[% END %] ([% other_holdings_count || 0 | html %])</span>
                     [% END %]
                 [% END %]
             [% ELSE %]
                 [% WRAPPER tab_item tabname= "holdings" %]
-                    <span>Holdings ([% items_to_display_count || 0 | html %])</span>
+                    <span>[% IF (ShowSummaryHoldings) %]Items[% ELSE %]Holdings[% END %] ([% items_to_display_count || 0 | html %])</span>
+                [% END %]
+            [% END %]
+            [% IF (ShowSummaryHoldings) %]
+                [% WRAPPER tab_item tabname= "summaryholdings" %]
+                    <span>Holdings ([% summary_holdings.count() || 0 | html %])</span>
                 [% END %]
             [% END %]
             [% IF Koha.Preference('EnableItemGroups') %]
@@ -435,6 +443,58 @@
                         </thead>
                     </table>
                 [% END # /IF EnableItemGroups %]
+            [% END # /tab_panel %]
+
+            [% WRAPPER tab_panel tabname="summaryholdings" %]
+                [% IF ( ShowSummaryHoldings ) %]
+                    [% IF ( summary_holdings.count() ) %]
+                        <div class="summaryholdings_table_controls">
+                        </div>
+                        <table class="summaryholdings_table">
+                            <thead>
+                                <tr>
+                                    <th>Library</th>
+                                    <th>Location</th>
+                                    <th>Collection</th>
+                                    <th>Call number</th>
+                                    <th>Status</th>
+                                    [% IF ( CAN_user_editcatalogue_edit_items ) %]<th class="NoSort">&nbsp;</th>[% END %]
+                                </tr>
+                            </thead>
+                            <tbody>
+                                [% FOREACH holding IN summary_holdings %]
+                                    <tr>
+                                        <td class="branch">[% UNLESS ( singlebranchmode ) %][% Branches.GetName( holding.holdingbranch ) | html %] [% END %]</td>
+                                        <td class="location"><span class="shelvingloc">[% holding.location | html %]</span>
+                                        <td class="collection">[% holding.ccode | html %]</span>
+                                        <td class="itemcallnumber">[% IF ( holding.callnumber ) %] [% holding.callnumber | html %][% END %]</td>
+                                        <td class="status">
+                                            [% IF ( holding.suppress ) %]
+                                                <span class="suppressed">Suppressed in OPAC</span>
+                                            [% END %]
+                                        </td>
+                                    [% IF CAN_user_editcatalogue_edit_items %]
+                                        <td class="actions">
+                                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&amp;biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]"><i class="fa fa-pencil"></i> Edit</a>
+                                            <form class="inline deleteholding" method="post" action="/cgi-bin/koha/cataloguing/addholding.pl" style="display:inline">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="op" value="cud-delete" />
+                                                <input type="hidden" name="biblionumber" value="[% holding.biblionumber | html %]" />
+                                                <input type="hidden" name="holding_id" value="[% holding.holding_id | html %]" />
+                                                <button type="submit" class="btn btn-default btn-xs"><i class="fa fa-eraser"></i> Delete</button>
+                                            </form>
+                                            <a class="btn btn-default btn-xs" href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% holding.biblionumber | uri %]&amp;holding_id=[% holding.holding_id | uri %]#additema"><i class="fa fa-plus"></i> Add item</a>
+                                            <a class="btn btn-default btn-xs previewMARC" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding.holding_id | uri %]&amp;viewas=html" title="MARC">Show MARC</a>
+                                        </td>
+                                    [% END %]
+                                    </tr>
+                                [% END %]
+                            </tbody>
+                        </table>
+                    [% ELSE %]
+                        <div id="noitems">No holdings records</div>
+                    [% END %]
+                [% END # /IF ShowSummaryHoldings %]
             [% END # /tab_panel %]
 
             [% WRAPPER tab_panel tabname="holdings" %]
@@ -1268,6 +1328,19 @@
     [%# The following PROCESS needs: %]
     [%# can_edit_items_from item_type_image_locations %]
     [% PROCESS build_items_table_js biblio => biblio %]
+    <script>
+      $(function(){
+        $(document)
+          .off('submit.deleteHolding', 'form.deleteholding')
+          .on('submit.deleteHolding', 'form.deleteholding', function(e){
+            if (!window.confirm(_("Holding record deletion:") + ' ' + _("Are you sure?"))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            }
+          });
+      });
+    </script>
 
     [% IF ( Koha.Preference('CatalogConcerns') ) %]
         <script>
@@ -1593,11 +1666,13 @@
         }
 
         $(document).ready(function() {
-            // Pick details tab to display by default
+            // Pick ShowSummaryHoldings and then details tab to display by default
             [% IF activetab == "comments" %]
                 $("#bibliodetails a[href='#comments_panel']").tab("show");
             [% ELSIF count == 0 %]
-                [% IF ( Koha.Preference('HTML5MediaEnabled') == 'staff' or Koha.Preference('HTML5MediaEnabled') == 'both' ) && HTML5MediaSets.size %]
+                [% IF ShowSummaryHoldings AND (summary_holdings.count() || 0) %]
+                    $("#bibliodetails a[href='#summaryholdings_panel']").tab("show");
+                [% ELSIF ( Koha.Preference('HTML5MediaEnabled') == 'staff' or Koha.Preference('HTML5MediaEnabled') == 'both' ) && HTML5MediaSets.size %]
                     $("#bibliodetails a[href='#html5media_panel']").tab("show");
                 [% ELSIF ComponentParts && ComponentParts.size %]
                     $("#bibliodetails a[href='#components_panel']").tab("show");
@@ -1671,6 +1746,13 @@
                 $(cover_slider).find(".cover-image").hide();
                 $(cover_slider).find(".cover-image").eq( num ).show();
             });
+
+            $('table.summaryholdings_table a.delete').click(function(e) {
+                e.stopPropagation()
+                console.log('delete clicked');
+                return confirm(_("Holding record deletion:") + ' ' + _("Are you sure?"));
+            });
+
         });
 
 

@@ -30,6 +30,7 @@ use C4::Barcodes::ValueBuilder;
 use C4::Context;
 
 use Koha::Items;
+use Koha::Holdings;
 
 use List::MoreUtils qw( any );
 use MARC::Record::MiJ;
@@ -263,11 +264,37 @@ sub get_items {
         # FIXME We need to order_by serial.publisheddate if we have _order_by=+me.serial_issue_number
         # FIXME Do we always need host_items => 1 or depending on a flag?
         # FIXME Should we prefetch => ['issue','branchtransfer']?
-        my $items_rs = $biblio->items( { host_items => 1 } )->search_ordered( {}, { join => 'biblioitem' } );
+        # my $items_rs = $biblio->items( { host_items => 1 } )->search_ordered( {}, { join => ['holding','biblioitem'] } );
+        my $items_rs = $biblio->items( { host_items => 1 } )->search_ordered( {}, { join => ['biblioitem'] } );
         $items_rs = $items_rs->filter_by_bookable if $bookable_only;
 
         # FIXME We need to order_by serial.publisheddate if we have _order_by=+me.serial_issue_number
         my $items = $c->objects->search($items_rs);
+
+        if (C4::Context->preference('SummaryHoldings')) {
+            foreach my $item (@{$items}) {
+                if ( $item->{holding_id} ) {
+
+                    my $holding = Koha::Holdings->find( $item->{holding_id} );
+
+                    $item->{holding} = $holding->unblessed;
+                    if ($holding->location()) {
+                        my $av = Koha::AuthorisedValues->search({ category => 'LOC', authorised_value => $holding->location() });
+                        $item->{holding}->{location_name} = $av->next()->opac_description() if $av->count;
+                    }
+                    if (my $branch = $holding->holding_branch()) {
+                        $item->{holding}->{branch_name} = $branch->branchname();
+                    }
+                    if ($holding->ccode) {
+                        my $av = Koha::AuthorisedValues->search({ category => 'CCODE', authorised_value => $holding->ccode() });
+                        $item->{holding}->{ccode_name} = $av->next()->opac_description() if $av->count;
+                    }
+                    if ($holding->callnumber()) {
+                        $item->{holding}->{callnumber} = $holding->callnumber();
+                    };
+                }
+            }
+        }
 
         return $c->render(
             status  => 200,

@@ -61,6 +61,7 @@ use Koha::Database;
 
 use Koha::Biblios;
 use Koha::Biblioitems;
+use Koha::Holdings;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::SearchEngine;
@@ -1569,9 +1570,18 @@ sub PrepareItemrecordDisplay {
                         }
 
                         $defaultvalue = $default_source;
-
-                        #---- "true" authorised value
+                    } elsif ( $subfield->{authorised_value} eq "holdings" && $bibnum ) {
+                        push @authorised_values, "" unless ( $subfield->{mandatory} );
+                        my $holdings = Koha::Holdings->search({ biblionumber => $bibnum, deleted_on => undef }, { order_by => ['holdingbranch'] });
+                        while (my $holding = $holdings->next()) {
+                            push @authorised_values, $holding->holding_id;
+                            $authorised_lib{$holding->holding_id} = $holding->holding_id . ' ' . $holding->holdingbranch
+                                . ' ' . ($holding->location // '')
+                                . ' ' . ($holding->ccode // '')
+                                . ' ' . $holding->callnumber;
+                        }
                     } else {
+                        #---- "true" authorised value
                         $authorised_values_sth->execute(
                             $subfield->{authorised_value},
                             $branch_limit ? $branch_limit : ()

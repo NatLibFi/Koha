@@ -792,6 +792,8 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('suggestion','1','','If ON, enables patron suggestions feature in OPAC','YesNo'),
 ('suggestionPatronCategoryExceptions', '', '', 'List the patron categories not affected by suggestion system preference if on', 'Free'),
 ('SuggestionsLog','0',NULL,'If ON, log pirchase suggestion changes','YesNo'),
+('SummaryHoldings', '0', NULL, 'Use Summary Holdings records (MFHD, MARC holdings) as an intermediate layer between bibliographic records and items, storing summary holdings and location information and overlaying selected MFHD fields into bibliographic records and item editor defaults.', 'YesNo'),
+('SummaryHoldingsEmbedTagsInBiblio', '583,852', '', 'Comma-separated list of MFHD MARC tags to embed into bibliographic records (e.g. "583,852"), used by OAI-PMH, and providing this data to search index, when MFHD is enabled. Leave empty to embed none. Use the special value "all" to embed all data tags (i.e. except control fields 00X and 999) from the MFHD holdings record.', 'Free'),
 ('SuspendHoldsIntranet','1','Allow holds to be suspended from the intranet.',NULL,'YesNo'),
 ('SuspendHoldsOpac','1','Allow holds to be suspended from the OPAC.',NULL,'YesNo'),
 ('SuspensionsCalendar','noSuspensionsWhenClosed','ignoreCalendar|noSuspensionsWhenClosed','Specify whether to use the Calendar in calculating suspension expiration','Choice'),

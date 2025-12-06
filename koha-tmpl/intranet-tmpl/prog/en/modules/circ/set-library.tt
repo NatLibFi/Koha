@@ -1,6 +1,7 @@
 [% USE raw %]
 [% USE Asset %]
 [% USE Branches %]
+[% USE Frameworks %]
 [% USE Desks %]
 [% USE Registers %]
 [% USE Koha %]
@@ -91,6 +92,17 @@
                             [% PROCESS options_for_registers registers => Registers.all() %]
                         </select>
                     </li>
+                </ol>
+            </fieldset>
+        [% END %]
+        [% IF Koha.Preference('SummaryHoldings') %]
+            <fieldset class="rows">
+                <legend>Set default holding framework to be used for new holdings</legend>
+                <ol>
+                    <li><label for="desk">Holding Framework:</label>
+                    <select name="holding_framework" id="holding_framework">
+                        [% PROCESS options_for_holding_frameworks holding_frameworks => Frameworks.all(), selected => holding_framework %]
+                    </select></li>
                 </ol>
             </fieldset>
         [% END %]
