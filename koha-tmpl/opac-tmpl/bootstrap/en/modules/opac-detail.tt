@@ -716,7 +716,7 @@
                                         <div class="component_part"> [% PART | $raw %] </div>
                                     [% END %]
                                     [% IF ComponentParts.size == Koha.Preference('MaxComponentRecords') %]
-                                        <p>Only [% ComponentParts.size | html %] results are shown: <a href="/cgi-bin/koha/opac-search.pl?q=[% ComponentPartsQuery | url %]">show all component parts</a></p>
+                                        <p>Only [% ComponentParts.size | html %] results are shown: <a href="/cgi-bin/koha/opac-search.pl?q=[% ComponentPartsQuery | uri %]&sort_by=[% ComponentPartsQuerySort | uri %]">show all component parts</a></p>
                                     [% END %]
                                 </div>
                             [% END # /tab_panel#components %]
