@@ -1981,6 +1981,10 @@
             }
         }
 
+        function utf8_to_b64( str ) {
+            return window.btoa(unescape(encodeURIComponent( str )));
+        }
+
         $(document).ready(function(){
 
             var activeTab = localStorage.getItem("sql_reports_activetab");
@@ -2011,9 +2015,19 @@
             })
 
             $('#download-chart').click(function() {
-                var svg = '<svg>' + $('#chart svg').html() + '</svg>';
-                this.href = 'data:application/octet-stream;base64,' + btoa(svg);
-                this.setAttribute('download', 'chart.svg');
+              const chartSvg = $('<svg>', {
+                xmlns: 'http://www.w3.org/2000/svg',
+                version: '1.1',
+                'font-family': 'Arial, sans-serif',
+                'font-size': '11px',
+                'text-anchor': 'start',
+                html: $('#chart svg').html()
+              });
+
+              $(this).attr({
+                href: `data:image/svg+xml;base64,${utf8_to_b64(chartSvg.prop('outerHTML'))}`,
+                download: 'chart.svg'
+              });
             });
 
             $('#chart-type').change(function() {
