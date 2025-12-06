@@ -277,7 +277,12 @@ sub _change_column {
 
 sub _columns_info {
     my ( $self, $table ) = @_;
-    return $self->{dbh}->selectall_hashref( 'SHOW FULL COLUMNS FROM ' . $self->{database} . '.' . $table, 'Field' );
+    my $dbh = $self->{dbh};
+    return $dbh->selectall_hashref( 'SHOW FULL COLUMNS FROM '
+        . $dbh->quote_identifier($self->{database})
+        . '.'
+        . $dbh->quote_identifier($table),
+        'Field' );
 }
 
 1;
