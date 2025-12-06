@@ -154,9 +154,11 @@ sub GetHoldsQueueItems {
 
 =head2 CreateQueue
 
-  CreateQueue();
+  CreateQueue($params);
 
 Top level function that turns reserves into tmp_holdsqueue and hold_fill_targets.
+In C<$params> hashref can be boolean keys 'verbose' and 'dry_run' for console
+scripts usage.
 
 =cut
 
@@ -165,6 +167,8 @@ sub CreateQueue {
     my $unallocated = $params->{unallocated};
     my $loops       = $params->{loops} || 1;
     my $dbh         = C4::Context->dbh;
+
+    die "DRY_RUN: not capable to dry run yet: needs code refactoring and transactions.\n" if $params->{dry_run};
 
     unless ($unallocated) {
         $dbh->do("DELETE FROM tmp_holdsqueue");    # clear the old table for new info
@@ -189,7 +193,11 @@ sub CreateQueue {
 
     $branches_to_use = load_branches_to_pull_from($use_transport_cost_matrix);
 
+    warn "\nBranches to use: @$branches_to_use\n" if $params->{verbose} and $branches_to_use;
+
     my $bibs_with_pending_requests = GetBibsWithPendingHoldRequests();
+
+    warn "\nBibslios with pending hold requests: @$bibs_with_pending_requests\n\n" if $params->{verbose} and $bibs_with_pending_requests;
 
     # Split the list of bibs into chunks to run in parallel
     my @chunks;
@@ -214,6 +222,10 @@ sub CreateQueue {
                         branches_to_use       => $branches_to_use,
                         transport_cost_matrix => $transport_cost_matrix,
                         unallocated           => $unallocated
+                    },
+                    {
+                        dry_run => $params->{dry_run},
+                        verbose => $params->{verbose},
                     }
                 );
             }
@@ -233,6 +245,9 @@ sub CreateQueue {
             );
         }
     }
+
+    warn "\nDone: $total_bibs bibs, $total_requests requests, $total_available_items available items, $num_items_mapped items mapped\n"
+        if $params->{verbose};
 }
 
 =head2 GetBibsWithPendingHoldRequests
@@ -1278,7 +1293,9 @@ are allowed to be passed to avoid calculating them many times inside loops.
 =cut
 
 sub update_queue_for_biblio {
-    my ($args) = @_;
+    my $args = shift;
+    my $params = shift;
+
     my $biblio_id = $args->{biblio_id};
     my $result;
 
@@ -1320,6 +1337,8 @@ sub update_queue_for_biblio {
         CreatePicklistFromItemMap($item_map);
         AddToHoldTargetMap($item_map);
     }
+
+    warn "Created and added hold to target map for items: " . join(', ', keys %$item_map) . "\n" if $params->{verbose} and %$item_map;
 
     return $result;
 }
