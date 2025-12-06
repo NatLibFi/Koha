@@ -1735,7 +1735,7 @@ sub HasSubscriptionStrictlyExpired {
     my $expirationdate = $subscription->{enddate} || GetExpirationDate($subscriptionid);
 
     # If the expiration date is set
-    if ( $expirationdate != 0 ) {
+    if ( defined $expirationdate and $expirationdate != 0 ) {
         my ( $endyear, $endmonth, $endday ) = split( '-', $expirationdate );
 
         # Getting today's date

@@ -280,7 +280,8 @@ elsif ( $op eq 'cud-add' ) {
     my $chargeperiod_charge_at  = $input->param('chargeperiod_charge_at');
     my $maxissueqty             = strip_non_numeric( scalar $input->param('maxissueqty') );
     my $maxonsiteissueqty       = strip_non_numeric( scalar $input->param('maxonsiteissueqty') );
-    my $renewalsallowed         = $input->param('renewalsallowed');
+    my $renewalsallowed         = strip_non_numeric( scalar $input->param('renewalsallowed') );
+    $renewalsallowed = $renewalsallowed eq q{} ? undef : $renewalsallowed;
     my $unseen_renewals_allowed =
         defined $input->param('unseen_renewals_allowed')
         ? strip_non_numeric( scalar $input->param('unseen_renewals_allowed') )
@@ -295,6 +296,7 @@ elsif ( $op eq 'cud-add' ) {
     my $no_auto_renewal_after_hard_limit = $input->param('no_auto_renewal_after_hard_limit') || q{};
     my $reservesallowed                  = strip_non_numeric( scalar $input->param('reservesallowed') );
     my $holds_per_record                 = strip_non_numeric( scalar $input->param('holds_per_record') );
+    $holds_per_record = $holds_per_record eq q{} ? undef : $holds_per_record;
     my $holds_per_day                    = strip_non_numeric( scalar $input->param('holds_per_day') );
     my $onshelfholds                     = $input->param('onshelfholds') || 0;
     my $issuelength                      = $input->param('issuelength')  || 0;
@@ -306,7 +308,7 @@ elsif ( $op eq 'cud-add' ) {
     my $opacitemholds                    = $input->param('opacitemholds')    || 0;
     my $article_requests                 = $input->param('article_requests') || 'no';
     my $overduefinescap                  = $input->param('overduefinescap')
-        && ( $input->param('overduefinescap') + 0 ) > 0 ? sprintf( "%.02f", $input->param('overduefinescap') ) : q{};
+        && ( $input->param('overduefinescap') + 0 ) > 0 ? sprintf( "%.02f", scalar $input->param('overduefinescap') ) : q{};
     my $cap_fine_to_replacement_price = ( $input->param('cap_fine_to_replacement_price') || q{} ) eq 'on';
     my $expire_reserves_charge        = $input->param('expire_reserves_charge') // q{};
     my $note                          = $input->param('note');

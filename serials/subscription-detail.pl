@@ -97,7 +97,7 @@ if ( $op eq "cud-close" ) {
     }
 
     # If it's ok to delete the subscription, we do so
-    if ( $issueconfirmed eq "1" ) {
+    if ( $issueconfirmed and $issueconfirmed eq "1" ) {
         &DelSubscription($subscriptionid);
         print $query->redirect("/cgi-bin/koha/serials/serials-home.pl");
         exit;
@@ -126,7 +126,7 @@ $subs->{ccode}         = $av->count ? $av->next->lib : '';
 $subs->{abouttoexpire} = abouttoexpire( $subs->{subscriptionid} );
 $template->param( %{$subs} );
 $template->param( biblionumber_for_new_subscription => $subs->{bibnum} );
-my @irregular_issues = split /;/, $subs->{irregularity};
+my @irregular_issues = defined $subs->{irregularity} ? split( split /;/, $subs->{irregularity} ) : ();
 
 my $frequency     = C4::Serials::Frequency::GetSubscriptionFrequency( $subs->{periodicity} );
 my $numberpattern = C4::Serials::Numberpattern::GetSubscriptionNumberpattern( $subs->{numberpattern} );
@@ -172,9 +172,9 @@ $template->param(
     cannotedit                                       => ( not C4::Serials::can_edit_subscription($subs) ),
     frequency                                        => $frequency,
     numberpattern                                    => $numberpattern,
-    has_X                                            => ( $numberpattern->{'numberingmethod'} =~ /{X}/ ) ? 1 : 0,
-    has_Y                                            => ( $numberpattern->{'numberingmethod'} =~ /{Y}/ ) ? 1 : 0,
-    has_Z                                            => ( $numberpattern->{'numberingmethod'} =~ /{Z}/ ) ? 1 : 0,
+    has_X                                            => ( $numberpattern->{'numberingmethod'} and $numberpattern->{'numberingmethod'} =~ /{X}/ ) ? 1 : 0,
+    has_Y                                            => ( $numberpattern->{'numberingmethod'} and $numberpattern->{'numberingmethod'} =~ /{Y}/ ) ? 1 : 0,
+    has_Z                                            => ( $numberpattern->{'numberingmethod'} and $numberpattern->{'numberingmethod'} =~ /{Z}/ ) ? 1 : 0,
     intranetstylesheet                               => C4::Context->preference('intranetstylesheet'),
     intranetcolorstylesheet                          => C4::Context->preference('intranetcolorstylesheet'),
     irregular_issues                                 => scalar @irregular_issues,

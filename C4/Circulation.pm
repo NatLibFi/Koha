@@ -176,7 +176,8 @@ sub barcodedecode {
     Koha::Plugins->call( 'item_barcode_transform', \$barcode );
     $filter or return $barcode;    # ensure filter is defined, else return untouched barcode
     if ( $filter eq 'whitespace' ) {
-        $barcode =~ s/\s//g;
+        $barcode =~ s/\s//g
+            if defined $barcode;
     } elsif ( $filter eq 'cuecat' ) {
         chomp($barcode);
         my @fields  = split( /\./, $barcode );
@@ -211,6 +212,7 @@ sub barcodedecode {
             warn "# [$barcode] not valid EAN-13/UPC-A\n";
         }
     }
+    # FIXME: important, 'undef' in barcode should pass thorugh otherwise MySQL uniq index test fails for empty barcodes!
     return $barcode;    # return barcode, modified or not
 }
 
@@ -3566,7 +3568,7 @@ sub AddRenewal {
 
             # Charge a new rental fee, if applicable
             my ( $charge, $type ) = GetIssuingCharges( $itemnumber, $borrowernumber );
-            if ( $charge > 0 ) {
+            if ( $charge && $charge > 0 ) {
                 AddIssuingCharge( $issue, $charge, 'RENT_RENEW' );
             }
 

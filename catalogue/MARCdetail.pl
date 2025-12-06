@@ -169,7 +169,8 @@ for ( my $tabloop = 0 ; $tabloop <= 10 ; $tabloop++ ) {
         # if tag <10, there's no subfield, use the "@" trick
         if ( $fields[$x_i]->tag() < 10 ) {
             next
-                if ( $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} ne $tabloop );
+                if ( not defined $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} or
+                     $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{tab} ne $tabloop );
             next if ( $tagslib->{ $fields[$x_i]->tag() }->{'@'}->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
             my %subfield_data;
             $subfield_data{marc_lib} =
@@ -260,8 +261,10 @@ foreach my $field (@fields) {
 
     # loop through each subfield
     for my $i ( 0 .. $#subf ) {
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
-        next if ( $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{tab} ne 10 );
+        next if ( defined $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden}
+            and $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{hidden} =~ /-7|-4|-3|-2|2|3|5|8/ );
 
         push @item_subfield_codes, $subf[$i][0];
         $witness{ $subf[$i][0] } =
@@ -281,15 +284,32 @@ foreach my $field (@fields) {
         }
 
         my $kohafield = $tagslib->{ $field->tag() }->{ $subf[$i][0] }->{kohafield};
-        $item->{ $subf[$i][0] } = output_pref( { str => $item->{ $subf[$i][0] }, dateonly => 1 } )
-            if grep { $kohafield eq $_ }
-            qw( items.dateaccessioned items.onloan items.datelastseen items.datelastborrowed items.replacementpricedate );
+
+        if( not defined $kohafield ) {
+            warn "[NTWIP] Undefined but expected 'kohafield' parameter for biblio $biblionumber for tag ".$field->tag().$subf[$i][0];
+        } else {
+            $item->{ $subf[$i][0] } = output_pref( { str => $item->{ $subf[$i][0] }, dateonly => 1 } )
+                if grep { $kohafield eq $_ }
+                qw( items.dateaccessioned items.onloan items.datelastseen items.datelastborrowed items.replacementpricedate );
+        }
     }
     push @item_loop, $item if $item;
 }
 
 my ( $holdingbrtagf, $holdingbrtagsubf ) = &GetMarcFromKohaField("items.holdingbranch");
-@item_loop = sort { $a->{$holdingbrtagsubf} cmp $b->{$holdingbrtagsubf} } @item_loop;
+@item_loop = sort {
+    my $x = $a->{$holdingbrtagsubf};
+    if( not defined $x ) {
+        warn  "[NTWIP] Undefined value for items.holdingbranch tag $holdingbrtagf$holdingbrtagsubf for biblio $biblionumber, var \$a";
+        $x = '';
+    }
+    my $y = $b->{$holdingbrtagsubf};
+    if( not defined $y ) {
+        warn  "[NTWIP] Undefined value for items.holdingbranch tag $holdingbrtagf$holdingbrtagsubf for biblio $biblionumber, var \$b";
+        $y = '';
+    }
+    $x cmp $y;
+} @item_loop;
 
 @item_subfield_codes = uniq @item_subfield_codes;
 
