@@ -962,6 +962,11 @@ sub get_components_query {
     } else {
         my $cleaned_title = $marc->subfield( '245', "a" );
         $cleaned_title =~ tr|/||;
+        # backslash quotes in title:
+        $cleaned_title =~ s/"/ /g;
+        $cleaned_title =~ s/\s+/ /g;
+        $cleaned_title =~ s/^\s+//;
+        $cleaned_title =~ s/\s+$//;
         $cleaned_title = $builder->clean_search_term($cleaned_title);
         $searchstr     = qq#Host-item:("$cleaned_title")#;
     }
