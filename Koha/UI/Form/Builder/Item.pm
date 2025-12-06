@@ -219,6 +219,10 @@ sub generate_subfield_form {
                 my $itype_sth = $dbh->prepare("SELECT itemtype FROM biblioitems WHERE biblionumber = ?");
                 $itype_sth->execute($biblionumber);
                 my ($biblio_itemtype) = $itype_sth->fetchrow_array;
+                if (! $biblio_itemtype) {
+                    warn "BIBLIO: $biblionumber has no itemtype what leads to empty item itemtype!\n";
+                    $biblio_itemtype //= '';
+                }
 
                 # Use biblioitems.itemtype as a default value only if it's a valid itemtype
                 if ( any { $_ eq $biblio_itemtype } @authorised_values ) {
