@@ -112,8 +112,11 @@ sub filter_by_for_hold {
         -or => [
             { is_closed_stack => 0 },
             {
-                is_closed_stack       => 1,
-                'reserves.reserve_id' => { '!=', undef },
+                is_closed_stack => 1,
+                -or             => [
+                    { 'reserves.reserve_id' => { '!=', undef } },
+                    { 'issue.issue_id'      => { '!=', undef } },
+                ],
             },
         ],
     };
@@ -126,7 +129,7 @@ sub filter_by_for_hold {
             },
             {
                 distinct => 1,
-                join     => 'reserves',
+                join     => [ 'issue', 'reserves' ],
             }
         );
     } else {
@@ -137,7 +140,7 @@ sub filter_by_for_hold {
             },
             {
                 distinct => 1,
-                join     => [ 'biblioitem', 'reserves' ],
+                join     => [ 'biblioitem', 'issue', 'reserves' ],
             }
         );
     }
