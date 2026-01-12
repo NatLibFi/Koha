@@ -13,6 +13,8 @@ use Koha::Logger;
 use Koha::RecordProcessor;
 use List::Util qw( all any );
 
+use Koha::Holdings;
+
 sub _get_record_for_export {
     my ($params)           = @_;
     my $record_type        = $params->{record_type};
