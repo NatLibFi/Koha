@@ -22,6 +22,7 @@ use Modern::Perl;
 use CGI qw ( -utf8 );
 
 use Koha::Database;
+use C4::Context;
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 use Koha::BiblioFrameworks;
@@ -72,6 +73,8 @@ unless ($no_upd) {
     $cache->clear_from_cache("MarcSubfieldStructure-");
 }
 
+my $summary_holdings_enabled = C4::Context->preference('SummaryHoldings');
+
 # Build/Show the form
 my $dbix_map = {
 
@@ -79,6 +82,9 @@ my $dbix_map = {
     biblio      => 'Biblio',
     biblioitems => 'Biblioitem',
     items       => 'Item',
+
+    # and also Holdings Records, when enabled
+    ( $summary_holdings_enabled ? ( holdings => 'Holding') : () ),
 };
 my @cols;
 foreach my $tbl ( sort keys %{$dbix_map} ) {
@@ -86,6 +92,19 @@ foreach my $tbl ( sort keys %{$dbix_map} ) {
         map { "$tbl.$_" } $schema->source( $dbix_map->{$tbl} )->columns;
 }
 my $kohafields = Koha::MarcSubfieldStructures->search(
+    $summary_holdings_enabled ?
+    {
+        -and => [
+            { kohafield => { '>', '' } },
+            {
+                -or => [
+                    { frameworkcode => q{} },
+                    { frameworkcode => 'HLD', kohafield => { -like => 'holdings.%' } },
+                ],
+            },
+        ],
+    }
+    :
     {
         frameworkcode => q{},
         kohafield     => { '>', '' },
@@ -94,7 +113,7 @@ my $kohafields = Koha::MarcSubfieldStructures->search(
 my @loop_data;
 foreach my $col (@cols) {
     my $found;
-    my $readonly = $col =~ /\.(biblio|biblioitem|item)number$/;
+    my $readonly = $col =~ /\.((biblio|biblioitem|item)number|holding_id)$/;
     foreach my $row ( $kohafields->search( { kohafield => $col } )->as_list ) {
         $found = 1;
         push @loop_data, {

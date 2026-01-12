@@ -126,7 +126,7 @@ sub build {
     );
     return if !$col_values;    # did not meet unique constraints?
 
-    # loop thru all fk and create linked records if needed
+    # loop through all fk and create linked records if needed
     # fills remaining entries in $col_values
     my $foreign_keys = $self->_getForeignKeys( { source => $source } );
     my $col_names    = {};
@@ -213,6 +213,22 @@ sub build_sample_item {
             %$args,
         }
     )->store->get_from_storage;
+}
+
+sub build_sample_holdings_record {
+    my ( $self, $args ) = @_;
+
+    my $biblionumber =
+      delete $args->{biblionumber} || $self->build_sample_biblio->biblionumber;
+    my $library = delete $args->{library}
+      || $self->build_object( { class => 'Koha::Libraries' } )->branchcode;
+
+    my $holding_marc = MARC::Record->new();
+    $holding_marc->append_fields(MARC::Field->new('852','','','b' => $library));
+    my $record = Koha::Holding->new({ biblionumber => $biblionumber, frameworkcode => '' });
+    $record->set_marc({record => $holding_marc});
+
+    return $record->store->get_from_storage;
 }
 
 sub build_sample_ill_request {
@@ -841,6 +857,12 @@ C<$args> is a hashref with the following optional keys:
 =item * C<branchcode> (default: a random branch)
 
 =back
+
+=head2 build_sample_holdings_record
+
+    my $record = $builder->build_sample_holdings_record( { biblionumber = $bibno, library => $branch });
+
+Creates and returns a sample Koha::Holding record.
 
 =head2 alt_rand
 
