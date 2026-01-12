@@ -1,0 +1,459 @@
+form {
+    display: block;
+}
+
+div#toolbar {
+    border: 0;
+    margin-bottom: 0;
+    padding-top: 5px;
+}
+
+.tab-content {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+}
+
+.tab-pane h3 {
+    font-size: 140%;
+    margin: .3em 0;
+}
+
+.tab-pane ul {
+    margin-bottom: 0;
+    padding-left: 0;
+}
+
+ul li.tag,
+ul li.tag li.subfield_line {
+    list-style-type: none;
+    padding-left: 30px;
+    position: relative;
+}
+
+ul li.tag::before {
+    content: " ";
+    font-size: .8em;
+    left: 10px;
+    padding-top: 1.7em;
+    position: absolute;
+    top: 0;
+}
+
+ul .handle {
+    color: #999;
+    cursor: move;
+    font-family: "Font Awesome 6 Free";
+    font-size: 1em;
+    padding-right: 3px;
+    passing-top: ;
+
+}
+ul li.subfield_line .handle {
+    font-size: .8em;
+
+}
+
+li.sortable-ghost {
+    background-color: #E0E0E0;
+    border-radius: 4px;
+    max-height: 150px;
+    padding: 2px;
+}
+
+li.sortable-ghost ul li {
+    display: none !important;
+}
+
+.sortable_subfield .sortable-ghost input.flat {
+    background-color: transparent;
+}
+
+ul li.tag li.subfield_line.sortable-ghost::before {
+    top: 5px;
+}
+
+.buttonPlus {
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.buttonMinus {
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a.expandfield {
+    text-decoration: none;
+}
+
+.toptabs {
+    margin-top: 0;
+}
+
+.toptabs .tab-pane {
+    padding: 1em;
+}
+
+.tag {
+    border-bottom: 2px solid #E4F2DA;
+    clear: both;
+    padding: .7em 0;
+}
+
+li.subfield_line {
+    clear: left;
+    float: left;
+    padding-bottom: .3em;
+    width: 100%;
+}
+
+li.subfield_line label {
+    clear: left;
+    float: left;
+    font-size: 89%;
+    padding-right: .4em;
+    text-align: left;
+    width: 10em;
+}
+
+.subfieldcode img {
+    cursor: pointer;
+}
+
+.subfieldcode input {
+    border: 0;
+}
+
+.tag_title {
+    font-size: 90%;
+    padding: .2em 0;
+}
+
+.tagnum {
+    color: #000;
+    font-size: 130%;
+    font-weight: bold;
+    padding: .1em .3em .1em 0;
+}
+
+a.tagnum {
+    color: #000;
+    font-size: 110%;
+    font-weight: bold;
+    padding: .1em .3em .1em 0;
+    text-decoration: none;
+}
+
+.subfield {
+    color: #00698A;
+    float: left;
+    text-align: right;
+    width: 10em;
+}
+
+.subfield.subfield_mandatory {
+    color: #C00;
+}
+
+.subfieldcode {
+    display: block;
+    float: left;
+}
+
+.labelsubfield {
+    float: left;
+}
+
+#cat_addholding .subfieldcode {
+    float: none;
+}
+
+#cat_addholding .labelsubfield {
+    float: none;
+    font-size: 90%;
+}
+
+#cat_addholding .subfield,
+#authoritytabs .subfield {
+    float: none;
+    padding: .25em .5em;
+}
+
+#cat_addholding .subfield label,
+#authoritytabs .subfield label {
+    color: #00698A;
+}
+
+.input_marceditor {
+    float: left;
+    width: 50%;
+}
+
+#cat_addholding .input_marceditor {
+    float: none;
+    width: 100%;
+}
+
+#cat_addholding .subfield_line {
+    display: flex;
+}
+
+#cat_addholding .field_marceditor {
+    flex-grow: 1;
+    padding: .25em .5em;
+}
+
+#cat_addholding .subfield_loop_mandatory {
+    padding: .25em .5em;
+}
+
+.indicator {
+    box-sizing: content-box;
+    width: 1em;
+}
+
+.item_edit_form .subfield_line {
+    align-items: flex-start;
+    display: flex;
+    flex-basis: 100%;
+}
+
+div.item_edit_form ol li label,
+div.item_edit_form ol li span.label {
+    flex-basis: 25%;
+    font-size: 100%;
+    margin-right: 1rem;
+}
+
+div.item_edit_form ol li {
+    padding-bottom: 3px;
+}
+
+.item_edit_form .input_marceditor {
+    flex-basis: 50%;
+    float: none;
+}
+
+.item_edit_form textarea.input_marceditor {
+    width: 31em;
+}
+
+div.item_edit_form ol li label:first-child,
+fieldset.order_details ol li label:first-child,
+div.item_edit_form ol li .label:first-child,
+fieldset.order_details ol li .label:first-child {
+    flex-basis: 25%;
+}
+
+#cat_addholding .field_marceditor .flatpickr_wrapper {
+    display: none;
+}
+
+.mandatory_marker {
+    color: #C00;
+}
+
+.linktools {
+    display: block;
+    white-space: nowrap;
+}
+
+.linktools a {
+    background-color: #FFF;
+    display: block;
+    font-size: 75%;
+    margin: 0 2px;
+    padding: 2px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.linktools a:first-child {
+    border-bottom: 1px solid #DDD;
+}
+
+.linktools a:hover {
+    background-color: #FFC;
+}
+
+.subfield_controls {
+    margin: 0 .5em;
+}
+
+#cataloguing_additem_itemlist {
+    margin-bottom: 1em;
+}
+
+tbody tr.active:nth-child( 2n+1 ) td,
+tbody tr.active td {
+    background-color: #FFFFCC;
+}
+
+#loading {
+    background-color: #FFF;
+    cursor: wait;
+    height: 100%;
+    left: 0;
+    opacity: .7;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+#loading div {
+    background: transparent url( "../img/loading.gif" ) top left no-repeat;
+    font-size: 175%;
+    font-weight: bold;
+    height: 2em;
+    left: 50%;
+    margin: -1em 0 0 -2.5em;
+    padding-left: 50px;
+    position: absolute;
+    top: 50%;
+    width: 15em;
+}
+
+#toolbar {
+    padding: 5px 0;
+}
+
+.toolbar-tabs-container {
+    flex-basis: 100%;
+    margin-top: .5em;
+}
+
+.toolbar-tabs-container .nav-tabs {
+    background-color: #FFF;
+    clear: both;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 0;
+    padding-left: 0;
+}
+
+.toolbar-tabs-container .nav-tabs li {
+    background-color: #FFF;
+    display: flex;
+    flex-grow: 1;
+    justify-content: center;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.toolbar-tabs-container .nav-tabs li a {
+    background-color: #71B443;
+    border: 1px solid #71B443;
+    border-left: 0;
+    border-radius: 5px;
+    border-right: 1px solid #71B443;
+    color: #FFF;
+    display: block;
+    font-weight: bold;
+    margin: 5px;
+    padding: .3em 1.5em;
+    width: 100%;
+}
+
+.toolbar-tabs-container .nav-tabs li.selected a {
+    background-color: #418940;
+    border-bottom: 1px solid #418940;
+    border-right: 1px solid #418940;
+    color: #FFF;
+    display: block;
+    font-weight: bold;
+    margin: 5px;
+    padding: .3em 1.5em;
+    text-decoration: none;
+    width: 100%;
+}
+
+.toolbar-tabs-container .nav-tabs li.selected a:hover,
+.toolbar-tabs-container .nav-tabs li.selected a:focus {
+    background-color: #418940;
+    border: 1px solid #418940;
+    border-left: 0;
+}
+
+.toolbar-tabs-container .nav-tabs li a:hover {
+    background-color: #418940;
+    border-bottom: 1px solid #418940;
+    border-right: 1px solid #418940;
+    color: #FFF;
+    display: block;
+    font-weight: bold;
+    margin: 5px;
+    padding: .3em 1.5em;
+    text-decoration: none;
+    width: 100%;
+}
+
+.tag_anchors_list {
+    background-color: #FFF;
+    clear: both;
+    display: block;
+    font-size: 95%;
+    margin-bottom: 0;
+    padding-left: 0;
+}
+
+.tag_anchor.selected {
+    font-weight: bold;
+}
+
+.tag_anchors {
+    display: none;
+    padding: .5em 0;
+}
+
+.tag_anchors a {
+    border-right: 1px solid #CCC;
+    display: inline-block;
+    padding: 0 .4em;
+}
+
+.tag_anchors.tab_selected {
+    display: inline-block;
+}
+
+.show-errors {
+    background: #FFEC8C none;
+    border-color: #E0C726;
+    color: #000;
+    display: none;
+    text-shadow: none;
+}
+
+.floating .show-errors {
+    display: inline-block;
+}
+
+@media ( min-width: 768px ) {
+    li.subfield_line label {
+        width: 20em;
+    }
+
+    .input_marceditor {
+        width: 50em;
+    }
+
+    .subfield {
+        width: 14em;
+    }
+}
+
+@media ( min-width: 1200px ) {
+    li.subfield_line label {
+        width: 25em;
+    }
+
+    .input_marceditor {
+        width: 60em;
+    }
+
+    .subfield {
+        width: 16em;
+    }
+}

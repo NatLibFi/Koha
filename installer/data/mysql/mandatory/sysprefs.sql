@@ -810,6 +810,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('suggestion','1'),
 ('suggestionPatronCategoryExceptions', ''),
 ('SuggestionsLog','0'),
+('SummaryHoldings','0'),
 ('SuspendHoldsIntranet','1'),
 ('SuspendHoldsOpac','1'),
 ('SuspensionsCalendar','noSuspensionsWhenClosed'),
