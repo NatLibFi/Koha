@@ -613,7 +613,11 @@ if ($holding_id) {
             exit;
         }
 
-        $frameworkcode = $holding->frameworkcode;
+        if($changed_framework) {
+            $holding->frameworkcode($frameworkcode);
+        } else {
+            $frameworkcode = $holding->frameworkcode;
+        }
 
     } else {
         $holding_id = undef;
