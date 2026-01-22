@@ -578,6 +578,7 @@ my $frameworkcode = $input->param('frameworkcode');
 my $redirect      = $input->param('redirect');
 my $searchid      = $input->param('searchid') // "";
 my $userflags     = 'edit_items';
+my $preserve_values = $input->param('preserve_values');
 
 # Set default values for global variable
 $op                = $input->param('op') // q{};
@@ -721,7 +722,7 @@ if ($op eq 'duplicate') {
 }
 
 my $record = -1;
-if ($changed_framework) {
+if ( $changed_framework && $preserve_values ) {
     $record = TransformHtmlToMarc($input, 1);
 }
 
@@ -784,7 +785,8 @@ $template->param(
     frameworkcode => $frameworkcode,
     itemtype => $frameworkcode,
     borrowernumber => $loggedinuser,
-    tab => scalar $input->param('tab')
+    tab => scalar $input->param('tab'),
+    preserve_values => ($changed_framework ? $preserve_values : $holding_id) ? 1 : 0
 );
 $template->{'VARS'}->{'searchid'} = $searchid;
 
