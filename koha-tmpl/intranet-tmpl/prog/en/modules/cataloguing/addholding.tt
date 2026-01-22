@@ -646,12 +646,19 @@
                     [% END %]
 
                     <div class="btn-group">
-                        <button class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" title="Click to Change framework"><i class="fa fa-book"></i>
+                        <button class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Click to Change framework"><i class="fa fa-book"></i>
                             <span style="text-overflow: ellipsis;max-width: 150px;overflow: hidden;white-space: nowrap;display: inline-block;vertical-align: bottom;">[% Frameworks.GetName(frameworkcode) | html %]</span>
                             [% IF ( frameworkcode ) %]([% frameworkcode | html %])[% END %]
                             <span class="caret"></span>
                         </button>
                         <ul id="frameworks-menu" class="dropdown-menu">
+                            <li>
+                              <label class="dropdown-item mb-0" for="preserve_values">
+                                <input type="checkbox" id="preserve_values" name="preserve_values"
+                                  class="me-2" value="1"[% IF preserve_values %] checked="checked"[% END %] />
+                                Keep entered values when switching frameworks</label>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item change-framework" href="#" data-frameworkcode="">
                                     [% IF ( frameworkcode ) %]
