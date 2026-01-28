@@ -3569,16 +3569,15 @@ CREATE TABLE `holdings` (
   `location` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the shelving location for this record (MARC21 852$b)',
   `ccode` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the collection code associated with this item (MARC21 852$g)',
   `callnumber` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'call number (852$h+$i in MARC21)',
+  /* FIXME: / TODO: in atomic we have 852$h+$k+$l+$m! To check which one is truther! */
   `suppress` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Boolean indicating whether the record is suppressed in OPAC',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time this record was last touched',
   `datecreated` date NOT NULL COMMENT 'the date this record was added to Koha',
-  `deleted_on` datetime DEFAULT NULL COMMENT 'the date this record was deleted',
   PRIMARY KEY (`holding_id`),
-  KEY `hldnoidx` (`holding_id`),
-  KEY `hldbibnoidx` (`biblionumber`),
+  KEY `biblionumber` (`biblionumber`),
   KEY `timestamp` (`timestamp`),
-  KEY `holdings_ibfk_2` (`holdingbranch`),
-  CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE,
+  KEY `holdingbranch` (`holdingbranch`),
+  CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON UPDATE CASCADE,
   CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`holdingbranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -3596,11 +3595,54 @@ CREATE TABLE `holdings_metadata` (
   `format` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata format (MARCXML, etc.)',
   `schema` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata schema (marc21, unimarc, etc.)',
   `metadata` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `deleted_on` datetime DEFAULT NULL COMMENT 'the date this record was deleted',
   PRIMARY KEY (`id`),
   UNIQUE KEY `holdings_metadata_uniq_key` (`holding_id`,`format`,`schema`),
-  KEY `hldnoidx` (`holding_id`),
+  /* holding_id lookups are covered by the leftmost prefix of holdings_metadata_uniq_key - do not add a separate index */
   CONSTRAINT `holdings_metadata_fk_1` FOREIGN KEY (`holding_id`) REFERENCES `holdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `deletedholdings`
+--
+
+DROP TABLE IF EXISTS `deletedholdings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `deletedholdings` (
+  `holding_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique identifier assigned to each holdings record',
+  `biblionumber` int(11) NOT NULL DEFAULT 0 COMMENT 'original foreign key from biblio table used to link this record to the right bib record',
+  `frameworkcode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'foreign key from the biblio_framework table to identify which framework was used in cataloging this record',
+  `holdingbranch` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'original foreign key from the branches table for the library that owns this record (MARC21 852$a)',
+  `location` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the shelving location for this record (MARC21 852$b)',
+  `ccode` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'authorized value for the collection code associated with this item (MARC21 852$g)',
+  `callnumber` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'call number (852$h+$i in MARC21)',
+  `suppress` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Boolean indicating whether the record is suppressed in OPAC',
+  `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time this record was last touched',
+  `datecreated` date NOT NULL COMMENT 'the date this record was added to Koha',
+  PRIMARY KEY (`holding_id`),
+  KEY `biblionumber` (`biblionumber`),
+  KEY `timestamp` (`timestamp`),
+  KEY `holdingbranch` (`holdingbranch`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `deletedholdings_metadata`
+--
+
+DROP TABLE IF EXISTS `deletedholdings_metadata`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `deletedholdings_metadata` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique identifier assigned to each holdings metadata record',
+  `holding_id` int(11) NOT NULL COMMENT 'foreign key from deletedholdings table used to link this record to the right deleted holdings record',
+  `format` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata format (MARCXML, etc.)',
+  `schema` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata schema (marc21, unimarc, etc.)',
+  `metadata` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `deletedholdings_metadata_uniq_key` (`holding_id`,`format`,`schema`),
+  CONSTRAINT `deletedholdings_metadata_fk_1` FOREIGN KEY (`holding_id`) REFERENCES `deletedholdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
