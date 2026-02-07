@@ -65,11 +65,19 @@
     [% INCLUDE 'messages.inc' %]
     [% IF item_doesnt_exist %]
         <div class="alert alert-warning">
-            <a href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% biblio.biblionumber | uri %]">Add a new item</a> or
+            <a href="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% biblio.biblionumber | uri %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]">Add a new item</a> or
             <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]#holdings">go to the records holdings</a>.
         </div>
     [% END %]
     <h1>Items for [% biblio.title | html %] [% IF ( biblio.author ) %]by [% biblio.author | html %][% END %] (Record #[% biblio.biblionumber | html %])</h1>
+    [% IF holding_id %]
+        <h2>(showing only [% items.size %] items linked to holding record #[% holding_id | html %]
+            <a class="btn btn-default btn-xs previewMARC" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% holding_id | uri %]&amp;viewas=html" title="Show MARC of this Holdings Record">show record</a>
+        )</h2>
+    [% ELSE %]
+        <h2>(showing all [% items.size %] items from this bibliographic record)</h2>
+    [% END %]
+
     <a id="newitem_jump" href="#f"><i class="fa fa-arrow-down"></i> Jump to form</a>
 
     [% IF ( onloan_cannot_withdraw ) %]<div class="alert alert-warning"><strong>Error saving item</strong>: Onloan item cannot be withdrawn.</div>[% END %]
@@ -127,10 +135,10 @@
                                                 [% IF item.biblionumber != biblio.biblionumber %]
                                                     [%# Host item %]
                                                     <li
-                                                        ><a href="additem.pl?op=edititem&amp;biblionumber=[% item.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]#edititem">Edit in host</a> &nbsp;
+                                                        ><a href="additem.pl?op=edititem&amp;biblionumber=[% item.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]#edititem">Edit in host</a> &nbsp;
                                                         <a
                                                             class="delete"
-                                                            href="/cgi-bin/koha/cataloguing/additem.pl?op=delinkitem&amp;biblionumber=[% biblio.biblionumber | html %]&amp;hostitemnumber=[% item.itemnumber | html %]&amp;searchid=[% searchid | html %]"
+                                                            href="/cgi-bin/koha/cataloguing/additem.pl?op=delinkitem&amp;biblionumber=[% biblio.biblionumber | html %]&amp;hostitemnumber=[% item.itemnumber | html %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]&amp;searchid=[% searchid | html %]"
                                                             >Unlink</a
                                                         ></li
                                                     >
@@ -139,7 +147,7 @@
                                                         <li
                                                             ><a
                                                                 class="dropdown-item"
-                                                                href="additem.pl?op=edititem&amp;biblionumber=[% biblio.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]&amp;searchid=[% searchid | uri %]#edititem"
+                                                                href="additem.pl?op=edititem&amp;biblionumber=[% biblio.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]&amp;searchid=[% searchid | uri %]#edititem"
                                                                 >Edit</a
                                                             ></li
                                                         >
@@ -147,7 +155,7 @@
                                                     <li
                                                         ><a
                                                             class="dropdown-item"
-                                                            href="additem.pl?op=dupeitem&amp;biblionumber=[% biblio.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]&amp;searchid=[% searchid | uri %]#additema"
+                                                            href="additem.pl?op=dupeitem&amp;biblionumber=[% biblio.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]&amp;searchid=[% searchid | uri %]#additema"
                                                             >Duplicate</a
                                                         ></li
                                                     >
@@ -171,6 +179,9 @@
                                                                 [% INCLUDE 'csrf-token.inc' %]
                                                                 <input type="hidden" name="op" value="cud-delitem" />
                                                                 <input type="hidden" name="biblionumber" value="[% item.biblionumber | html %]" />
+                                                                [% IF holding_id %]
+                                                                <input type="hidden" name="holding_id" value="[% holding_id | html %]" />
+                                                                [% END %]
                                                                 <input type="hidden" name="itemnumber" value="[% item.itemnumber | html %]" />
                                                                 <input type="hidden" name="searchid" value="[% searchid | html %]" />
                                                                 <input type="hidden" name="delete-serial-issues" id="[% item.itemnumber | html %]-delete-serial-issues" value="" />
@@ -217,7 +228,7 @@
             <div class="col-md-2 order-sm-2 order-md-1"> [% INCLUDE 'biblio-view-menu.inc' %] </div>
             <div class="col-md-10 order-md-2 order-sm-1">
                 <div id="cataloguing_additem_newitem" class="item_edit_form page-section marc_editor">
-                    <form id="f" method="post" action="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% biblio.biblionumber | html %]" name="f">
+                    <form id="f" method="post" action="/cgi-bin/koha/cataloguing/additem.pl?biblionumber=[% biblio.biblionumber | html %][% IF holding_id %]&amp;holding_id=[% holding_id | html %][% END %]" name="f">
                         [% INCLUDE 'csrf-token.inc' %]
                         <input type="hidden" name="op" value="[% op | html %]" />
                         [% IF (popup) %]
@@ -229,7 +240,12 @@
                         [% ELSE %]
                             <h2 id="edititem">Edit item #[% itemnumber | html %][% IF ( barcode ) %]/ Barcode [% barcode | html %][% END %]</h2>
                         [% END %]
-
+                        [% IF holding_id %]
+                            <input type="hidden" name="holding_id" value="[% holding_id | html %]" />
+                        [% END %]
+                        [% IF item_holding_id %]
+                            <h3>(<a title="Open this Holdings record in Editor" href="/cgi-bin/koha/cataloguing/addholding.pl?biblionumber=[% biblio.biblionumber | uri %]&amp;holding_id=[% item_holding_id | html %]">item attached to Holding Record <u>#[% item_holding_id | html %]</u></a> <a class="btn btn-default btn-xs previewMARC" href="/cgi-bin/koha/catalogue/showmarc.pl?holding_id=[% item_holding_id | uri %]&amp;viewas=html" title="Show MARC of this Holdings Record">show record</a>)</h3>
+                        [% END %]
                         [% IF item_templates.owned.count || item_templates.shared.count %]
                             <div id="item-template-toolbar" class="btn-toolbar">
                                 <select name="template_id" id="template_id" class="select2" style="width: 20em">
@@ -423,6 +439,24 @@
     <!-- /#cataloguing_additem_itemlist -->
 [% END %]
 
+    <div id="marcPreview" class="modal" tabindex="-1" role="dialog" aria-labelledby="marcPreviewLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="marcPreviewLabel">MARC preview</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="loading"> <img src="[% interface | html %]/[% theme | html %]/img/spinner-small.gif" alt="" /> Loading </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#marcPreview.modal -->
+
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'datatables.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
@@ -440,6 +474,19 @@
     [% Asset.js("js/cataloging_additem.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         var has_item_groups = "[% item_groups.size | html %]";
+    </script>
+    <script>
+        $(document).ready(function() {
+            console.log($(".previewMARC"));
+            $("body").on("click",".previewMARC", function(e){
+                console.log("Preview MARC clicked");
+                e.preventDefault();
+                var page = $(this).attr("href");
+                $("#marcPreview .modal-body").load(page + " table");
+                $('#marcPreview').modal("show");
+                console.log("Loading MARC preview from " + page);
+            });
+        });
     </script>
 [% END %]
 
