@@ -290,8 +290,13 @@
 
 [% IF ( footerjs ) %]
     [% INCLUDE js_includes.inc %]
-    [% jsinclude | $raw # Parse the page template's JavaScript block if necessary %]
 [% END %]
+[%# koha-tmpl/intranet-tmpl/prog/en/modules/acqui/neworderempty.tt
+    and koha-tmpl/intranet-tmpl/prog/en/modules/cataloguing/additem.tt
+    have jsinclude blocks, but additem.tt generates inline-JS with JQuery (plugins)
+    so it can't use footerjs=1
+%]
+[% jsinclude | $raw # Parse the page template's JavaScript block if necessary %]
 [% KohaPlugins.get_plugins_intranet_js | $raw %]
 
 </body>
