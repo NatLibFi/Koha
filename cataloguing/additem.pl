@@ -702,7 +702,13 @@ if ($op) {
 # now, build existiing item list
 
 my @items;
-for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
+# Bug? biblio->items already contains host_items if EasyAnalyticalRecords enabled!
+# for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
+for my $item (
+    $holding_id
+        ? $biblio->items->search( { holding_id => $holding_id } )->as_list
+        : $biblio->items->as_list
+ ) {
     my $i = $item->columns_to_str;
     $i->{nomod} = 1 unless $patron->can_edit_items_from( $item->homebranch );
     push @items, $i;
@@ -822,6 +828,8 @@ my @sorted_ig = sort { $a->display_order <=> $b->display_order } @ig;
 # what's the next op ? it's what we are not in : an add if we're editing, otherwise, and edit.
 $template->param(
     biblio           => $biblio,
+    holding_id       => $summary_holdings_enabled && $holding_id,
+    item_holding_id  => $summary_holdings_enabled && ( $item && $item->holding_id || $holding_id),
     items            => \@items,
     item_groups      => \@sorted_ig,
     item_header_loop => \@header_value_loop,
