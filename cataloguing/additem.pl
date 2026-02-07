@@ -127,6 +127,8 @@ if ( $input->param('itemnumber') && !$input->param('biblionumber') ) {
 
 my $biblio = Koha::Biblios->find($biblionumber);
 
+my $summary_holdings_enabled = C4::Context->preference('SummaryHoldings');
+
 my $holding_id = $input->param('holding_id') // '';
 
 my $op             = $input->param('op') || q{};
@@ -260,6 +262,9 @@ if ( $op eq "cud-additem" ) {
     my @columns = Koha::Items->columns;
     my $item    = Koha::Item->new;
     $item->biblionumber( $biblio->biblionumber );
+    if($summary_holdings_enabled && $holding_id) {
+        $item->holding_id($holding_id);
+    }
     for my $c (@columns) {
         if ( $c eq 'more_subfields_xml' ) {
             my @more_subfields_xml = $input->multi_param("items.more_subfields_xml");
