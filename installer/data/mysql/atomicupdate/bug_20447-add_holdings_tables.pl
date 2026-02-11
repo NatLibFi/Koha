@@ -79,6 +79,16 @@ return {
         });
 
         $res += $dbh->do(q{
+            INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
+                ('SummaryHoldingsEmbedTagsInBiblio', '852!x', '', 'Comma-separated list of MFHD tags to embed into bibliographic records for export (e.g. OAI-PMH) when SummaryHoldings is enabled. Each entry can be a tag (852), a tag with included subfields (852abch), or a tag with excluded subfields (852!x). Leave empty to embed none. Use "all" to embed all MFHD data fields. Control fields (00X) and Koha-internal 999 are never embedded.', 'Free');
+        });
+
+        $res += $dbh->do(q{
+            INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
+                ('SummaryHoldingsEmbedTagsInSearch', '583!x,852!x', '', 'Comma-separated list of MFHD tags to embed into bibliographic records for search indexing when SummaryHoldings is enabled. Each entry can be a tag (852), a tag with included subfields (852abch), or a tag with excluded subfields (852!x). Leave empty to embed none. Use "all" to embed all MFHD data fields. Control fields (00X) and Koha-internal 999 are never embedded. Changing this preference requires reindexing.', 'Free');
+        });
+
+        $res += $dbh->do(q{
             INSERT IGNORE INTO `biblio_framework` VALUES ('HLD', 'Default holdings framework');
         });
 
