@@ -79,6 +79,16 @@ return {
         });
 
         $res += $dbh->do(q{
+            INSERT IGNORE INTO systempreferences ( `variable`, `value` ) VALUES
+                ('SummaryHoldingsEmbedTagsInBiblio', '852!x');
+        });
+
+        $res += $dbh->do(q{
+            INSERT IGNORE INTO systempreferences ( `variable`, `value` ) VALUES
+                ('SummaryHoldingsEmbedTagsInSearch', '583!x,852!x');
+        });
+
+        $res += $dbh->do(q{
             INSERT IGNORE INTO `biblio_framework` (`frameworkcode`, `frameworktext`) VALUES
                 ('HLD', 'Default holdings framework');
         });
