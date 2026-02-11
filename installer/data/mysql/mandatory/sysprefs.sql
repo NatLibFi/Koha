@@ -812,6 +812,8 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('suggestionPatronCategoryExceptions', ''),
 ('SuggestionsLog','0'),
 ('SummaryHoldings','0'),
+('SummaryHoldingsEmbedTagsInBiblio','852!x'),
+('SummaryHoldingsEmbedTagsInSearch','583!x,852!x'),
 ('SuspendHoldsIntranet','1'),
 ('SuspendHoldsOpac','1'),
 ('SuspensionsCalendar','noSuspensionsWhenClosed'),
