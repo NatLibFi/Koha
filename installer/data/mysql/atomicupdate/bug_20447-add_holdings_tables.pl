@@ -8,6 +8,8 @@ return {
         my ($args) = @_;
         my ($dbh, $out) = @$args{qw(dbh out)};
 
+        my $res = 0;
+
         if( !TableExists( 'holdings' ) ) {
             $dbh->do(q{
                 CREATE TABLE `holdings` ( -- table that stores summary holdings information
@@ -29,6 +31,7 @@ return {
                     CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`holdingbranch`) REFERENCES `branches` (`branchcode`) ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             });
+            say_info($out, "SummaryHoldings: Created 'holdings' table to store summary holdings information");
         }
         if( !TableExists( 'holdings_metadata' ) ) {
             $dbh->do(q{
@@ -45,6 +48,7 @@ return {
                     CONSTRAINT `holdings_metadata_fk_1` FOREIGN KEY (`holding_id`) REFERENCES `holdings` (`holding_id`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             });
+            say_info($out, "SummaryHoldings: Created 'holdings_metadata' table to store summary holdings metadata in various formats/schemas");
         }
 
         if( !column_exists( 'items', 'holding_id' ) ) {
@@ -61,25 +65,27 @@ return {
             $dbh->do(q{
                 ALTER TABLE `deleteditems` ADD COLUMN `holding_id` int(11) default NULL;
             });
+
+            say_info($out, "SummaryHoldings: Added holding_id column to items and deleteditems tables to link items to their summary holdings record");
         }
 
-        $dbh->do(q{
+        $res += $dbh->do(q{
             INSERT IGNORE INTO authorised_value_categories( category_name ) VALUES ('holdings');
         });
 
-        $dbh->do(q{
+        $res += $dbh->do(q{
             INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
                 ('SummaryHoldings', '0', NULL, 'Use Summary Holdings records (MFHD, MARC holdings) as an intermediate layer between bibliographic records and items, storing summary holdings and location information and overlaying selected MFHD fields into bibliographic records and item editor defaults.', 'YesNo');
         });
 
-        $dbh->do(q{
+        $res += $dbh->do(q{
             INSERT IGNORE INTO `biblio_framework` VALUES ('HLD', 'Default holdings framework');
         });
 
         if (C4::Context->preference("marcflavour") eq 'MARC21') {
 
             # items.holding_id in the default framework
-            $dbh->do(q{
+            $res += $dbh->do(q{
                 INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
                         ('952', 'k', 'Holdings record', 'Holdings record', 0, 0, 'items.holding_id', 10, 'holdings', '', '', NULL, -1, '', '', '', NULL);
             });
@@ -90,17 +96,17 @@ return {
             $sth->execute;
             my ($value) = $sth->fetchrow;
             if($value == 1) {
-                $dbh->do(q{
+                $res += $dbh->do(q{
                     INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
                             ('952', 'k', 'Holdings record', 'Holdings record', 0, 0, 'items.holding_id', 10, 'holdings', '', '', NULL, -1, 'ACQ', '', '', NULL);
                 });
             }
             else {
-
+                say_info($out, "SummaryHoldings: ACQ framework not found, skipping addition of items.holding_id field to ACQ framework");
             }
 
             # Holdings framework
-            $dbh->do(q{
+            $res += $dbh->do(q{
                 INSERT IGNORE INTO `marc_tag_structure` (`tagfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `authorised_value`, `frameworkcode`) VALUES
                         ('000', 'LEADER', 'LEADER', 0, 1, '', 'HLD'),
                         ('001', 'CONTROL NUMBER', 'CONTROL NUMBER', 0, 0, '', 'HLD'),
@@ -156,7 +162,7 @@ return {
                         ('942', 'ADDED ENTRY ELEMENTS (KOHA)', 'ADDED ENTRY ELEMENTS (KOHA)', 0, 0, '', 'HLD'),
                         ('999', 'SYSTEM CONTROL NUMBERS (KOHA)', 'SYSTEM CONTROL NUMBERS (KOHA)', 1, 0, '', 'HLD');
             });
-            $dbh->do(q{
+            $res += $dbh->do(q{
                 INSERT IGNORE INTO `marc_subfield_structure` (`tagfield`, `tagsubfield`, `liblibrarian`, `libopac`, `repeatable`, `mandatory`, `kohafield`, `tab`, `authorised_value`, `authtypecode`, `value_builder`, `isurl`, `hidden`, `frameworkcode`, `seealso`, `link`, `defaultvalue`) VALUES
                         ('000', '@', 'fixed length control field', 'fixed length control field', 0, 1, '', 0, '', '', 'marc21_leader_holdings.pl', 0, 0, 'HLD', '', '', NULL),
                         ('001', '@', 'control field', 'control field', 0, 0, '', 0, '', '', '', 0, 4, 'HLD', '', '', NULL),
@@ -688,8 +694,15 @@ return {
                         ('999', 'c', 'Koha biblionumber', 'Koha biblionumber', 0, 0, 'biblio.biblionumber', -1, NULL, NULL, '', NULL, -5, 'HLD', '', '', NULL),
                         ('999', 'e', 'Koha holding_id', 'Koha holding_id', 0, 0, 'holdings.holding_id', -1, NULL, NULL, '', NULL, -5, 'HLD', '', '', NULL);
             });
-            $dbh->do("UPDATE marc_subfield_structure SET maxlength=24 WHERE frameworkcode='HLD' AND tagfield='000'");
-            $dbh->do("UPDATE marc_subfield_structure SET maxlength=40 WHERE tagfield='008'");
+            $res += $dbh->do("UPDATE marc_subfield_structure SET maxlength=24 WHERE frameworkcode='HLD' AND tagfield='000'");
+            $res += $dbh->do("UPDATE marc_subfield_structure SET maxlength=40 WHERE tagfield='008'");
+        }
+
+        # We account 0E0's from above, and keep the message on idempotency:
+        if ($res) {
+            say_success($out, "SummaryHoldings: $res Inserts and Updates for database done");
+        } else {
+            say_info($out, "SummaryHoldings: No Inserts and Updates made: already there");
         }
 
     },
