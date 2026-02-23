@@ -353,6 +353,13 @@ sub _version_compare {
     my $ver1 = shift @args || 0;
     my $ver2 = shift @args || 0;
 
+    if ( $ENV{NUGDEV} ) {
+        $ver1 = 0 if $ver1 eq '{VERSION}';
+        $ver2 = 0 if $ver2 eq '{VERSION}';
+        # use Data::Printer;
+        # p %ENV;
+    }
+
     my @v1 = split /[.+:~-]/, $ver1;
     my @v2 = split /[.+:~-]/, $ver2;
 
