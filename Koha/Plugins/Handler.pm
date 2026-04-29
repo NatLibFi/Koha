@@ -64,12 +64,19 @@ sub run {
     my $plugin_method = $args->{'method'};
     my $cgi           = $args->{'cgi'};
     my $params        = $args->{'params'};
+    my $auth_cookies  = $args->{'auth_cookies'};
 
     my $has_method =
         Koha::Plugins::Methods->search( { plugin_class => $plugin_class, plugin_method => $plugin_method } )->count();
     if ($has_method) {
         load $plugin_class;
-        my $plugin = $plugin_class->new( { cgi => $cgi, enable_plugins => $args->{'enable_plugins'} } );
+        my $plugin = $plugin_class->new(
+            {
+                cgi            => $cgi,
+                enable_plugins => $args->{'enable_plugins'},
+                _auth_cookies  => $auth_cookies,
+            }
+        );
 
         my @management_methods = qw( enable disable install uninstall upgrade configure );
         return unless ( $plugin->is_enabled || any { $plugin_method eq $_ } @management_methods );
