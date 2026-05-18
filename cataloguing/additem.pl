@@ -677,7 +677,7 @@ if ( $op eq "cud-additem" ) {
             last;
         }
     }
-    my $modbibresult = ModBiblio( $record, $biblionumber, '' );
+    my $modbibresult = ModBiblio( $record, $biblionumber, $frameworkcode );
 }
 
 # update OAI-PMH sets
