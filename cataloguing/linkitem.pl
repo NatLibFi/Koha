@@ -62,7 +62,7 @@ if ( $op eq 'cud-linkitem' && $barcode && $biblionumber ) {
         my $field = PrepHostMarcField( $item->biblio->biblionumber, $item->itemnumber, $marcflavour );
         $record->append_fields($field);
 
-        my $modresult = ModBiblio( $record, $biblionumber, '' );
+        my $modresult = ModBiblio( $record, $biblionumber, $biblio->frameworkcode );
         if ($modresult) {
             $template->param( success => 1 );
         } else {
