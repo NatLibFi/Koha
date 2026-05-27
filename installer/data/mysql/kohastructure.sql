@@ -5660,7 +5660,7 @@ CREATE TABLE `pseudonymized_transactions` (
   `categorycode` varchar(10) NOT NULL DEFAULT '',
   `dateenrolled` date DEFAULT NULL,
   `sex` varchar(1) DEFAULT NULL,
-  `age` varchar(16) DEFAULT NULL,
+  `age` tinyint(4) DEFAULT NULL,
   `sort1` varchar(80) DEFAULT NULL,
   `sort2` varchar(80) DEFAULT NULL,
   `datetime` datetime DEFAULT NULL,
