@@ -402,6 +402,14 @@
             } );
         }
 
+        function fixMissingFixedLengthData( record ) {
+            let frameworkDefaults = new MARC.Record();
+            KohaBackend.FillRecord( record.frameworkcode || '', frameworkDefaults );
+
+            let lengthData = frameworkDefaults.field('008');
+            if ( lengthData ) record.addFieldGrouped( lengthData.clone() );
+        }
+
         function loadRecord( recid, editor, callback ) {
             var parts = recid.split('/');
             if ( parts.length != 2 ) return false;
@@ -412,12 +420,13 @@
                 if ( !record.error ) {
                     var remove_control_num = ([% IF Koha.Preference('autoControlNumber') == 'OFF' %] false [% ELSE %] true [% END %]) && (parts[0] === 'duplicate');
                     if( remove_control_num ){ record.removeField("001"); }
-                    if( parts[0] === 'duplicate' ) {
+
+                    let lengthData = record.field('008');
+                    if ( !lengthData ) fixMissingFixedLengthData( record );
+
+                    if( parts[0] === 'duplicate' && lengthData ) {
                         let today = new Date();
-                        let field008 = record.field('008');
-                        if ( field008 ) {
-                            record.field('008').subfield('@', today.toISOString().substring(2,10).replaceAll('-','') + record.field('008').subfield('@').substring(6));
-                        }
+                        lengthData.subfield('@', today.toISOString().substring(2,10).replaceAll('-','') + lengthData.subfield('@').substring(6));
                     }
                     editor.displayRecord( record );
                     editor.focus();
