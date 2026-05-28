@@ -3573,6 +3573,7 @@ CREATE TABLE `holdings` (
   `suppress` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Boolean indicating whether the record is suppressed in OPAC',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time this record was last touched',
   `datecreated` date NOT NULL COMMENT 'the date this record was added to Koha',
+  `deleted_on` datetime DEFAULT NULL COMMENT 'date/time of deletion',
   PRIMARY KEY (`holding_id`),
   KEY `biblionumber` (`biblionumber`),
   KEY `timestamp` (`timestamp`),
@@ -3595,6 +3596,7 @@ CREATE TABLE `holdings_metadata` (
   `format` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata format (MARCXML, etc.)',
   `schema` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'metadata schema (marc21, unimarc, etc.)',
   `metadata` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `deleted_on` datetime DEFAULT NULL COMMENT 'date/time of deletion',
   PRIMARY KEY (`id`),
   UNIQUE KEY `holdings_metadata_uniq_key` (`holding_id`,`format`,`schema`),
   /* holding_id lookups are covered by the leftmost prefix of holdings_metadata_uniq_key - do not add a separate index */
