@@ -422,7 +422,10 @@
                     if( remove_control_num ){ record.removeField("001"); }
 
                     let lengthData = record.field('008');
-                    if ( !lengthData ) fixMissingFixedLengthData( record );
+                    if ( !lengthData ) {
+                        fixMissingFixedLengthData( record );
+                        lengthData = record.field('008');
+                    }
 
                     if( parts[0] === 'duplicate' && lengthData ) {
                         let today = new Date();
