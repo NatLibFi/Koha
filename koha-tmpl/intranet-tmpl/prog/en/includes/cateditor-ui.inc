@@ -427,7 +427,7 @@
                         lengthData = record.field('008');
                     }
 
-                    if( parts[0] === 'duplicate' ) {
+                    if( parts[0] === 'duplicate' && lengthData ) {
                         let today = new Date();
                         lengthData.subfield('@', today.toISOString().substring(2,10).replaceAll('-','') + lengthData.subfield('@').substring(6));
                     }
