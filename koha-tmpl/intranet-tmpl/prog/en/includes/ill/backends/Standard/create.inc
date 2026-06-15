@@ -109,7 +109,6 @@
             <input id="ill-submit" class="btn btn-primary" type="submit" value="Create" disabled />
             <a class="cancel" href="/cgi-bin/koha/ill/ill-requests.pl">Cancel</a>
         </fieldset>
-        <input type="hidden" name="method" value="create" />
         <input type="hidden" name="stage" value="form" />
         <input type="hidden" name="backend" value="Standard" />
         <input type="hidden" name="op" value="cud-create" />

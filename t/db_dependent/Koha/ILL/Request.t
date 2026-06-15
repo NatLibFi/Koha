@@ -20,9 +20,11 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::MockModule;
+use Test::Warn;
 
+use Koha::ILL::Request;
 use Koha::ILL::Requests;
 
 use t::lib::Mocks;
@@ -30,6 +32,40 @@ use t::lib::TestBuilder;
 
 my $builder = t::lib::TestBuilder->new;
 my $schema  = Koha::Database->new->schema;
+
+subtest 'get_op_param_deprecation() tests' => sub {
+
+    plan tests => 4;
+
+    my $op;
+    warnings_are {
+        $op = Koha::ILL::Request->get_op_param_deprecation(
+            'intranet',
+            {
+                op      => 'add_form',
+                backend => 'Standard',
+            }
+        );
+    }
+    [],
+        'Using the add_form op in the staff interface does not trigger a deprecation warning';
+
+    is( $op, 'cud-create', 'add_form maps to the existing staff create flow' );
+
+    warning_like {
+        $op = Koha::ILL::Request->get_op_param_deprecation(
+            'intranet',
+            {
+                method  => 'create',
+                backend => 'Standard',
+            }
+        );
+    }
+    qr/"method" form param is DEPRECATED.*"create" op is DEPRECATED.*Used by Standard backend/,
+        'Using the legacy method=create parameter in the staff interface still triggers a deprecation warning';
+
+    is( $op, 'cud-create', 'method=create still maps to the existing staff create flow' );
+};
 
 subtest 'patron() tests' => sub {
 
