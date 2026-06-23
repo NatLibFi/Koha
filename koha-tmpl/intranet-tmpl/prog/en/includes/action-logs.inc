@@ -145,6 +145,8 @@
         <span>End</span>
     [% CASE 'PATRON_MERGE' %]
         <span>Merge</span>
+    [% CASE 'VIEW_PERSONAL_DATA' %]
+        <span>View personal data</span>
     [% CASE 'EDIT_MAPPINGS' %]
         <span>Edit mappings</span>
     [% CASE 'RESET_MAPPINGS' %]

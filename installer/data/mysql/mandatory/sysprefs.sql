@@ -639,6 +639,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('PatronAutoComplete','1'),
 ('PatronDuplicateMatchingAddFields','surname|firstname|dateofbirth'),
 ('patronimages','0'),
+('PatronPersonalDataAccessLog','0'),
 ('PatronQuickAddFields', ''),
 ('PatronRemovalDelay',''),
 ('PatronRestrictionTypes','0'),
