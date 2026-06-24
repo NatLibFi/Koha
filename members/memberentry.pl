@@ -36,6 +36,7 @@ use Koha::AuthUtils;
 use Koha::AuthorisedValues;
 use Koha::Email;
 use Koha::Patron::Debarments qw( AddDebarment DelDebarment );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access );
 use Koha::Patron::Restriction::Types;
 use Koha::Cities;
 use Koha::DateUtils qw( dt_from_string );
@@ -171,6 +172,14 @@ if ( $op eq 'edit_form' or $op eq 'cud-save' or $op eq 'duplicate' ) {
         $input, $cookie, $template,
         { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
     );
+
+    if ( $op eq 'edit_form' ) {
+        log_patron_personal_data_access(
+            $patron->borrowernumber,
+            'members/memberentry.pl',
+            'borrowernumber=' . $patron->borrowernumber . ' op=edit_form'
+        );
+    }
 
     # check permission to modify email info.
     if ( $patron->is_superlibrarian && !$logged_in_user->is_superlibrarian ) {
