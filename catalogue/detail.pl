@@ -32,6 +32,7 @@ use C4::Serials qw( CountSubscriptionFromBiblionumber SearchSubscriptions GetLat
 use C4::Output  qw( output_html_with_http_headers );
 use C4::Biblio  qw( GetBiblioData GetFrameworkCode );
 use C4::Items   qw( GetAnalyticsCount );
+use C4::Log     qw( logaction );
 use C4::Reserves;
 use C4::Serials          qw( CountSubscriptionFromBiblionumber SearchSubscriptions GetLatestSerials );
 use C4::XISBN            qw( get_xisbns );
@@ -101,6 +102,22 @@ unless ($biblio) {
     );
     output_html_with_http_headers $query, $cookie, $template->output;
     exit;
+}
+
+my %logged_patron_personal_data_access;
+sub log_patron_personal_data_access {
+    my ( $patron_id, $context, $biblio_id ) = @_;
+
+    return unless C4::Context->preference('PatronPersonalDataAccessLog');
+    return unless $patron_id;
+    return if $logged_patron_personal_data_access{"$patron_id:$context"}++;
+
+    logaction(
+        'MEMBERS',
+        'VIEW_PERSONAL_DATA',
+        $patron_id,
+        "catalogue/detail.pl biblionumber=$biblio_id context=$context"
+    );
 }
 
 my $frameworkcode = $biblio->frameworkcode;
@@ -414,6 +431,17 @@ if ( C4::Context->preference('OPACComments') ) {
     }
     $template->param( 'reviews' => $reviews );
 
+}
+
+if ( C4::Context->preference('PatronPersonalDataAccessLog') ) {
+    $all_items->reset;
+    while ( my $item = $all_items->next ) {
+        my $checkout = $item->checkout;
+        next unless $checkout;
+
+        log_patron_personal_data_access( $checkout->borrowernumber, 'item_checkout', $biblio->biblionumber );
+    }
+    $all_items->reset;
 }
 
 my @results = ( $dat, );
