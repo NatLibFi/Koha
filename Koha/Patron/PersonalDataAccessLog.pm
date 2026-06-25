@@ -24,7 +24,7 @@ use C4::Log qw( logaction );
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw( log_patron_personal_data_access );
+our @EXPORT_OK = qw( log_patron_personal_data_access log_patron_personal_data_access_from_cgi );
 
 my %logged_patron_personal_data_access;
 my $current_request_key;
@@ -72,9 +72,47 @@ sub log_patron_personal_data_access {
     );
 }
 
+=head3 log_patron_personal_data_access_from_cgi
+
+    log_patron_personal_data_access_from_cgi( $input, $patron );
+
+Logs staff access to patron personal data from a CGI script.
+
+=cut
+
+sub log_patron_personal_data_access_from_cgi {
+    my ( $input, $patron ) = @_;
+
+    return unless $patron;
+
+    my $borrowernumber = $patron->borrowernumber;
+    return unless $borrowernumber;
+
+    my $script_path = _script_path_from_cgi($input);
+
+    log_patron_personal_data_access(
+        $borrowernumber,
+        $script_path,
+        'borrowernumber=' . $borrowernumber
+    );
+}
+
 sub _request_key {
     return unless ref $ENV{'psgi.input'};
     return refaddr( $ENV{'psgi.input'} );
+}
+
+sub _script_path_from_cgi {
+    my ($input) = @_;
+
+    my $script_name = $input ? eval { $input->script_name } : undef;
+    $script_name ||= $ENV{SCRIPT_NAME} || q{};
+
+    $script_name =~ s{^/cgi-bin/koha/}{};
+    $script_name =~ s{^/(?:intranet|opac)/}{};
+    $script_name =~ s{^/}{};
+
+    return $script_name || 'unknown';
 }
 
 1;
