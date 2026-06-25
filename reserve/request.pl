@@ -49,6 +49,7 @@ use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
 use Koha::Patrons;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patron::Attribute::Types;
 use Koha::Clubs;
 use Koha::BackgroundJob::BatchCancelHold;
@@ -244,6 +245,8 @@ if ($supplyill) {
 if ( $borrowernumber_hold && !$op ) {
     my $patron = Koha::Patrons->find($borrowernumber_hold);
     my $diffbranch;
+
+    log_patron_personal_data_access_from_cgi( $input, $patron );
 
     # we check the reserves of the user, and if they can reserve a document
     # FIXME At this time we have a simple count of reservs, but, later, we could improve the infos "title" ...

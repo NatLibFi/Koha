@@ -47,6 +47,7 @@ use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Checkouts::ReturnClaims;
 use Koha::CsvProfiles;
 use Koha::Patrons;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Patron::Restriction::Types;
 use Koha::Plugins;
@@ -273,6 +274,8 @@ if ($patron) {
         $query, $cookie, $template,
         { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
     );
+
+    log_patron_personal_data_access_from_cgi( $query, $patron );
 
     my $overdues = $patron->overdues;
     my $issues   = $patron->checkouts;

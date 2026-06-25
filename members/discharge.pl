@@ -37,6 +37,7 @@ use C4::Members;
 use C4::Reserves;
 use C4::Letters;
 use Koha::Patron::Discharge;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 my $input = CGI->new;
@@ -64,6 +65,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my ( $can_be_discharged, $discharge_problems ) =
     Koha::Patron::Discharge::can_be_discharged( { borrowernumber => $borrowernumber } );
