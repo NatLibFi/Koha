@@ -25,6 +25,7 @@ use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_htt
 use CGI        qw ( -utf8 );
 use C4::Members;
 use C4::Letters qw( GetPreparedLetter EnqueueLetter );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Patron::Categories;
 use Koha::Patron::Password::Recovery qw( SendPasswordRecoveryEmail ValidateBorrowernumber );
@@ -53,6 +54,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 # Allow resending of messages in Notices tab
 my $op = $input->param('op') || q{};
@@ -147,4 +150,3 @@ $template->param(
     sentnotices     => 1,
 );
 output_html_with_http_headers $input, $cookie, $template->output;
-

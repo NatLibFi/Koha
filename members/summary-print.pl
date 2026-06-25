@@ -27,6 +27,7 @@ use C4::Reserves;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Holds;
 use Koha::ItemTypes;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 my $input          = CGI->new;
@@ -47,6 +48,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $total = $patron->account->balance;
 my $accts = Koha::Account::Lines->search(
