@@ -30,7 +30,7 @@ use List::MoreUtils qw( any uniq );
 use Koha::DateUtils qw( dt_from_string );
 use Koha::ActionLogs;
 
-use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Patron::Categories;
 
@@ -62,11 +62,7 @@ output_and_exit_if_error(
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
 
-log_patron_personal_data_access(
-    $patron->borrowernumber,
-    'members/readingrec.pl',
-    'borrowernumber=' . $patron->borrowernumber
-);
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 #   barcode export
 if ( $op eq 'export_barcodes' ) {

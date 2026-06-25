@@ -22,6 +22,7 @@ use CGI qw ( -utf8 );
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 my $input = CGI->new;
@@ -43,6 +44,8 @@ unless ($patron) {
     print $input->redirect("/cgi-bin/koha/circ/circulation.pl?borrowernumber=$borrowernumber");
     exit;
 }
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 $template->param(
     holdshistoryview => 1,

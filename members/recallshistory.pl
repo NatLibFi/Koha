@@ -20,6 +20,7 @@ use Modern::Perl;
 use CGI        qw ( -utf8 );
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 
 my $input = CGI->new;
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
@@ -35,6 +36,8 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $borrowernumber = $input->param('borrowernumber');
 my $recalls = Koha::Recalls->search( { patron_id => $borrowernumber }, { order_by => { '-desc' => 'created_date' } } );
 my $patron  = Koha::Patrons->find($borrowernumber);
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 $template->param(
     patron          => $patron,
