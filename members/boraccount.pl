@@ -30,6 +30,7 @@ use C4::Members;
 use C4::Accounts;
 use C4::Letters;
 use Koha::Cash::Registers;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Patron::Categories;
 use Koha::Items;
@@ -68,6 +69,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $registerid = $input->param('registerid');
 

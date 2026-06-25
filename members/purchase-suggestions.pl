@@ -23,6 +23,7 @@ use CGI      qw ( -utf8 );
 use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Suggestions;
 
@@ -45,6 +46,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $category = $patron->category;
 $template->param(

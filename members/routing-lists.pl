@@ -24,6 +24,7 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Members;
 use C4::Context;
 use C4::Serials;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use CGI::Session;
 
@@ -51,6 +52,8 @@ output_and_exit_if_error(
     $query, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $query, $patron );
 
 $template->param(
     patron          => $patron,

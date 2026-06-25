@@ -35,7 +35,7 @@ use C4::Form::MessagingPreferences;
 use List::MoreUtils qw( uniq );
 use Scalar::Util    qw( looks_like_number );
 use Koha::Patron::Attribute::Types;
-use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patron::Restriction::Types;
 use Koha::Patron::Categories;
 use Koha::Patron::Messages;
@@ -78,11 +78,7 @@ output_and_exit_if_error(
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
 
-log_patron_personal_data_access(
-    $patron->borrowernumber,
-    'members/moremember.pl',
-    'borrowernumber=' . $patron->borrowernumber
-);
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $category      = $patron->category;
 my $category_type = $category->category_type;
