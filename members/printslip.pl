@@ -37,6 +37,7 @@ use C4::Context;
 use C4::Auth    qw( get_session get_template_and_user );
 use C4::Output  qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 use C4::Members qw( IssueSlip );
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 
 my $input     = CGI->new;
 my $sessionID = $input->cookie("CGISESSID");
@@ -66,6 +67,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $branch = C4::Context->userenv->{'branch'};
 my ( $letter, $slip, $is_html );

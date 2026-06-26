@@ -24,6 +24,7 @@ use C4::Output qw( output_and_exit_if_error output_html_with_http_headers );
 use CGI        qw ( -utf8 );
 use C4::Letters;
 use Koha::Account::Lines;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 
 my $input = CGI->new;
 
@@ -50,6 +51,8 @@ output_and_exit_if_error(
         current_patron => $patron
     }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $letter_code = $input->param('notice');
 my $letter      = C4::Letters::GetPreparedLetter(

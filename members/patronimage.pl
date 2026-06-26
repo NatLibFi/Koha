@@ -25,6 +25,7 @@ use Modern::Perl;
 use CGI      qw ( -utf8 );
 use C4::Auth qw( check_api_auth );
 use C4::Context;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 $| = 1;
@@ -67,6 +68,8 @@ unless ( $logged_in_user->can_see_patron_infos($patron) ) {
     print $query->header( -type => 'text/plain', -status => '403 Forbidden' );
     exit 0;
 }
+
+log_patron_personal_data_access_from_cgi( $query, $patron );
 
 my $patron_image = $patron->image;
 
