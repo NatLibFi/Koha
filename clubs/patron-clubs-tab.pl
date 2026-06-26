@@ -24,6 +24,7 @@ use CGI;
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Club::Enrollments;
 
@@ -41,6 +42,8 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $patronnumber = $cgi->param('borrowernumber');
 
 my $patron = Koha::Patrons->find($patronnumber);
+
+log_patron_personal_data_access_from_cgi( $cgi, $patron );
 
 my @enrollments = $patron->get_club_enrollments->as_list;
 my @clubs       = $patron->get_enrollable_clubs->as_list;

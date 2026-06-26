@@ -24,6 +24,7 @@ use CGI;
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::List::Patron qw( GetPatronLists AddPatronsToList DelPatronsFromList );
 
@@ -52,6 +53,8 @@ my @patrons_to_remove = $cgi->multi_param('patrons_to_remove');
 if ( !$logged_in_user->can_see_patron_infos($patron) ) {
     $template->param( 'no_access_to_patron' => 1 );
 } else {
+    log_patron_personal_data_access_from_cgi( $cgi, $patron );
+
     my $has_perms = C4::Auth::haspermission( $logged_in_user->userid, { 'tools' => 'manage_patron_lists' } );
     if ( $list_id && $has_perms ) {
         my ($list) = GetPatronLists( { patron_list_id => $list_id } );

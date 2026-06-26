@@ -26,6 +26,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::CurbsidePickups;
 use Koha::CurbsidePickupPolicies;
 use Koha::Libraries;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 my $input         = CGI->new;
@@ -50,6 +51,8 @@ if ( $op eq 'find-patron' ) {
     my $borrowernumber = $input->param('borrowernumber');
 
     my $patron = Koha::Patrons->find($borrowernumber);
+
+    log_patron_personal_data_access_from_cgi( $input, $patron );
 
     my $existing_curbside_pickups = Koha::CurbsidePickups->search(
         {

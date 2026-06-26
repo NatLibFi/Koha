@@ -25,6 +25,7 @@ use C4::Search  qw( enabled_staff_search_views );
 use C4::Serials qw( CountSubscriptionFromBiblionumber );
 use Koha::Biblios;
 use Koha::Logger;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::ArticleRequests;
 
@@ -108,6 +109,7 @@ if ( $patron && !$patron->can_request_article ) {
 }
 
 if ($patron) {
+    log_patron_personal_data_access_from_cgi( $cgi, $patron );
     $template->param( article_request_fee => $patron->article_request_fee );
 }
 
