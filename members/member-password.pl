@@ -11,6 +11,7 @@ use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_htt
 use C4::Context;
 use CGI qw ( -utf8 );
 
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Patron::Categories;
 
@@ -46,6 +47,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $category_type = $patron->category->category_type;
 

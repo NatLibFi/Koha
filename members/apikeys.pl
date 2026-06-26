@@ -27,6 +27,7 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_and_exit output_html_with_http_headers );
 
 use Koha::ApiKeys;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 
 my $cgi = CGI->new;
@@ -62,6 +63,8 @@ if ( $patron_id != $loggedinuser && !C4::Context->IsSuperLibrarian() ) {
     print $cgi->redirect("/cgi-bin/koha/errors/403.pl");    # escape early
     exit;
 }
+
+log_patron_personal_data_access_from_cgi( $cgi, $patron );
 
 my $op = $cgi->param('op') // '';
 

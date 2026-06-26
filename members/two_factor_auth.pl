@@ -22,6 +22,7 @@ use CGI qw(-utf8);
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_and_exit output_html_with_http_headers );
 
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Auth::TwoFactorAuth;
 
@@ -63,6 +64,8 @@ if ( !$patron ) {
     print $cgi->redirect("/cgi-bin/koha/errors/404.pl");
     exit;
 }
+
+log_patron_personal_data_access_from_cgi( $cgi, $patron );
 
 if ( !C4::Context->config('encryption_key') ) {
     $template->param( missing_key => 1 );
