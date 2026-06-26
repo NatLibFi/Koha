@@ -38,6 +38,7 @@ use C4::Accounts;
 use C4::Stats;
 use C4::Koha;
 use C4::Overdues;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Items;
 
@@ -74,6 +75,8 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 our $user = $input->remote_user;
 $user ||= q{};

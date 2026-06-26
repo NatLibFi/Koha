@@ -37,6 +37,7 @@ use Koha::Items;
 use Koha::Old::Items;
 use Koha::Checkouts;
 use Koha::Old::Checkouts;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 
 use Koha::Patron::Categories;
 use Koha::Account::DebitTypes;
@@ -200,6 +201,8 @@ if ( $op eq 'cud-add' ) {
         }
     }
 }
+
+log_patron_personal_data_access_from_cgi( $input, $patron );
 
 my $debit_types = Koha::Account::DebitTypes->search_with_library_limits(
     { can_be_invoiced => 1, archived => 0 },

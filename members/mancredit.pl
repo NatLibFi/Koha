@@ -31,6 +31,7 @@ use C4::Members;
 use C4::Accounts;
 
 use Koha::Items;
+use Koha::Patron::PersonalDataAccessLog qw( log_patron_personal_data_access_from_cgi );
 use Koha::Patrons;
 use Koha::Patron::Categories;
 use Koha::Account::CreditTypes;
@@ -110,6 +111,8 @@ if ( $op eq 'cud-add' ) {
     print $input->redirect("/cgi-bin/koha/members/boraccount.pl?borrowernumber=$borrowernumber");
     exit;
 } else {
+
+    log_patron_personal_data_access_from_cgi( $input, $patron );
 
     my @credit_types = Koha::Account::CreditTypes->search_with_library_limits(
         { can_be_added_manually => 1, archived => 0 },
