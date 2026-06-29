@@ -848,7 +848,7 @@
 
                             [% IF ( closed_stack_requests.count ) %]
                                 [% WRAPPER tab_panel tabname="opac-user-closed-stack-requests" %]
-                                    [% PROCESS 'holds-table.inc' HOLDS = closed_stack_requests, SuspendHoldsOpac = SuspendHoldsOpac, showpriority = showpriority, AutoResumeSuspendedHolds = AutoResumeSuspendedHolds, table_id = 'closed-stack-requests-table' %]
+                                    [% PROCESS 'holds-table.inc' HOLDS = closed_stack_requests, SuspendHoldsOpac = 0, showpriority = showpriority, AutoResumeSuspendedHolds = AutoResumeSuspendedHolds, table_id = 'closed-stack-requests-table' %]
                                 [% END %]
                             [% END %]
 
