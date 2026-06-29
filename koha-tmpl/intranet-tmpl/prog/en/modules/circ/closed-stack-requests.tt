@@ -162,7 +162,7 @@
                     [% END %]
                     [% WRAPPER tab_panels %]
                         [% WRAPPER tab_panel tabname="pending" bt_active=1 %]
-                            <p>The following holds have not been filled. Please retrieve them and check them in.</p>
+                            <p>The following closed stack requests are pending. Please retrieve the items and check them in.</p>
 
                             [% INCLUDE holds_table id="holdst" holds=pending_holds %]
                         [% END %]
