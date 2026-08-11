@@ -1223,7 +1223,7 @@ sub GetQueuedMessages {
 
     my $dbh       = C4::Context->dbh();
     my $statement = <<'ENDSQL';
-SELECT message_id, borrowernumber, subject, content, message_transport_type, status, time_queued, updated_on, failure_code, from_address, to_address, cc_address
+SELECT message_id, borrowernumber, subject, content, message_transport_type, status, time_queued, updated_on, failure_code, response_message, from_address, to_address, cc_address
 FROM message_queue
 ENDSQL
 
@@ -1278,7 +1278,7 @@ sub GetMessage {
     my $dbh = C4::Context->dbh;
     return $dbh->selectrow_hashref(
         q|
-        SELECT message_id, borrowernumber, subject, content, metadata, letter_code, message_transport_type, status, time_queued, updated_on, to_address, from_address, reply_address, content_type, failure_code
+        SELECT message_id, borrowernumber, subject, content, metadata, letter_code, message_transport_type, status, time_queued, updated_on, to_address, from_address, reply_address, content_type, failure_code, response_message
         FROM message_queue
         WHERE message_id = ?
     |, {}, $message_id
@@ -1394,7 +1394,7 @@ sub _get_unsent_messages {
 
     my $dbh       = C4::Context->dbh();
     my $statement = qq{
-        SELECT mq.message_id, mq.borrowernumber, mq.subject, mq.content, mq.message_transport_type, mq.status, mq.time_queued, mq.from_address, mq.reply_address, mq.to_address, mq.content_type, b.branchcode, mq.letter_code, mq.failure_code, mq.letter_id
+        SELECT mq.message_id, mq.borrowernumber, mq.subject, mq.content, mq.message_transport_type, mq.status, mq.time_queued, mq.from_address, mq.reply_address, mq.to_address, mq.content_type, b.branchcode, mq.letter_code, mq.failure_code, mq.response_message, mq.letter_id
         FROM message_queue mq
         LEFT JOIN borrowers b ON b.borrowernumber = mq.borrowernumber
         WHERE status = ?
@@ -1850,9 +1850,17 @@ sub _update_message_cc_address {
 
 =head2 _set_message_status
 
-  _set_message_status({ message_id => $id, status => $status, failure_code => $code });
+  _set_message_status(
+      {
+          message_id       => $id,
+          status           => $status,
+          failure_code     => $code,
+          response_message => $response_message,
+      }
+  );
 
-Update the status and optional failure_code for a queued message.
+Update the status, optional failure_code, and optional response_message for a
+queued message. Omitted failure details are cleared.
 
 =cut
 
@@ -1864,11 +1872,12 @@ sub _set_message_status {
     }
 
     my $dbh       = C4::Context->dbh();
-    my $statement = 'UPDATE message_queue SET status= ?, failure_code= ? WHERE message_id = ?';
+    my $statement = 'UPDATE message_queue SET status = ?, failure_code = ?, response_message = ? WHERE message_id = ?';
     my $sth       = $dbh->prepare($statement);
     my $result    = $sth->execute(
         $params->{'status'},
         $params->{'failure_code'} || '',
+        $params->{'response_message'} // '',
         $params->{'message_id'}
     );
     return $result;
