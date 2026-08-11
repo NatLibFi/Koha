@@ -4983,6 +4983,7 @@ CREATE TABLE `message_queue` (
   `reply_address` longtext DEFAULT NULL,
   `content_type` mediumtext DEFAULT NULL,
   `failure_code` mediumtext DEFAULT NULL,
+  `response_message` mediumtext DEFAULT NULL,
   PRIMARY KEY (`message_id`),
   KEY `borrowernumber` (`borrowernumber`),
   KEY `message_transport_type` (`message_transport_type`),
