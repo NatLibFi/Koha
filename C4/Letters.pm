@@ -1638,8 +1638,9 @@ sub _send_message_by_email {
         if !$message->{to_address}
         || $message->{to_address} ne $email->email->header('To');
 
-    $smtp_transports->{ $smtp_server->id // 'default' } ||= $smtp_server->transport;
-    my $smtp_transport = $smtp_transports->{ $smtp_server->id // 'default' };
+    my $smtp_transport_key = $smtp_server->id // 'default';
+    $smtp_transports->{$smtp_transport_key} ||= $smtp_server->transport;
+    my $smtp_transport = $smtp_transports->{$smtp_transport_key};
 
     _update_message_from_address( $message->{'message_id'}, $email->email->header('From') )
         if !$message->{from_address}
@@ -1657,7 +1658,17 @@ sub _send_message_by_email {
         );
         return 1;
     } catch {
-        my $response_message = Koha::Email->exception_message($_);
+        my $exception = $_;
+
+        delete $smtp_transports->{$smtp_transport_key};
+        try {
+            $smtp_transport->disconnect;
+        } catch {
+
+            # A disconnect failure must not replace the delivery failure.
+        };
+
+        my $response_message = Koha::Email->exception_message($exception);
         _set_message_status(
             {
                 message_id       => $message->{'message_id'},
