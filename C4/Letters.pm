@@ -1632,15 +1632,15 @@ sub _send_message_by_email {
         );
         return 1;
     } catch {
+        my $response_message = Koha::Email->exception_message($_);
         _set_message_status(
             {
-                message_id   => $message->{'message_id'},
-                status       => 'failed',
-                failure_code => 'SENDMAIL'
+                message_id       => $message->{'message_id'},
+                status           => 'failed',
+                failure_code     => 'SENDMAIL',
+                response_message => $response_message,
             }
         );
-        carp "$_";
-        carp "$Mail::Sendmail::error";
         return;
     };
 }
