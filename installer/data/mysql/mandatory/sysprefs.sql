@@ -438,6 +438,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('MARCOrgCode','OSt'),
 ('MARCOverlayRules','0'),
 ('MarkLostItemsAsReturned','batchmod,moredetail,cronjob,additem,pendingreserves,onpayment'),
+('MaxCheckoutsHardLimit', ''),
 ('MaxComponentRecords', '300'),
 ('MaxFine',''),
 ('maxItemsInSearchResults','20'),
