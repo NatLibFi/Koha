@@ -251,7 +251,7 @@ sub update {
 
     # Forcibly Remove readOnly fields from the request body:
     my $body = $c->req->json || {};
-    for my $field (qw(expired restricted anonymized)) {
+    for my $field (qw(expired restricted anonymized self_renewal_available)) {
         if (exists $body->{$field}) {
             delete $body->{$field};
             # warn "[HOTFIX!] Removing read-only field '$field' from request body";
