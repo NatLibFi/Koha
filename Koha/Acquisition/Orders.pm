@@ -161,6 +161,7 @@ quantityreceived).
 
 sub filter_by_active {
     my ($self) = @_;
+    my $source_alias = $self->_resultset->current_source_alias;
     return $self->search(
         {
             'datecancellationprinted' => undef,
@@ -171,7 +172,7 @@ sub filter_by_active {
                 },
                 { 'orderstatus' => [ 'ordered', 'partial' ] }
             ],
-            quantityreceived => { '<', \['COALESCE(me.quantity,0)'] },
+            quantityreceived => { '<', \["COALESCE($source_alias.quantity,0)"] },
         },
         { join => 'basket' }
     );
