@@ -109,6 +109,9 @@ sub update_index {
 
             my $record = $self->_get_record($record_id);
             if ($record) {
+
+                $record = $self->fix_record( $record, $record_id );
+
                 push @$records,          $record;
                 push @$index_record_ids, $record_id;
             }
@@ -144,6 +147,39 @@ sub update_index {
         };
     }
     return $response;
+}
+
+=head2 fix_record
+
+Temporary fix from NuggedTeam to make some indexes compliant for not to brreak ES to exceptions,
+but this will need to be reworked in Community master/
+
+Sidenotes:
+
+    # /usr/share/koha/bin/search_tools/rebuild_elasticsearch.pl -v -b --bnumber 1218
+    # use DDP; warn "$id:", p $record->field(505)->subfield('a');
+
+=cut
+
+sub fix_record {
+    my ($self, $record, $id) = @_;
+
+    if (my $f505 = $record->field(505)) {
+        if ($f505->subfield('a')) {
+            my $len = length $f505->subfield('a');
+            if ($len > 4096) {
+                warn "ERROR: 505a too long: $len chars for biblio [$id]. Field truncated to 4096.\n";
+                $f505->update( a => substr($f505->subfield('a'), 0, 4096) );
+            }
+        }
+    }
+
+    if ($record->leader() && length $record->leader() > 24) {
+        warn "ERROR: BROKEN LEADER, longer than 24 chars [".$record->leader()."] for biblio [$id]. Truncated to 24.\n";
+        $record->leader( substr($record->leader(), 0, 24) );
+    }
+
+    return $record;
 }
 
 =head2 set_index_status_ok
