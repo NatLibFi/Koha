@@ -244,8 +244,9 @@ if ( $op eq 'add_form' ) {
         }
     )->count;
     my $patrons_count = Koha::Patrons->search( { branchcode => $branchcode, } )->count;
+    my $holdings_count = Koha::Holdings->search( { holdingbranch => $branchcode, } )->count;
 
-    if ( $items_count or $patrons_count ) {
+    if ( $items_count or $patrons_count or $holdings_count ) {
         push @messages,
             {
             type => 'alert',
@@ -253,6 +254,7 @@ if ( $op eq 'add_form' ) {
             data => {
                 items_count   => $items_count,
                 patrons_count => $patrons_count,
+                holdings_count => $holdings_count,
             },
             };
         $op = 'list';
@@ -261,6 +263,7 @@ if ( $op eq 'add_form' ) {
             library       => $library,
             items_count   => $items_count,
             patrons_count => $patrons_count,
+            holdings_count => $holdings_count,
         );
     }
 } elsif ( $op eq 'cud-delete_confirmed' ) {

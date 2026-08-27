@@ -1038,6 +1038,30 @@ biblios:
     opac: 1
     staff_client: 1
     type: ''
+  action-note:
+    label: action-note (staff)
+    mandatory: ~
+    mappings:
+    - facet: ''
+      marc_field: '583'
+      marc_type: marc21
+      sort: 1
+      suggestible: ''
+    opac: 0
+    staff_client: 1
+    type: ''
+  action-note-opac:
+    label: action-note (OPAC)
+    mandatory: ~
+    mappings:
+    - facet: ''
+      marc_field: '583(0123456789abcdefghijklmnopqrstuvwyz)'
+      marc_type: marc21
+      sort: 1
+      suggestible: ''
+    opac: 1
+    staff_client: 0
+    type: ''
   acqsource:
     label: acqsource
     mandatory: ~
@@ -1855,6 +1879,15 @@ biblios:
       suggestible: ''
     opac: 1
     staff_client: 1
+    type: ''
+  location-item-part:
+    label: location-item-part
+    mappings:
+      - facet: ''
+        marc_field: 852i
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
     type: ''
   ff7-00:
     label: ff7-00
@@ -3151,6 +3184,11 @@ biblios:
       sort: 1
       suggestible: ''
     - facet: ''
+      marc_field: '583(0123456789abcdefghijklmnopqrstuvwyz)'
+      marc_type: marc21
+      sort: 1
+      suggestible: ''
+    - facet: ''
       marc_field: '590'
       marc_type: marc21
       sort: 1
@@ -3366,6 +3404,15 @@ biblios:
       suggestible: ''
     opac: 1
     staff_client: 1
+    type: ''
+  placement:
+    label: placemen
+    mappings:
+      - facet: ''
+        marc_field: 852h
+        marc_type: marc21
+        sort: ~
+        suggestible: ''
     type: ''
   publisher:
     label: publisher
