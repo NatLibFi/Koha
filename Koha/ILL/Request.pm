@@ -2565,7 +2565,7 @@ sub get_op_param_deprecation {
         $op = 'cud-create' if $op eq 'create' || $op eq 'add_form';
     } elsif ( $interface eq 'intranet' ) {
         $op = $params->{op} // $params->{method} // 'illlist';
-        $op = 'cud-create'          if $op eq 'create';
+        $op = 'cud-create'          if $op eq 'create' || $op eq 'add_form';
         $op = 'cud-edit_action'     if $op eq 'edit_action';
         $op = 'cud-generic_confirm' if $op eq 'generic_confirm';
         $op = 'cud-cancel'          if $op eq 'cancel';
