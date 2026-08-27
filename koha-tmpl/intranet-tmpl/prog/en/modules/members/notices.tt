@@ -124,7 +124,10 @@
                                     [% ELSIF ( QUEUED_MESSAGE.failure_code == 'SMS_SEND_DRIVER_MISSING' ) %]
                                         <span class="clearfix">The SMS driver could not be loaded</span>
                                     [% ELSIF ( QUEUED_MESSAGE.failure_code == 'SENDMAIL' ) %]
-                                        <span class="clearfix">Unhandled email failure, check the logs for further details</span>
+                                        <span class="clearfix">Email delivery failed</span>
+                                        [% IF ( QUEUED_MESSAGE.response_message ) %]
+                                            <span class="clearfix">[% QUEUED_MESSAGE.response_message | html %]</span>
+                                        [% END %]
                                     [% ELSIF ( QUEUED_MESSAGE.failure_code == "UNKNOWN_ERROR" ) %]
                                         <span class="clearfix">Unknown error</span>
                                     [% ELSE %]
