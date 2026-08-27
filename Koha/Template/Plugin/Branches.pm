@@ -67,6 +67,8 @@ sub GetURL {
     return $self->{libraries}->{$branchcode} ? $self->{libraries}->{$branchcode}->branchurl : q{};
 }
 
+my $Encoder_sorted = Sereal::Encoder->new({ sort_keys => 1 });
+
 sub all {
     my ( $self, $params ) = @_;
     my $selected      = $params->{selected} // ();
@@ -85,10 +87,45 @@ sub all {
         ? $selected->get_column('branchcode')
         : ( $selected // () );
 
-    my $libraries =
-        $unfiltered
-        ? Koha::Libraries->search( $search_params, { order_by => ['branchname'] } )->unblessed
-        : Koha::Libraries->search_filtered( $search_params, { order_by => ['branchname'] } )->unblessed;
+    my $libraries;
+
+    my $userenv = C4::Context->userenv;
+    my $search_params_hash = $Encoder_sorted->encode($search_params);
+
+    # use Data::Dumper (); warn Data::Dumper->new( [{
+    #     context => $C4::Context::context,
+    #     search_params_hash => $search_params_hash,
+    # }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump;
+
+    my $cache_key = $unfiltered
+        ? "BranchesSelector:"
+            # . $C4::Context::context->{activeuser} # do instead:
+            . ($userenv->{number} // q{})
+            # problem: no {activeuser} with sessionID anymore. We need to reconsider this solution.
+            # need to think should we cache for sessionID anyway, or we need to rework the task
+            # to make selection more permanent
+            . $search_params_hash
+        : sprintf "BranchesSelector:%s:%s:%s:%s:%s",
+            $userenv->{number} // q{}, $userenv->{branch} // q{}, C4::Context::only_my_library ? 1 : 0,
+            # $C4::Context::context->{activeuser}, # do instead:
+            0,
+            # problem: no {activeuser} with sessionID anymore. We need to reconsider this solution.
+            # need to think should we cache for sessionID anyway, or we need to rework the task
+            # to make selection more permanent
+            $search_params_hash;
+
+    my $cache = Koha::Caches->get_instance();
+    if( my $cached = $cache->get_from_cache($cache_key, { unsafe => 1 })){
+        $libraries = $cached;
+    }
+    else{
+        $libraries =
+          $unfiltered
+          ? Koha::Libraries->search( $search_params, { order_by => ['branchname'] } )->unblessed
+          : Koha::Libraries->search_filtered( $search_params, { order_by => ['branchname'] } )->unblessed;
+
+        $cache->set_in_cache( $cache_key, $libraries, { expiry => 36000 } );
+    }
 
     if ($ip_limit) {
         my $ip           = $ENV{'REMOTE_ADDR'};
@@ -112,6 +149,9 @@ sub all {
             and $l->{branchcode} eq ( C4::Context->userenv->{branch} // q{} ) )
         {
             $l->{selected} = 1;
+        }
+        else{
+            $l->{selected} = 0;
         }
     }
 
