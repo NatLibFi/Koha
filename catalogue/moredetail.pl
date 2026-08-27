@@ -56,6 +56,8 @@ my $itemnumber;
 if ( $query->param('itemnumber') && !$query->param('biblionumber') ) {
     $itemnumber = $query->param('itemnumber');
     my $item = Koha::Items->find($itemnumber);
+
+    output_and_exit( $query, $cookie, $template, 'unknown_item' ) unless $item;
     $biblionumber = $item->biblionumber;
 } else {
     $biblionumber = $query->param('biblionumber');
