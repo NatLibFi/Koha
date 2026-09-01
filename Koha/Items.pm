@@ -128,7 +128,8 @@ sub filter_by_for_hold {
                 itype => { -not_in => \@hold_not_allowed_itypes },
             },
             {
-                join => [ 'issue', 'reserves' ],
+                distinct => 1,
+                join     => [ 'issue', 'reserves' ],
             }
         );
     } else {
@@ -138,7 +139,8 @@ sub filter_by_for_hold {
                 'biblioitem.itemtype' => { -not_in => \@hold_not_allowed_itypes },
             },
             {
-                join => [ 'biblioitem', 'issue', 'reserves' ],
+                distinct => 1,
+                join     => [ 'biblioitem', 'issue', 'reserves' ],
             }
         );
     }
