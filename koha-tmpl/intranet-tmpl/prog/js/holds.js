@@ -1315,10 +1315,9 @@ $(document).ready(function () {
     }
 
     function load_closed_stack_requests_table() {
-        var holds = new Array();
         if (!$.fn.DataTable.isDataTable($("#closed-stack-requests-table"))) {
             var title;
-            const table = $("#closed-stack-requests-table").dataTable(
+            $("#closed-stack-requests-table").dataTable(
                 $.extend(true, {}, dataTablesDefaults, {
                     bAutoWidth: false,
                     sDom: "rt",
