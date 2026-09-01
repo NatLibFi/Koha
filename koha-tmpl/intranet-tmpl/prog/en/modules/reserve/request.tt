@@ -715,6 +715,21 @@
                         </li>
                     </ol>
                 </fieldset>
+                [% IF supplyill %]
+                    <fieldset class="rows">
+                        <legend>ISO18626 ILL request details</legend>
+                        <p>This hold will be linked to <a target="_blank" href="/cgi-bin/koha/ill/iso18626_requests/[% supplyill | url %]"> supply ILL [% supplyill | html %]</a>. </p
+                        ><p>This will update the ILL's status to "ExpectToSupply" and send an ISO18626 message to the requesting agency including the details below.</p>
+                        <li>
+                            <label for="iso18626_messageInfo_note">Message info note:</label>
+                            <textarea id="iso18626_messageInfo_note" name="iso18626_messageInfo_note" cols="30" rows="1"></textarea>
+                        </li>
+                        <li>
+                            <label for="iso18626_statusInfo_expectedDeliveryDate">Status info expected delivery date:</label>
+                            <input id="iso18626_statusInfo_expectedDeliveryDate" name="iso18626_statusInfo_expectedDeliveryDate" size="10" type="text" class="flatpickr" data-flatpickr-enable-time="true" />
+                        </li>
+                    </fieldset>
+                [% END %]
                 [% biblio_info = biblioloop.0 %]
 
                 [% UNLESS closed_stack_request %]
