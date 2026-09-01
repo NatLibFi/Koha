@@ -75,12 +75,32 @@ It returns a data URL suited for use in an img src attribute
 sub create_as_data_url {
     my ( $self, $type, $barcode, $args, $plot_args ) = @_;
 
+    my %supported_types = map { $_ => 1 } qw(
+        Code39
+        COOP2of5
+        EAN8
+        EAN13
+        IATA2of5
+        Industrial2of5
+        ITF
+        Matrix2of5
+        NW7
+        QRcode
+        UPCA
+        UPCE
+    );
+
+    die "Unsupported barcode type\n" unless $supported_types{$type};
+
     $args      //= {};
     $plot_args //= {};
 
-    my $data = GD::Barcode->new( $type, $barcode, $args )->plot(%$plot_args)->png;
+    my $barcode_image = GD::Barcode->new( $type, $barcode, $args );
+    die "Unable to create barcode\n" unless $barcode_image;
 
-    return 'data:image/png;base64,' . encode_base64($data);
+    my $data = $barcode_image->plot(%$plot_args)->png;
+
+    return 'data:image/png;base64,' . encode_base64( $data, q{} );
 }
 
 1;
