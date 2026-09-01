@@ -154,7 +154,8 @@ if ( C4::Context->preference('PatronSelfRegistrationAlert') ) {
 }
 
 my $pending_closed_stack_requests =
-    Koha::Holds->search( { branchcode => C4::Context->userenv->{branch} } )->filter_by_closed_stack_requests()
+    Koha::Holds->search( { branchcode => C4::Context->userenv->{branch} } )
+    ->filter_by_closed_stack_requests()
     ->search( { closed_stack_request_slip_printed => 0 } );
 
 $template->param(
