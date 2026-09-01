@@ -43,7 +43,6 @@ use Koha::Exceptions;
 use Koha::Exceptions::Checkin;
 use Koha::Exceptions::Item::Bundle;
 use Koha::Exceptions::Item::Transfer;
-use Koha::Holdings;
 use Koha::Item::Attributes;
 use Koha::Item::Availability::Checkin;
 use Koha::Exceptions::Item::Bundle;
@@ -61,6 +60,7 @@ use Koha::StockRotationItem;
 use Koha::StockRotationRotas;
 use Koha::TrackedLinks;
 use Koha::Policy::Holds;
+use Koha::Holdings;
 use Koha::Statistics;
 
 use base qw(Koha::Object);
