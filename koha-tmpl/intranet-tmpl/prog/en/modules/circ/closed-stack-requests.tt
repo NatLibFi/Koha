@@ -276,6 +276,7 @@
                 // Printing slip will change the reserve's status
                 // Reload the page to make the status change visible
                 $("#holdst .print-closed-stack-request-slip").on("click", function (ev) {
+                    ev.preventDefault();
                     const reserve_id = $(this).data("reserve-id");
                     const form = document.getElementById("print-closed-stack-request-slip-" + reserve_id);
                     if (form) {
