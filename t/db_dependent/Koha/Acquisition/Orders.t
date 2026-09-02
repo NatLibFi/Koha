@@ -33,9 +33,11 @@ my $builder = t::lib::TestBuilder->new;
 
 subtest 'filter_by_active() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
+
+    my $cancellation_date = '2025-01-01';
 
     my $basket_1 = $builder->build_object(
         {
@@ -54,48 +56,77 @@ subtest 'filter_by_active() tests' => sub {
     my $order_1 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
-            value => { orderstatus => 'cancelled' }
+            value => { orderstatus => 'cancelled', datecancellationprinted => $cancellation_date }
         }
     );
     my $order_2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
-            value => { orderstatus => 'completed' }
+            value => { orderstatus => 'completed', datecancellationprinted => undef }
         }
     );
     my $order_3 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
             value => {
-                basketno         => $basket_1->basketno,
-                orderstatus      => 'new',
-                quantity         => 1,
-                quantityreceived => 0,
+                basketno                => $basket_1->basketno,
+                orderstatus             => 'new',
+                quantity                => 1,
+                quantityreceived        => 0,
+                datecancellationprinted => undef,
             }
         }
     );
     my $order_4 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
-            value => { orderstatus => 'ordered', quantity => 1, quantityreceived => 0 }
+            value => {
+                orderstatus             => 'ordered',
+                quantity                => 1,
+                quantityreceived        => 0,
+                datecancellationprinted => undef,
+            }
         }
     );
     my $order_5 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
-            value => { orderstatus => 'partial', quantity => 2, quantityreceived => 1 }
+            value => {
+                orderstatus             => 'partial',
+                quantity                => 2,
+                quantityreceived        => 1,
+                datecancellationprinted => undef,
+            }
         }
     );
     my $order_6 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Orders',
             value => {
-                basketno         => $basket_2->basketno,
-                orderstatus      => 'new',
-                quantity         => 1,
-                quantityreceived => 0,
+                basketno                => $basket_2->basketno,
+                orderstatus             => 'new',
+                quantity                => 1,
+                quantityreceived        => 0,
+                datecancellationprinted => undef,
             }
         }
+    );
+    my @orders_with_cancellation_date = map {
+        $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Orders',
+                value => { %$_, datecancellationprinted => $cancellation_date },
+            }
+        )
+    } (
+        { orderstatus => 'ordered', quantity => 1, quantityreceived => 0 },
+        { orderstatus => 'partial', quantity => 2, quantityreceived => 1 },
+        {
+            basketno         => $basket_1->basketno,
+            orderstatus      => 'new',
+            quantity         => 1,
+            quantityreceived => 0,
+        },
     );
 
     my $this_orders_rs = Koha::Acquisition::Orders->search(
@@ -107,6 +138,7 @@ subtest 'filter_by_active() tests' => sub {
                 $order_4->ordernumber,
                 $order_5->ordernumber,
                 $order_6->ordernumber,
+                map { $_->ordernumber } @orders_with_cancellation_date,
             ]
         },
         { order_by => 'ordernumber' }
@@ -114,6 +146,11 @@ subtest 'filter_by_active() tests' => sub {
 
     my $rs = $this_orders_rs->filter_by_active;
 
+    is(
+        $rs->search( { ordernumber => [ map { $_->ordernumber } @orders_with_cancellation_date ] } )->count,
+        0,
+        'Orders with a cancellation date are not returned'
+    );
     is( $rs->count,             3, 'Only new (basket is standing), ordered and partial orders are returned' );
     is( $rs->next->ordernumber, $order_3->ordernumber, 'Expected order in resultset' );
     is( $rs->next->ordernumber, $order_4->ordernumber, 'Expected order in resultset' );
