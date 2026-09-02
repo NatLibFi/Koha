@@ -995,6 +995,8 @@ sub cancel {
                 }
             }
 
+            $self->cancellation_requests->delete;
+
             my $old_me = $self->_move_to_old;
 
             # Store data for plugin hook (to be called after transaction)
@@ -1098,6 +1100,8 @@ sub fill {
                     $params->{item_id} ? ( itemnumber => $params->{item_id} ) : (),
                 }
             );
+
+            $self->cancellation_requests->delete;
 
             my $old_me = $self->_move_to_old;
 
