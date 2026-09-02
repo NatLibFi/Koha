@@ -38,6 +38,8 @@ use C4::XSLT;
 use Koha::SearchEngine::Elasticsearch;
 use LWP::Simple qw/get/;
 
+use Search::Elasticsearch ();
+
 my $input = CGI->new;
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
@@ -61,6 +63,7 @@ try {
         {
             index => $es->index_name,
             id    => $biblionumber,
+            ($Search::Elasticsearch::VERSION >= 8.00 ? () : (type  => '_doc')),
         }
     );
 } catch {
