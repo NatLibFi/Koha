@@ -75,6 +75,16 @@ $estimateddeliverydateto ||=
     ? dt_from_string()
     : undef;
 
+###### ------- HOTFIX to be later developed as Preferences configurable value by Petro
+# if no date from and no delay -- let's limit results from 1 month ago:
+if ( ! $delay
+     and not defined $estimateddeliverydatefrom
+     and not defined $estimateddeliverydateto ) {
+
+    $estimateddeliverydatefrom = dt_from_string() - DateTime::Duration->new( months => 1 );
+}
+###### <<<<<<< ------- HOTFIX to be later developed as Preferences configurable value by Petro
+
 my $branch = $input->param('branch');
 my $op     = $input->param('op');
 
