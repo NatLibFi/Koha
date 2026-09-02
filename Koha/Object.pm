@@ -854,23 +854,25 @@ Returns the passed params, converted from API naming into the model.
 =cut
 
 sub _recursive_fixup {
-    my ( $self, $key, $value, $column_info ) = @_;
+    my ( $self, $key, $value, $column_info, $koha_field_name ) = @_;
 
     if ( ref($value) && ref($value) eq 'HASH' ) {
         my $hash;
         for my $k ( keys %$value ) {
-            $hash->{$k} = $self->_recursive_fixup( $key, $value->{$k}, $column_info );
+            $hash->{$k} = $self->_recursive_fixup( $key, $value->{$k}, $column_info, $koha_field_name );
         }
         return $hash;
 
     } elsif ( ref($value) && ref($value) eq 'ARRAY' ) {
-        return [ map { $self->_recursive_fixup( $key, $_, $column_info ) } @$value ];
+        return [ map { $self->_recursive_fixup( $key, $_, $column_info, $koha_field_name ) } @$value ];
     } else {
         if ( $column_info->{is_boolean} ) {
 
             # TODO: Remove when D8 is formally deprecated
             # Handle booleans gracefully
             $value = ($value) ? 1 : 0;
+        } elsif ( ! defined $column_info->{data_type} ) {
+            warn "DEBUG: Unknown API column requested: \$koha_field_name=[".($koha_field_name//'-undef-')."], key/value: ($key, $value)\n";
         } elsif ( _date_or_datetime_column_type( $column_info->{data_type} ) ) {
             if ( defined $value && $value !~ m{^%|%$} ) {
                 try {
@@ -916,7 +918,7 @@ sub attributes_from_api {
 
             # TODO No fixup if the name is from an embed (eg. suggester.borrowernumber)
             # See warnings produced by t/db_dependent/Koha/REST/Plugin/Objects.t if this test is removed
-            $params->{$koha_field_name} = $self->_recursive_fixup( $key, $value, $columns_info->{$koha_field_name} );
+            $params->{$koha_field_name} = $self->_recursive_fixup( $key, $value, $columns_info->{$koha_field_name}, $koha_field_name );
         } else {
             $params->{$koha_field_name} = $value;
         }
