@@ -37,9 +37,9 @@
                 <button class="btn btn-default" id="newRecord"><i class="fa fa-plus"></i> New record</button>
                 <button class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" id="newRecordDefault" href="/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=">Default framework</a></li>
+                    <li><a class="dropdown-item" [% default_framework == '' ? 'id="newRecordDefault" style="font-weight:bold"' : '' %] href="/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=">Default framework</a></li>
                     [% FOREACH framework IN frameworks %]
-                        <li><a class="dropdown-item" href="/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=[% framework.frameworkcode | uri %]">[% framework.frameworktext | html %]</a></li>
+                        <li><a class="dropdown-item" [% default_framework == framework.frameworkcode ? 'id="newRecordDefault" style="font-weight:bold"' : '' %] href="/cgi-bin/koha/cataloguing/addbiblio.pl?frameworkcode=[% framework.frameworkcode | uri %]">[% framework.frameworktext | html %]</a></li>
                     [% END %]
                 </ul>
             </div>
