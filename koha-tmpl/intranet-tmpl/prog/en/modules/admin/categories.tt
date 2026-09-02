@@ -777,7 +777,7 @@
                                 [% END %]
                                 <td>
                                     [% SET library_limits = category.library_limits %]
-                                    [% IF library_limits.count > 0 %]
+                                    [% IF library_limits AND library_limits.count > 0 %]
                                         [% library_str = "" %]
                                         [% FOREACH library IN library_limits %]
                                             [%- IF loop.first -%]
