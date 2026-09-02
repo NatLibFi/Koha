@@ -293,6 +293,15 @@ function renderObject(data, type, row) {
                 "</a>"
             );
         }
+        if (info.substr(0, 7) == "holding") {
+            return (
+                '<a href="/cgi-bin/koha/cataloguing/addholding.pl?op=edit&holding_id=' +
+                encodeURIComponent(obj) +
+                '">' +
+                __("Holding %s").format(escapeHtml(obj)) +
+                "</a>"
+            );
+        }
         return escapeHtml(obj);
     }
 

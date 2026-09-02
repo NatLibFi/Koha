@@ -183,7 +183,7 @@
                 <tbody>
                     <tr>
                         <td>&nbsp;</td>
-                        <td>Default framework</td>
+                        <td>Default bibliographic framework</td>
                         <td>
                             <div class="btn-group dropup">
                                 <a class="btn btn-default btn-xs dropdown-toggle" id="frameworkactions[% loo.frameworkcode | html %]" role="button" data-bs-toggle="dropdown" href="#"> Actions </a>

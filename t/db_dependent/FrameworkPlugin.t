@@ -221,6 +221,7 @@ sub selected_plugins {
         @fi = qw| barcode.pl dateaccessioned.pl marc21_orgcode.pl
             marc21_field_005.pl marc21_field_006.pl marc21_field_007.pl marc21_field_008.pl
             marc21_field_008_authorities.pl marc21_leader.pl marc21_leader_authorities.pl
+            marc21_field_008_holdings.pl marc21_leader_holdings.pl
             unimarc_leader.pl unimarc_field_100.pl unimarc_field_105.pl
             unimarc_field_106.pl unimarc_field_110.pl unimarc_field_120.pl
             unimarc_field_130.pl unimarc_field_140.pl unimarc_field_225a.pl
