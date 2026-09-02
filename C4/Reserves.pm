@@ -2285,7 +2285,17 @@ sub MoveReserve {
                 }
             ) // 1;
 
-            $hold->fill( { item_id => $item->id } ) if $fill_other_biblio_holds_policy;
+            if ($fill_other_biblio_holds_policy) {
+                if ( $hold->is_waiting ) {
+
+                    # Keep the hold linked to the pickup-shelf item until staff
+                    # processes the cancellation request.
+                    $hold->add_cancellation_request
+                        unless $hold->cancellation_requested;
+                } else {
+                    $hold->fill( { item_id => $item->id } );
+                }
+            }
         }
     }
 
