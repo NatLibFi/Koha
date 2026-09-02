@@ -32,6 +32,7 @@ use C4::Output qw( output_html_with_http_headers );
 use C4::Auth   qw( get_template_and_user );
 use C4::Biblio qw( GetXmlBiblio );
 use C4::XSLT;
+use Koha::Holdings;
 
 use Koha::Biblios;
 use Koha::Import::Records;
@@ -49,13 +50,16 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $biblionumber = $input->param('id');
 my $importid     = $input->param('importid');
 my $view         = $input->param('viewas') || '';
+my $holding_id   = $input->param('holding_id') // '';
 
 my $marcflavour = C4::Context->preference('marcflavour');
 
 my $record;
 my $record_type = 'biblio';
 my $format      = $marcflavour eq 'UNIMARC' ? 'UNIMARC' : 'USMARC';
-if ($importid) {
+if ($holding_id) {
+    $record = Koha::Holdings->find($holding_id)->metadata()->record();
+} elsif ($importid) {
     my $import_record = Koha::Import::Records->find($importid);
     if ($import_record) {
         if ( $marcflavour eq 'UNIMARC' && $import_record->record_type eq 'auth' ) {
@@ -74,7 +78,7 @@ if ( !ref $record ) {
 }
 
 if ( $view eq 'card' || $view eq 'html' ) {
-    my $xml = $importid ? $record->as_xml($format) : GetXmlBiblio($biblionumber);
+    my $xml = ( $importid || $holding_id ) ? $record->as_xml($format) : GetXmlBiblio($biblionumber);
     my $xsl;
     if ( $view eq 'card' ) {
         $xsl = $marcflavour eq 'UNIMARC' ? 'UNIMARC_compact.xsl' : 'compact.xsl';
