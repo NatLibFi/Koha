@@ -22,7 +22,6 @@ properties:
       - string
       - "null"
     description: The item's barcode
-    maxLength: 20
   acquisition_date:
     type:
       - string
