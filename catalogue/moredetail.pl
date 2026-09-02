@@ -70,6 +70,8 @@ my $biblionumber;
 my $itemnumber;
 if ( $query->param('itemnumber') && !$query->param('biblionumber') ) {
     $itemnumber = $query->param('itemnumber');
+    # TODO: prevent DIEs,
+    # Can't call method "biblionumber" on an undefined value at /usr/share/koha/intranet/cgi-bin/catalogue/moredetail.pl line 79.
     my $item = Koha::Items->find($itemnumber);
 
     # bring global error if no $item record exists:
