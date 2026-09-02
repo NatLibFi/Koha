@@ -532,9 +532,10 @@ sub get_columns_for {
         };
     }
 
-    my $sql          = "SHOW COLUMNS FROM $table";                                      # TODO not db agnostic
-    my $table_prefix = $table . q|.|;
-    my $rows         = C4::Context->dbh->selectall_arrayref( $sql, { Slice => {} } );
+    my $dbh = C4::Context->dbh;
+    my $sql          = "SHOW COLUMNS FROM " . $dbh->quote_identifier($table); # TODO not db agnostic
+    my $table_prefix = $dbh->quote_identifier($table) . q|.|;
+    my $rows         = $dbh->selectall_arrayref( $sql, { Slice => {} } );
     for my $row ( @{$rows} ) {
         next
             if $row->{'Field'} eq 'timestamp'
