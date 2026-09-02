@@ -48,10 +48,12 @@ function LoadIssuesTable() {
         renew_column.force_visibility = 1;
     } else {
         renew_column.is_hidden = 0;
-        checkin_column.is_hidden = 0;
     }
     renew_column.force_visibility = 1;
-    checkin_column.force_visibility = 1;
+
+    if (checkin_column.cannot_be_toggled) {
+        checkin_column.force_visibility = 1;
+    }
 
     let claims_returned_column = table_settings_issues_table.columns.find(
         c => c.columnname == "claims_returned"
