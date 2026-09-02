@@ -160,6 +160,18 @@ on this order (checking quantity and quantityreceived).
 
 sub filter_by_active {
     my ($self) = @_;
+
+    my $quantityreceived;
+    # OPAC dies with: Unknown column 'me.quantity' in 'where clause'
+    # but works in Intranet with other object (hierarchy).
+    # But if to remove 'me.' it goes vise versa, works in OPAC and dies in another place.
+    if ( $self && ref($self) && ref($self) eq 'Koha::Acquisition::Orders' ) {
+        $quantityreceived = { '<', \['COALESCE(quantity,0)'] };
+    } else {
+        $quantityreceived = { '<', \['COALESCE(me.quantity,0)'] };
+        warn "[$self] SELF is " . ref($self);
+    }
+
     return $self->search(
         {
             '-or' => [
@@ -169,7 +181,8 @@ sub filter_by_active {
                 },
                 { 'orderstatus' => [ 'ordered', 'partial' ] }
             ],
-            quantityreceived => { '<', \['COALESCE(me.quantity,0)'] },
+            # quantityreceived => { '<', \['COALESCE(me.quantity,0)'] },
+            quantityreceived => $quantityreceived,
         },
         { join => 'basket' }
     );
