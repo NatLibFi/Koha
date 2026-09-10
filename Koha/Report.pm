@@ -277,6 +277,14 @@ sub prep_report {
         }
     }
 
+    my $instance_limit = C4::Context->config('total_running_reports_per_instance_limit');
+    if ($instance_limit) {
+        my $running_count = Koha::Reports->running_count();
+        if ( $running_count >= $instance_limit ) {
+            Koha::Exceptions::Report::InstanceTotalRunning->throw( limit => $instance_limit );
+        }
+    }
+
     $sql .= " /* { saved_sql.id: $report_id } { user_id: $user_id } */";
 
     return $sql, $headers;
