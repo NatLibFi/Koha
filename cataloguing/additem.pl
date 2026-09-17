@@ -134,7 +134,7 @@ my $holding_id = $input->param('holding_id') // '';
 my $op             = $input->param('op') || q{};
 my $hostitemnumber = $input->param('hostitemnumber');
 my $marcflavour    = C4::Context->preference("marcflavour");
-my $searchid       = $input->param('searchid');
+my $searchid       = $input->param('searchid') // q{};
 
 # fast cataloguing datas
 my $fa_circborrowernumber  = $input->param('circborrowernumber');
@@ -146,7 +146,7 @@ my $item_group             = $input->param('item_group');
 my $item_group_description = $input->param('item_group_description');
 my $display_order          = $input->param('item_group_display_order');
 
-our $frameworkcode = &GetFrameworkCode($biblionumber);
+our $frameworkcode = &GetFrameworkCode($biblionumber) // '';
 
 # Defining which userflag is needing according to the framework currently used
 my $fast_cataloging_mode =
