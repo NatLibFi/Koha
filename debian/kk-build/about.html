@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+
+    <link rel="shortcut icon" href="/intranet-tmpl/prog/img/favicon.ico" type="image/x-icon" />
+
+    <title>KK-Koha v%OUR_RELEASE%.%OUR_BUILD_NUMBER%</title>
+
+    <style>
+    html { font-family: sans-serif; }
+    .content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .centered {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+    }
+    .give_a_little_space {
+        margin-top: 8px;
+    }
+    a[href ^= "http"]:after {
+        content: " " url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAVklEQVR4Xn3PgQkAMQhDUXfqTu7kTtkpd5RA8AInfArtQ2iRXFWT2QedAfttj2FsPIOE1eCOlEuoWWjgzYaB/IkeGOrxXhqB+uA9Bfcm0lAZuh+YIeAD+cAqSz4kCMUAAAAASUVORK5CYII=);
+    }
+    div.logo {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: auto;
+    }
+    div.logo a {
+        text-decoration: none;
+    }
+    div.logo a:after {
+        content: "";
+    }
+    img.logo {
+/*        width: 100%;*/
+        height: 150px;
+        padding: 20px 20px;
+    }
+    </style>
+</head><body>
+<div class="logo">
+    <a href="https://www.kiwi.fi/display/KK/KK-Koha+builds+changelogs" title="KK-Koha builds changelogs" target="_blank">
+        <img class="logo" src="/intranet-tmpl/prog/img/kk-logo2.jpg" />
+    </a>
+    <a href="https://perlkohacon.fi/Team.html" title="KK Team" target="_blank">
+        <img class="logo" src="/intranet-tmpl/prog/img/nt-logo2.png" />
+    </a>
+    <a href="https://perlkohacon.fi/ULRI.html" title="ULRI - Ukrainian Libraries help
+and post-war Restoration Initiative" target="_blank">
+        <img class="logo" src="/intranet-tmpl/prog/img/nt-logo1.svg" />
+    </a>
+</div>
+<div class="content">
+    <h1 class="centered">
+        KK-Koha v%OUR_RELEASE%.%OUR_BUILD_NUMBER%
+    </h1>
+    <div class="centered">
+        Kansalliskirjasto Koha build made by KK Koha Dev Department
+    </div>
+    <div class="centered give_a_little_space">
+        <h2><a href="https://www.kiwi.fi/display/KK/KK-team+release+25.05+%2823nd%29+changelogs" target="_blank">
+            KK-team release 25.05 (23nd) changelogs
+        </a></h2>
+    </div>
+    <div class="centered give_a_little_space">
+        <a href="/kk-build.txt">
+            build tech info
+        </a>&nbsp;·&nbsp;
+        <a href="/cgi-bin/koha/admin/admin-home.pl">
+            admin
+        </a>&nbsp;·&nbsp;
+        <a href="/cgi-bin/koha/about.pl">
+            server info
+        </a>
+    </div>
+</div>
+</body></html>
