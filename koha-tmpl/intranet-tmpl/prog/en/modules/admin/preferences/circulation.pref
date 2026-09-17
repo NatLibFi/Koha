@@ -212,6 +212,11 @@ Circulation:
                   0: "Don't allow"
             - staff to override and check out items when the patron has reached the maximum number of allowed checkouts.
         -
+            - Set the global hard limit on active checkouts per patron to
+            - pref: MaxCheckoutsHardLimit
+              class: integer
+            - regardless of circulation rules (leave blank to disable; 0 blocks all new checkouts). Staff can override this limit when AllowTooManyOverride is enabled.
+        -
             - pref: AllowNotForLoanOverride
               choices:
                   1: Allow
