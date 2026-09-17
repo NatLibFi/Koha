@@ -1,5 +1,6 @@
 [% USE raw %]
 [% USE Asset %]
+[% USE Holdings %]
 [% USE Koha %]
 [% USE KohaDates %]
 [% USE Price %]
@@ -234,6 +235,8 @@
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'acquisitions-search.inc' %]
 [% END %]
+
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
 
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
@@ -491,6 +494,7 @@
                                 <tr>
                                     <th class="no-export">Actions</th>
                                     <th>Barcode</th>
+                                    [% IF (ShowSummaryHoldings) %]<th id="holdings_record">Holdings record</th>[% END %]
                                     <th>Home library</th>
                                     <th>Holding library</th>
                                     <th>Not for loan</th>
