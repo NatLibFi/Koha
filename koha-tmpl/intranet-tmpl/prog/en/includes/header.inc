@@ -95,6 +95,37 @@
                 [% END %]
             </ul>
 
+            [% IF !( Koha.Preference('IndependentBranches') && !CAN_user_superlibrarian && !CAN_user_editcatalogue_edit_catalogue ) && (Koha.Preference('ShowQuickBranchSelector') ) %]
+                <ul id="branch-menu" class="nav navbar-nav">
+                    <li class="nav-item dropdown" id="quick-branch-dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="quick-branch-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="nav-link-icon"><i class="fa fa-fw fa-code-branch" title="Branches"></i>: [% Branches.GetLoggedInBranchcode | html %]</span>
+                            <span class="nav-link-text" style="color: white">Library: [% Branches.GetLoggedInBranchname | html %]</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="quick-branch-toggle">
+                            <form id="select_branches_form" method="post" action="/cgi-bin/koha/circ/set-library.pl">
+                                [% INCLUDE 'csrf-token.inc' %]
+                                <input type="hidden" name="op" value="cud-set-library">
+                                <input type="hidden" name="branch" value="[% Branches.GetLoggedInBranchcode | html %]">
+                            </form>
+                            [% FOREACH l IN Branches.all() %]
+                                <li>
+                                    [% IF l.selected %]
+                                        <span class="dropdown-item active" style="background-color: #408540; color: white;">
+                                            <i class="fa fa-fw fa-check"></i> [% l.branchname | html %]
+                                        </span>
+                                    [% ELSE %]
+                                        <a class="dropdown-item quick-branch-selection-item" href="#" data-branchcode="[% l.branchcode | html %]">
+                                            <i class="fa fa-fw">&nbsp;</i> [% l.branchname | html %]
+                                        </a>
+                                    [% END %]
+                                </li>
+                            [% END %]
+                        </ul>
+                    </li>
+                </ul>
+            [% END %]
+
             <ul id="user-menu" class="nav navbar-nav">
                 [% IF ( loggedinusername ) %]
                     <li class="nav-item dropdown" id="logged-in-dropdown">
@@ -108,6 +139,7 @@
                                     >[% logged_in_user.userid | html %]</span
                                 >
                                 <span class="loggedincategorycode content_hidden" data-loggedincategorycode="[% logged_in_user.categorycode | html %]">[% logged_in_user.categorycode | html %]</span>
+                                [% IF ( !Koha.Preference('ShowQuickBranchSelector') ) %]
                                 [% IF ( StaffLoginRestrictLibraryByIP ) %]
                                     <brand> [% Branches.GetLoggedInBranchname | html %] </brand>
                                 [% ELSE %]
@@ -115,6 +147,7 @@
                                         <span class="logged-in-branch-name" data-logged-in-branch-name="[% Branches.GetLoggedInBranchname | html %]">[% Branches.GetLoggedInBranchname | html %]</span>
                                         <span class="logged-in-branch-code content_hidden" data-logged-in-branch-code="[% Branches.GetLoggedInBranchcode | html %]">[% Branches.GetLoggedInBranchcode | html %]</span>
                                     </strong>
+                                [% END %]
                                 [% END %]
                                 [% IF Koha.Preference('UseCirculationDesks') && Desks.ListForLibrary.count %]
                                     <span class="separator">|</span>
