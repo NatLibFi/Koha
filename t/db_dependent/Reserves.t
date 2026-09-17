@@ -698,21 +698,204 @@ MoveReserve( $item, $patron );
 ($status) = CheckReserves($item);
 is( $status, '', 'MoveReserve filled hold' );
 
-#   hold from A waiting, today, no fut holds: MoveReserve should fill it
-my $other_item = $builder->build_sample_item( { biblionumber => $biblio->id } );
-AddReserve(
-    {
-        branchcode     => $branch_1,
-        borrowernumber => $borrowernumber,
-        biblionumber   => $bibnum,
-        priority       => 1,
-        found          => 'W',
-        itemnumber     => $other_item->id,
-    }
-);
-MoveReserve( $item, $patron );
-($status) = CheckReserves($item);
-is( $status, '', 'MoveReserve filled waiting hold' );
+subtest 'MoveReserve preserves a waiting title-level hold when another item is checked out' => sub {
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'ConfirmFutureHolds',    0 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',    0 );
+    t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'ReservesNeedReturns',   1 );
+
+    my $set_fill_other_holds_rule = sub {
+        my ( $patron, $item, $value ) = @_;
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode => $patron->branchcode,
+                itemtype   => $item->itype,
+                rule_name  => 'fill_other_biblio_holds_policy',
+                rule_value => $value,
+            }
+        );
+    };
+
+    my $capture_title_hold = sub {
+        my ( $patron, $item ) = @_;
+        my $hold_id = AddReserve(
+            {
+                branchcode     => $patron->branchcode,
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $item->biblionumber,
+                priority       => 1,
+            }
+        );
+        ModReserveAffect( $item->itemnumber, $patron->borrowernumber, 0, $hold_id );
+        return Koha::Holds->find($hold_id);
+    };
+
+    subtest 'Waiting title-level hold gets one cancellation request' => sub {
+        my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $itype   = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 0 } } );
+        my $biblio  = $builder->build_sample_biblio;
+        my $item_a  = $builder->build_sample_item(
+            {
+                biblionumber => $biblio->biblionumber,
+                library      => $library->branchcode,
+                itype        => $itype->itemtype,
+                notforloan   => 0,
+            }
+        );
+        my $item_b = $builder->build_sample_item(
+            {
+                biblionumber => $biblio->biblionumber,
+                library      => $library->branchcode,
+                itype        => $itype->itemtype,
+                notforloan   => 0,
+            }
+        );
+        $builder->build_sample_item(
+            {
+                biblionumber => $biblio->biblionumber,
+                library      => $library->branchcode,
+                itype        => $itype->itemtype,
+                notforloan   => 0,
+            }
+        );
+        my $patron =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+        t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
+        $set_fill_other_holds_rule->( $patron, $item_b, 1 );
+
+        my $hold    = $capture_title_hold->( $patron, $item_a );
+        my $hold_id = $hold->id;
+        ok( $hold->is_waiting,       'Title-level hold was captured and is waiting' );
+        ok( !$hold->item_level_hold, 'Captured hold remains title-level' );
+
+        my $issue = AddIssue( $patron, $item_b->barcode );
+        ok( $issue, 'Checkout of item B succeeds' );
+
+        $hold = Koha::Holds->find($hold_id);
+        ok( $hold, 'Waiting hold remains active after checkout of item B' );
+        is( $hold && $hold->found,      'W',         'Hold remains waiting' );
+        is( $hold && $hold->itemnumber, $item_a->id, 'Hold remains linked to item A' );
+        is( $hold ? $hold->cancellation_requests->count : 0, 1,     'One cancellation request is created' );
+        is( Koha::Old::Holds->find($hold_id),                undef, 'Hold is not moved to history' );
+        is( $biblio->items->filter_by_available->count,      1, 'Only the unheld, unchecked-out item is available' );
+
+        my $queue_items = C4::HoldsQueue::GetItemsAvailableToFillHoldRequestsForBib( $biblio->id );
+        ok(
+            !grep( { $_->{itemnumber} == $item_a->id } @{$queue_items} ),
+            'Item A is not an available HoldsQueue candidate'
+        );
+
+        MoveReserve( $item_b, $patron );
+        $hold = Koha::Holds->find($hold_id);
+        is(
+            $hold ? $hold->cancellation_requests->count : 0,
+            1, 'Repeated processing does not add another request'
+        );
+
+        my $issue_a = AddIssue( $patron, $item_a->barcode );
+        ok( $issue_a, 'Later checkout of item A succeeds' );
+
+        ok( !Koha::Holds->find($hold_id), 'Checkout of item A fills the active hold' );
+        my $old_hold = Koha::Old::Holds->find($hold_id);
+        is( $old_hold->found,      'F',         'Hold is filled by item A' );
+        is( $old_hold->itemnumber, $item_a->id, 'Filled hold remains linked to item A' );
+        is(
+            $schema->resultset('HoldCancellationRequest')->search( { hold_id => $hold_id } )->count,
+            0,
+            'Filling the hold removes its cancellation request'
+        );
+    };
+
+    subtest 'Non-waiting title-level hold is still filled' => sub {
+        my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $itype   = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 0 } } );
+        my $biblio  = $builder->build_sample_biblio;
+        my $item    = $builder->build_sample_item(
+            {
+                biblionumber => $biblio->id,
+                library      => $library->branchcode,
+                itype        => $itype->itemtype,
+                notforloan   => 0,
+            }
+        );
+        my $patron =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+        $set_fill_other_holds_rule->( $patron, $item, 1 );
+        my $hold_id = AddReserve(
+            {
+                branchcode     => $library->branchcode,
+                borrowernumber => $patron->id,
+                biblionumber   => $biblio->id,
+                priority       => 1,
+            }
+        );
+
+        AddIssue( $patron, $item->barcode );
+        ok( !Koha::Holds->find($hold_id), 'Non-waiting hold is no longer active' );
+        my $old_hold = Koha::Old::Holds->find($hold_id);
+        is( $old_hold->found,      'F',       'Non-waiting hold is filled' );
+        is( $old_hold->itemnumber, $item->id, 'Filled hold is linked to the checked-out item' );
+    };
+
+    subtest 'Policy disabled leaves the waiting hold unchanged' => sub {
+        my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $itype   = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 0 } } );
+        my $biblio  = $builder->build_sample_biblio;
+        my $item_a  = $builder->build_sample_item(
+            { biblionumber => $biblio->id, library => $library->id, itype => $itype->id, notforloan => 0 } );
+        my $item_b = $builder->build_sample_item(
+            { biblionumber => $biblio->id, library => $library->id, itype => $itype->id, notforloan => 0 } );
+        my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->id } } );
+        $set_fill_other_holds_rule->( $patron, $item_b, 0 );
+        my $hold = $capture_title_hold->( $patron, $item_a );
+
+        AddIssue( $patron, $item_b->barcode );
+        $hold = Koha::Holds->find( $hold->id );
+        is( $hold->found,                        'W', 'Waiting hold remains waiting' );
+        is( $hold->cancellation_requests->count, 0,   'No cancellation request is created' );
+    };
+
+    subtest 'Item-level and other-patron holds are unchanged' => sub {
+        my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $itype   = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 0 } } );
+        my $biblio  = $builder->build_sample_biblio;
+        my $item_a  = $builder->build_sample_item(
+            { biblionumber => $biblio->id, library => $library->id, itype => $itype->id, notforloan => 0 } );
+        my $item_b = $builder->build_sample_item(
+            { biblionumber => $biblio->id, library => $library->id, itype => $itype->id, notforloan => 0 } );
+        my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->id } } );
+        my $other_patron =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->id } } );
+        $set_fill_other_holds_rule->( $patron, $item_b, 1 );
+
+        my $item_hold_id = AddReserve(
+            {
+                branchcode     => $library->id,
+                borrowernumber => $patron->id,
+                biblionumber   => $biblio->id,
+                itemnumber     => $item_a->id,
+                priority       => 1,
+            }
+        );
+        ModReserveAffect( $item_a->id, $patron->id, 0, $item_hold_id );
+        MoveReserve( $item_b, $patron );
+        my $item_hold = Koha::Holds->find($item_hold_id);
+        ok( $item_hold && $item_hold->is_waiting, 'Waiting item-level hold is untouched' );
+        is( $item_hold->cancellation_requests->count, 0, 'Item-level hold gets no cancellation request' );
+
+        $item_hold->cancel;
+        my $other_hold = $capture_title_hold->( $other_patron, $item_a );
+        MoveReserve( $item_b, $patron );
+        $other_hold = Koha::Holds->find( $other_hold->id );
+        ok( $other_hold && $other_hold->is_waiting, 'Other patron\'s waiting hold is untouched' );
+        is( $other_hold->cancellation_requests->count, 0, 'Other patron\'s hold gets no cancellation request' );
+    };
+
+    $schema->storage->txn_rollback;
+};
 
 #   hold from A pos 1, tomorrow, no fut holds: not filled
 $resdate = dt_from_string();
