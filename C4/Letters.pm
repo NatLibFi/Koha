@@ -1207,7 +1207,7 @@ sub GetQueuedMessages {
 
     my $dbh       = C4::Context->dbh();
     my $statement = <<'ENDSQL';
-SELECT message_id, borrowernumber, subject, content, message_transport_type, status, time_queued, updated_on, failure_code, from_address, to_address, cc_address
+SELECT message_id, borrowernumber, subject, content, message_transport_type, status, time_queued, updated_on, failure_code, response_message, from_address, to_address, cc_address
 FROM message_queue
 ENDSQL
 
@@ -1262,7 +1262,7 @@ sub GetMessage {
     my $dbh = C4::Context->dbh;
     return $dbh->selectrow_hashref(
         q|
-        SELECT message_id, borrowernumber, subject, content, metadata, letter_code, message_transport_type, status, time_queued, updated_on, to_address, from_address, reply_address, content_type, failure_code
+        SELECT message_id, borrowernumber, subject, content, metadata, letter_code, message_transport_type, status, time_queued, updated_on, to_address, from_address, reply_address, content_type, failure_code, response_message
         FROM message_queue
         WHERE message_id = ?
     |, {}, $message_id
@@ -1378,7 +1378,7 @@ sub _get_unsent_messages {
 
     my $dbh       = C4::Context->dbh();
     my $statement = qq{
-        SELECT mq.message_id, mq.borrowernumber, mq.subject, mq.content, mq.message_transport_type, mq.status, mq.time_queued, mq.from_address, mq.reply_address, mq.to_address, mq.content_type, b.branchcode, mq.letter_code, mq.failure_code, mq.letter_id
+        SELECT mq.message_id, mq.borrowernumber, mq.subject, mq.content, mq.message_transport_type, mq.status, mq.time_queued, mq.from_address, mq.reply_address, mq.to_address, mq.content_type, b.branchcode, mq.letter_code, mq.failure_code, mq.response_message, mq.letter_id
         FROM message_queue mq
         LEFT JOIN borrowers b ON b.borrowernumber = mq.borrowernumber
         WHERE status = ?
@@ -1613,8 +1613,9 @@ sub _send_message_by_email {
         if !$message->{to_address}
         || $message->{to_address} ne $email->email->header('To');
 
-    $smtp_transports->{ $smtp_server->id // 'default' } ||= $smtp_server->transport;
-    my $smtp_transport = $smtp_transports->{ $smtp_server->id // 'default' };
+    my $smtp_transport_key = $smtp_server->id // 'default';
+    $smtp_transports->{$smtp_transport_key} ||= $smtp_server->transport;
+    my $smtp_transport = $smtp_transports->{$smtp_transport_key};
 
     _update_message_from_address( $message->{'message_id'}, $email->email->header('From') )
         if !$message->{from_address}
@@ -1632,15 +1633,25 @@ sub _send_message_by_email {
         );
         return 1;
     } catch {
+        my $exception = $_;
+
+        delete $smtp_transports->{$smtp_transport_key};
+        try {
+            $smtp_transport->disconnect;
+        } catch {
+
+            # A disconnect failure must not replace the delivery failure.
+        };
+
+        my $response_message = Koha::Email->exception_message($exception);
         _set_message_status(
             {
-                message_id   => $message->{'message_id'},
-                status       => 'failed',
-                failure_code => 'SENDMAIL'
+                message_id       => $message->{'message_id'},
+                status           => 'failed',
+                failure_code     => 'SENDMAIL',
+                response_message => $response_message,
             }
         );
-        carp "$_";
-        carp "$Mail::Sendmail::error";
         return;
     };
 }
@@ -1765,11 +1776,12 @@ sub _set_message_status {
     }
 
     my $dbh       = C4::Context->dbh();
-    my $statement = 'UPDATE message_queue SET status= ?, failure_code= ? WHERE message_id = ?';
+    my $statement = 'UPDATE message_queue SET status = ?, failure_code = ?, response_message = ? WHERE message_id = ?';
     my $sth       = $dbh->prepare($statement);
     my $result    = $sth->execute(
         $params->{'status'},
         $params->{'failure_code'} || '',
+        $params->{'response_message'} // '',
         $params->{'message_id'}
     );
     return $result;
