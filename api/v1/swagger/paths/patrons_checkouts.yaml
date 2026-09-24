@@ -45,6 +45,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -70,6 +71,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: GET /patrons/{patron_id}/checkouts
     x-koha-authorization:
       permissions:
         - circulate: circulate_remaining_permissions
