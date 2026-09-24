@@ -502,6 +502,70 @@ subtest 'supported non-Patron API references add exact patron subjects' => sub {
     done_testing;
 };
 
+subtest 'Patron serialization uses the positive accessibility decision' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log',         1 );
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', 1000 );
+    @{ $logger->messages } = ();
+
+    my $actor  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $actor->branchcode,
+                surname    => 'REDACTED_PRIVATE_SENTINEL',
+            },
+        }
+    );
+    my $event = new_event(
+        actor_id => $actor->id,
+        surface  => 'patrons.record.api',
+        breadth  => 'record',
+    );
+
+    my $patron_mock = Test::MockModule->new('Koha::Patron');
+    $patron_mock->redefine( is_accessible => sub { return 0 } );
+
+    throws_ok {
+        $patron->to_api(
+            {
+                user               => $actor,
+                _patron_disclosure => { event => $event, policy => { strategies => { path_patron => 1 } } },
+            }
+        );
+    }
+    qr/requires the serialized_patrons disclosure strategy/,
+        'an active covered operation cannot serialize a Patron through an undeclared strategy';
+
+    my $representation = $patron->to_api(
+        {
+            user               => $actor,
+            _patron_disclosure => { event => $event, policy => { strategies => { serialized_patrons => 1 } } },
+        }
+    );
+
+    ok(
+        exists $representation->{surname} && !defined $representation->{surname},
+        'the inaccessible Patron representation retains a null redacted field'
+    );
+    is( $representation->{library_id}, $patron->branchcode, 'the mapped unredacted field remains visible' );
+
+    $event->commit;
+    my $log = disclosure_logs()->single;
+    is( $log->object, $patron->id, 'the internal subject ID is exact even though the response ID is redacted' );
+    is_deeply(
+        JSON->new->decode( $log->info )->{data_classes},
+        [qw( circulation_current notes_restrictions profile )],
+        'classes come from positively visible mapped and calculated fields, not null-key presence'
+    );
+    is( disclosure_logs()->count, 1, 'serialization writes one subject row' );
+
+    $schema->storage->txn_rollback;
+};
+
 subtest 'exact transactional rows, class union, and event identity' => sub {
     $schema->storage->txn_begin;
     t::lib::Mocks::mock_config( 'patron_data_disclosure_log',         1 );
