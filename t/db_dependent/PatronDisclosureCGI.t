@@ -20,6 +20,7 @@ use Modern::Perl;
 use CGI::Compile;
 use CGI::Emulate::PSGI;
 use FindBin;
+use Cwd qw( realpath );
 use File::Temp qw( tempdir );
 use HTTP::Request::Common qw( GET POST );
 use JSON                  qw( decode_json );
@@ -48,6 +49,9 @@ use Koha::Token;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
+my $candidate_root = realpath("$FindBin::Bin/../..");
+t::lib::Mocks::mock_config( 'intranetdir', $candidate_root );
+t::lib::Mocks::mock_config( 'intrahtdocs', "$candidate_root/koha-tmpl/intranet-tmpl" );
 
 {
     package Test::PatronDisclosureCGI::Logger;
