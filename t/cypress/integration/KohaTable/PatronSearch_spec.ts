@@ -11,6 +11,103 @@ function cleanup() {
     const sql = "DELETE FROM borrower_attribute_types WHERE code=?";
     cy.task("query", { sql, values: [patron_attr_type] });
 }
+
+describe("Patron disclosure page-size ceiling", () => {
+    // Run with patronDisclosureEnabled=true and
+    // patronDisclosureMaxSubjects=15 against a site configured with those values.
+    // With the default site config, both environment values may be omitted.
+    const auditEnabled = Cypress.env("patronDisclosureEnabled") === true;
+    const auditLimit = Number(Cypress.env("patronDisclosureMaxSubjects"));
+    const table_id = "memberresultst";
+
+    beforeEach(() => {
+        cy.login();
+        cy.title().should("eq", "Koha staff interface");
+        cy.window().then(win => win.localStorage.clear());
+        cy.task("query", {
+            sql: "SELECT value FROM systempreferences WHERE variable='PatronsPerPage'",
+        }).then(rows => {
+            cy.wrap(rows[0].value).as("syspref_PatronsPerPage");
+        });
+    });
+
+    afterEach(function () {
+        cy.set_syspref("PatronsPerPage", this.syspref_PatronsPerPage);
+    });
+
+    it("uses the configured page ceiling after restoring a saved table state", () => {
+        if (auditEnabled) expect(auditLimit).to.equal(15);
+        cy.task("buildSampleObjects", {
+            object: "patron",
+            count: 15,
+            values: {},
+        }).then(patrons => {
+            cy.intercept("GET", "/api/v1/patrons*", {
+                statusCode: 200,
+                body: patrons,
+                headers: {
+                    "X-Base-Total-Count": baseTotalCount,
+                    "X-Total-Count": baseTotalCount,
+                },
+            }).as("searchPatrons");
+
+            cy.set_syspref("PatronsPerPage", 100).then(() => {
+                cy.visit("/cgi-bin/koha/members/members-home.pl");
+                cy.get("form.patron_search_form input[type='submit']").click();
+                cy.wait("@searchPatrons").then(interception => {
+                    expect(interception.request.query._per_page).to.equal(
+                        auditEnabled ? "15" : "100"
+                    );
+                });
+                cy.get(`#${table_id}`).then($table => {
+                    const table = $table.DataTable();
+                    table.page.len(100).state.save();
+                    expect(table.state().length).to.equal(100);
+                });
+                cy.visit("/cgi-bin/koha/members/members-home.pl");
+                cy.get("form.patron_search_form input[type='submit']").click();
+                cy.wait("@searchPatrons").then(interception => {
+                    expect(interception.request.query._per_page).to.equal(
+                        auditEnabled ? "15" : "100"
+                    );
+                });
+            });
+        });
+    });
+
+    it("removes unsafe lengths when auditing is enabled", function () {
+        if (!auditEnabled) this.skip();
+        expect(auditLimit).to.equal(15);
+        cy.task("buildSampleObjects", {
+            object: "patron",
+            count: 15,
+            values: {},
+        }).then(patrons => {
+            cy.intercept("GET", "/api/v1/patrons*", {
+                statusCode: 200,
+                body: patrons.map(p => ({ ...p, account_balance: 0 })),
+                headers: {
+                    "X-Base-Total-Count": baseTotalCount,
+                    "X-Total-Count": baseTotalCount,
+                },
+            }).as("searchPatrons");
+            cy.set_syspref("PatronsPerPage", 100).then(() => {
+                cy.visit("/cgi-bin/koha/members/members-home.pl");
+                cy.get("form.patron_search_form input[type='submit']").click();
+                cy.wait("@searchPatrons").then(interception => {
+                    expect(interception.request.query._per_page).to.equal("15");
+                });
+                cy.get(`#${table_id}`).then($table => {
+                    expect($table.DataTable().page.len()).to.equal(15);
+                });
+                cy.get(`#${table_id}_wrapper select.dt-input option[value='-1']`).should("not.exist");
+                cy.get(`#${table_id}_wrapper select.dt-input option[value='100']`).should("not.exist");
+                cy.get(`#${table_id}_wrapper select.dt-input option[value='15']`).should("exist");
+            });
+        });
+    });
+});
+
 describe("ExtendedPatronAttributes", () => {
     beforeEach(() => {
         cleanup();
