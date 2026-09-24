@@ -678,6 +678,7 @@ sub set_userenv_from_session {
         $session->param('emailaddress'), $session->param('shibboleth'),
         $session->param('desk_id'),      $session->param('desk_name'),
         $session->param('register_id'),  $session->param('register_name'),
+        $session->param('default_framework'),
         $session->param('default_holding_framework'),
         $session->id,
     );
@@ -706,6 +707,7 @@ sub set_userenv {
         $usersurname,  $userbranch,    $branchname, $userflags,
         $emailaddress, $shibboleth,    $desk_id,    $desk_name,
         $register_id,  $register_name,
+        $default_framework,
         $default_holding_framework,
         $session_id,
     ) = @_;
@@ -727,6 +729,7 @@ sub set_userenv {
         "desk_name"     => $desk_name,
         "register_id"   => $register_id,
         "register_name" => $register_name,
+        "default_framework" => $default_framework,
         "default_holding_framework" => $default_holding_framework,
         "session_id"    => $session_id,
     };
