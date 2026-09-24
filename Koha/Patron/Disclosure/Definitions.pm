@@ -234,4 +234,33 @@ sub valid_breadth {
     return $BREADTHS{$breadth};
 }
 
+my %REST_OPERATIONS = (
+    'GET /patrons' => {
+        surface                => 'patrons.search.results',
+        success_statuses       => { 200 => 1 },
+        strategies             => { serialized_patrons => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 1,
+        fixed_subjects         => 0,
+    },
+    'GET /patrons/{patron_id}' => {
+        surface          => 'patrons.record.api',
+        success_statuses => { 200 => 1 },
+        strategies       => { serialized_patrons => 1 },
+    },
+);
+
+sub rest_operation {
+    my ( $class, $key ) = @_;
+    return $REST_OPERATIONS{$key};
+}
+
+sub surface_ids {
+    return [ sort keys %SURFACES ];
+}
+
+sub rest_operation_keys {
+    return [ sort keys %REST_OPERATIONS ];
+}
+
 1;
