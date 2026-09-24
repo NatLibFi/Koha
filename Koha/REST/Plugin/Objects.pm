@@ -313,15 +313,18 @@ Returns the API representation of the passed resultset.
 
             # Grab user
             my $user = $c->stash('koha.user');
+            my $params = {
+                embed   => $embed,
+                public  => $public,
+                strings => $strings,
+                user    => $user,
+            };
+            if ( $c->app->renderer->helpers->{'patron_disclosure.context'} ) {
+                my $context = $c->patron_disclosure->context;
+                $params->{_patron_disclosure} = $context if $context;
+            }
 
-            return $object->to_api(
-                {
-                    embed   => $embed,
-                    public  => $public,
-                    strings => $strings,
-                    user    => $user
-                }
-            );
+            return $object->to_api($params);
         }
     );
 }
