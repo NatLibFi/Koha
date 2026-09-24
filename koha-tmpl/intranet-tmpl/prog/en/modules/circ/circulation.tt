@@ -8,6 +8,7 @@
 [% USE ItemTypes %]
 [% USE Price %]
 [% USE AuthorisedValues %]
+[% USE PatronDisclosure %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -1213,6 +1214,7 @@
             waiting_holds_barcodes.push("[% wh.item.barcode | html %]");
         [% END %]
         const onsite_checkout = "[% onsite_checkout | html %]";
+        const patron_disclosure_bookings_page_size_limit = [% PatronDisclosure.page_size_limit('GET /bookings') || 'undefined' | html %];
     </script>
     [% Asset.js("js/pages/circulation.js") | $raw %]
     [% IF Koha.Preference('ClaimReturnedLostValue') || Koha.Preference('BundleLostValue') %]

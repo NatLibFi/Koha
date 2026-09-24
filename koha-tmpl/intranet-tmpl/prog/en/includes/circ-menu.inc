@@ -223,8 +223,8 @@
             [% END %]
             [% IF ( CAN_user_tools_view_system_logs ) %]
                 <li [% IF logview %]class="active"[% END %]>
-                    <a href="/cgi-bin/koha/tools/viewlog.pl?do_it=1&amp;modules=MEMBERS&amp;modules=CIRCULATION&amp;modules=APIKEYS&amp;object=[% patron.borrowernumber | uri %]&amp;src=circ" title="Modification log"
-                        ><i class="fa-solid fa-clipboard-list fa-fw" aria-hidden="true"></i><span class="menu-label">Modification log</span></a
+                    <a href="/cgi-bin/koha/tools/viewlog.pl?do_it=1&amp;modules=MEMBERS&amp;modules=CIRCULATION&amp;modules=APIKEYS&amp;modules=PATRON_DISCLOSURE&amp;object=[% patron.borrowernumber | uri %]&amp;src=circ" title="Modification and disclosure log"
+                        ><i class="fa-solid fa-clipboard-list fa-fw" aria-hidden="true"></i><span class="menu-label">Modification and disclosure log</span></a
                     >
                 </li>
             [% END %]
