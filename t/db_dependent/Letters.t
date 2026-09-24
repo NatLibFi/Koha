@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 use File::Basename qw(dirname);
-use Test::More tests => 110;
+use Test::More tests => 111;
 use Test::NoWarnings;
 
 use Test::MockModule;
@@ -27,6 +27,7 @@ use Test::Warn;
 use Test::Exception;
 
 use Email::Sender::Failure;
+use Email::Sender::Failure::Temporary;
 
 use MARC::Record;
 
@@ -1703,6 +1704,74 @@ subtest 'Test message_id parameter for SendQueuedMessages' => sub {
     my $message_2 = C4::Letters::GetMessage($message_id);
     is( $message_1->{status}, 'failed', 'Message 1 status is unchanged' );
     is( $message_2->{status}, 'sent',   'Valid from_address => status sent' );
+};
+
+subtest 'Email delivery failures' => sub {
+
+    plan tests => 8;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->{branchcode},
+                email      => 'recipient@example.org',
+            }
+        }
+    );
+    my $message_id = C4::Letters::EnqueueLetter(
+        {
+            letter => {
+                content      => 'a message',
+                metadata     => 'metadata',
+                code         => 'TEST_MESSAGE',
+                content_type => 'text/plain',
+                title        => 'message title',
+            },
+            borrowernumber         => $patron->borrowernumber,
+            to_address             => $patron->email,
+            message_transport_type => 'email',
+            from_address           => 'from@example.org',
+        }
+    );
+
+    my $diagnostic        = 'from@example.org failed after MAIL FROM: 452 4.7.0 Too many messages in this connection';
+    my $send_attempts     = 0;
+    my $mocked_koha_email = Test::MockModule->new('Koha::Email');
+    $mocked_koha_email->mock(
+        'send_or_die',
+        sub {
+            $send_attempts++;
+            Email::Sender::Failure::Temporary->throw(
+                {
+                    message => $diagnostic,
+                    code    => 452,
+                }
+            );
+        }
+    );
+
+    my $messages_processed;
+    {
+        no warnings 'once';
+        local $Mail::Sendmail::error = 'stale Mail::Sendmail error';
+        warning_is {
+            $messages_processed = C4::Letters::SendQueuedMessages( { message_id => $message_id } );
+        }
+        undef, 'A handled email delivery failure does not write a warning';
+    }
+
+    is( $messages_processed, 0, 'A failed delivery is not counted as sent' );
+    is( $send_attempts,      1, 'A temporary delivery failure is not retried automatically' );
+    my $message = C4::Letters::GetMessage($message_id);
+    is( $message->{status},           'failed',    'The message is marked failed' );
+    is( $message->{failure_code},     'SENDMAIL',  'The stable email failure code is stored' );
+    is( $message->{response_message}, $diagnostic, 'The stack-free provider response is stored' );
+    unlike( $message->{response_message}, qr/Trace begun/, 'The provider response does not contain a stack trace' );
+    unlike(
+        $message->{response_message}, qr/stale Mail::Sendmail error/,
+        'A stale Mail::Sendmail global does not affect the stored response'
+    );
 };
 
 subtest 'Template toolkit syntax in parameters' => sub {
