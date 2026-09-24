@@ -392,6 +392,13 @@ inventory number (MARC21 952$i)
 
 Exclude this item from local holds priority
 
+=head2 holding_id
+
+  data_type: 'integer'
+  is_nullable: 1
+
+foreign key from holdings table used to link this item to the right holdings record
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -516,6 +523,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "exclude_from_local_holds_priority",
   { data_type => "tinyint", is_nullable => 1 },
+  "holding_id",
+  { data_type => "integer", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
