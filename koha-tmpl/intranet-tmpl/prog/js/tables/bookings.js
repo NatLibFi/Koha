@@ -33,6 +33,7 @@ $(document).ready(function () {
                         url: bookings_table_url,
                     },
                     embed: ["biblio", "item", "patron"],
+                    pageSizeLimit: patron_disclosure_bookings_page_size_limit,
                     columns: [
                         {
                             data: "booking_id",
