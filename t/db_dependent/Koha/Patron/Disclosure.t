@@ -120,6 +120,32 @@ subtest 'Patron REST schema classification is exhaustive' => sub {
     );
 };
 
+subtest 'system preferences cannot control disclosure auditing' => sub {
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log', undef );
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', undef );
+    is( Koha::Patron::Disclosure->enabled, 0, 'absent config defaults off' );
+    is( Koha::Patron::Disclosure->max_subjects, 1000, 'absent limit defaults to 1000' );
+
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log', 1 );
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', 17 );
+    t::lib::Mocks::mock_preference( 'StaffPatronDataDisclosureLog', 0 );
+    t::lib::Mocks::mock_preference( 'StaffPatronDataDisclosureMaxSubjects', 1 );
+    is( Koha::Patron::Disclosure->enabled, 1, 'old preference cannot disable config-enabled audit' );
+    is( Koha::Patron::Disclosure->max_subjects, 17, 'old preference cannot change the config limit' );
+
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log', 0 );
+    t::lib::Mocks::mock_preference( 'StaffPatronDataDisclosureLog', 1 );
+    is( Koha::Patron::Disclosure->enabled, 0, 'old preference cannot enable config-disabled audit' );
+
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log', 'invalid' );
+    throws_ok { Koha::Patron::Disclosure->enabled } 'Koha::Exceptions::PatronDisclosure',
+        'invalid explicit enablement fails rather than silently disabling the audit';
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_log', 1 );
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', '' );
+    throws_ok { Koha::Patron::Disclosure->max_subjects } 'Koha::Exceptions::PatronDisclosure',
+        'invalid explicit limit fails closed';
+};
+
 subtest 'config gates event creation, not an event already in flight' => sub {
     plan tests => 7;
 
@@ -733,6 +759,96 @@ subtest 'a false store result rolls back the complete event' => sub {
 
     $schema->storage->txn_rollback;
     done_testing;
+};
+
+subtest 'relationship-debt aggregates retain exact patron provenance' => sub {
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+    t::lib::Mocks::mock_preference( 'borrowerRelationship',                   'parent' );
+    t::lib::Mocks::mock_preference( 'NoIssuesChargeGuarantees',               1 );
+    t::lib::Mocks::mock_preference( 'NoIssuesChargeGuarantorsWithGuarantees', 1 );
+
+    my $parent_1 = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $parent_2 = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $child_1  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $child_2  = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    $child_1->add_guarantor( { guarantor_id => $parent_1->id, relationship => 'parent' } );
+    $child_1->add_guarantor( { guarantor_id => $parent_2->id, relationship => 'parent' } );
+    $child_2->add_guarantor( { guarantor_id => $parent_1->id, relationship => 'parent' } );
+    $child_2->add_guarantor( { guarantor_id => $parent_2->id, relationship => 'parent' } );
+
+    my %amounts = (
+        $parent_1->id => 3,
+        $parent_2->id => 5,
+        $child_1->id  => 7,
+        $child_2->id  => 2,
+    );
+    for my $patron_id ( keys %amounts ) {
+        $builder->build_object(
+            {
+                class => 'Koha::Account::Lines',
+                value => {
+                    borrowernumber    => $patron_id,
+                    amount            => $amounts{$patron_id},
+                    amountoutstanding => $amounts{$patron_id},
+                    debit_type_code   => 'OVERDUE',
+                },
+            }
+        );
+    }
+
+    my $details = $child_1->relationships_debt_details(
+        { include_guarantors => 1, only_this_guarantor => 0, include_this_patron => 1 } );
+    is( $details->{amount}, 17, 'the aggregate amount is unchanged' );
+    is_deeply(
+        $details->{patron_ids},
+        [ sort { $a <=> $b } keys %amounts ],
+        'every patron whose balance contributed to the aggregate is retained'
+    );
+    is(
+        $child_1->relationships_debt( { include_guarantors => 1, only_this_guarantor => 0, include_this_patron => 1 } ),
+        17,
+        'the existing scalar method delegates to the detailed calculation'
+    );
+
+    $child_1->category->noissueschargeguarantorswithguarantees(undef)->store;
+    my $limits = $child_1->is_patron_inside_charge_limits( { include_patron_ids => 1 } );
+    is(
+        $limits->{NoIssuesChargeGuarantorsWithGuarantees}->{charge}, 17,
+        'charge-limit calculation uses the detail amount'
+    );
+    is_deeply(
+        $limits->{NoIssuesChargeGuarantorsWithGuarantees}->{patron_ids},
+        [ sort { $a <=> $b } keys %amounts ],
+        'charge-limit result exposes exact aggregate provenance to the response audit'
+    );
+
+    $parent_1->category->noissueschargeguarantees(undef)->store;
+    my $guarantee_limits = $parent_1->is_patron_inside_charge_limits( { include_patron_ids => 1 } );
+    is(
+        $guarantee_limits->{NoIssuesChargeGuarantees}->{charge},
+        $amounts{ $child_1->id } + $amounts{ $child_2->id },
+        'direct-guarantee charge total is unchanged'
+    );
+    is_deeply(
+        $guarantee_limits->{NoIssuesChargeGuarantees}->{patron_ids},
+        [ sort { $a <=> $b } ( $child_1->id, $child_2->id ) ],
+        'direct-guarantee calculation retains its exact patron IDs'
+    );
+
+    my $default_limits = $parent_1->is_patron_inside_charge_limits;
+    ok(
+        !exists $default_limits->{NoIssuesChargeGuarantees}->{patron_ids},
+        'the default direct-guarantee result does not expose audit provenance'
+    );
+    ok(
+        !exists $default_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{patron_ids},
+        'the default guarantor result keeps its existing public shape'
+    );
+
+    $schema->storage->txn_rollback;
 };
 
 had_no_warnings;
