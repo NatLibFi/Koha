@@ -23,6 +23,7 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 
 use Koha::Patrons;
+use Koha::Patron::Disclosure;
 
 my $input = CGI->new;
 
@@ -49,4 +50,25 @@ $template->param(
     patron           => $patron,
 );
 
-output_html_with_http_headers $input, $cookie, $template->output;
+my $extra_options;
+if ( Koha::Patron::Disclosure->enabled ) {
+    my $logged_in_user = Koha::Patrons->find($loggedinuser);
+    my @data_classes   = (
+        @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+        @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+        'circulation_history'
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.holds.history',
+            subjects => [ { patron_id => $patron->id, data_classes => \@data_classes } ],
+        }
+    };
+}
+output_html_with_http_headers(
+    $input,
+    $cookie,
+    $template->output,
+    undef,
+    $extra_options
+);

@@ -471,6 +471,12 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: catalogue.item_pickup_locations.for_patron
+      success_statuses:
+        - 200
+      strategies:
+        - explicit
     x-koha-authorization:
       permissions:
         reserveforothers: place_holds

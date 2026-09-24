@@ -1626,6 +1626,65 @@ function _dt_save_restore_state(table_settings, external_filter_nodes = {}) {
     };
 }
 
+function _dt_apply_page_size_limit(settings, pageSizeLimit) {
+    const limit = Number(pageSizeLimit);
+    if (!Number.isInteger(limit) || limit < 1) {
+        throw new Error("pageSizeLimit must be a positive integer");
+    }
+
+    const menu = settings.lengthMenu;
+    if (!Array.isArray(menu)) {
+        throw new Error("pageSizeLimit requires an array lengthMenu");
+    }
+
+    const hasLabels = Array.isArray(menu[0]);
+    const values = hasLabels ? menu[0] : menu;
+    const labels = hasLabels ? menu[1] : menu;
+    const entries = values
+        .map((value, index) => ({
+            value: Number(value),
+            label: hasLabels ? labels[index] : Number(value),
+        }))
+        .filter(
+            entry =>
+                Number.isInteger(entry.value) &&
+                entry.value > 0 &&
+                entry.value <= limit
+        );
+
+    if (!entries.some(entry => entry.value === limit)) {
+        entries.push({ value: limit, label: limit });
+    }
+    entries.sort((a, b) => a.value - b.value);
+
+    settings.lengthMenu = hasLabels
+        ? [entries.map(entry => entry.value), entries.map(entry => entry.label)]
+        : entries.map(entry => entry.value);
+
+    const pageLength = Number(settings.pageLength);
+    if (!Number.isInteger(pageLength) || pageLength < 1 || pageLength > limit) {
+        settings.pageLength = limit;
+    }
+
+    if (typeof settings.stateLoadCallback === "function") {
+        const stateLoadCallback = settings.stateLoadCallback;
+        settings.stateLoadCallback = function (dataTableSettings) {
+            const state = stateLoadCallback.call(this, dataTableSettings);
+            if (state) {
+                const stateLength = Number(state.length);
+                if (
+                    !Number.isInteger(stateLength) ||
+                    stateLength < 1 ||
+                    stateLength > limit
+                ) {
+                    state.length = limit;
+                }
+            }
+            return state;
+        };
+    }
+}
+
 function update_search_description(
     table_node,
     table_dt,
@@ -1712,6 +1771,7 @@ function update_search_description(
      *                                                for implementing joins in api search queries, and 'coded_value:TABLE' to allow
      *                                                for clientside translations of description to code to reduce join requirements.
      *                                                See bug 39011 for an example implementation.
+     * @param  {Number}  [options.pageSizeLimit]      Positive server-side page-size ceiling. Larger choices and "All" are removed.
      * @param  {Object}  table_settings               The arrayref as returned by TableSettings.GetTableSettings function
      *                                                available from the columns_settings template toolkit include
      * @param  {Boolean} add_filters                  Add a filters row as the top row of the table
@@ -1736,6 +1796,10 @@ function update_search_description(
     ) {
         // Early return if the node does not exist
         if (!this.length) return;
+
+        options = { ...options };
+        const pageSizeLimit = options.pageSizeLimit;
+        delete options.pageSizeLimit;
 
         if (options) {
             // Don't redefine the default initComplete
@@ -1822,6 +1886,17 @@ function update_search_description(
                     [table_settings["default_sort_order"], "asc"],
                 ];
             }
+        }
+
+        if (
+            settings.pageLength !== undefined &&
+            !Number.isInteger(settings.pageLength)
+        ) {
+            settings.pageLength = parseInt(settings.pageLength, 10);
+        }
+
+        if (pageSizeLimit !== undefined) {
+            _dt_apply_page_size_limit(settings, pageSizeLimit);
         }
 
         settings["buttons"] = _dt_buttons({ settings, table_settings });

@@ -72,33 +72,40 @@
         var bookings_table;
         var timeline;
         let biblionumber = "[% biblionumber | uri %]";
+        [% IF Koha.Preference('StaffPatronDataDisclosureLog') %]
+            const configured_patron_disclosure_biblio_bookings_max_subjects = Number("[% Koha.Preference('StaffPatronDataDisclosureMaxSubjects') | html %]");
+            const patron_disclosure_biblio_bookings_page_size_limit =
+                Number.isInteger(configured_patron_disclosure_biblio_bookings_max_subjects) && configured_patron_disclosure_biblio_bookings_max_subjects > 0
+                    ? Math.min(1000, configured_patron_disclosure_biblio_bookings_max_subjects)
+                    : undefined;
+        [% ELSE %]
+            const patron_disclosure_biblio_bookings_page_size_limit = undefined;
+        [% END %]
         Koha.addPermissions({
             CAN_user_circulate_manage_bookings: [% CAN_user_circulate_manage_bookings ? 1 : 0 | html %],
         });
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         $(document).ready(function () {
-            var items = $.ajax({
-                url: "/api/v1/biblios/%s/items?bookable=1".format(biblionumber),
-                dataType: "json",
-                type: "GET",
-            });
-            var bookings = $.ajax({
-                url: "/api/v1/biblios/%s/bookings?_per_page=-1".format(biblionumber),
-                headers: { "x-koha-embed": "patron" },
-                dataType: "json",
-                type: "GET",
-            });
+            var items = fetchAllKohaApiPages(
+                "/api/v1/biblios/%s/items?bookable=1".format(biblionumber),
+                "item_id"
+            );
+            var bookings = fetchAllKohaApiPages(
+                "/api/v1/biblios/%s/bookings".format(biblionumber),
+                "booking_id",
+                { "x-koha-embed": "patron" }
+            );
 
-            $.when(items, bookings).then(
-                function (items, bookings) {
+            Promise.all([items, bookings]).then(
+                function ([items, bookings]) {
                     var itemsSet = new vis.DataSet([
                         {
                             id: 0,
                             content: _("Record level"),
                         },
                     ]);
-                    for (item of items[0]) {
+                    for (item of items) {
                         itemsSet.add({
                             id: item.item_id,
                             content: _("Item %s").format(item.external_id),
@@ -106,7 +113,7 @@
                     }
 
                     var bookingsSet = new vis.DataSet();
-                    for (booking of bookings[0]) {
+                    for (booking of bookings) {
                         const isActive = ["new", "pending", "active"].includes(booking.status);
                         const patronContent = $patron_to_html(booking.patron, {
                             display_cardnumber: true,
@@ -220,8 +227,13 @@
                     };
                     timeline = new vis.Timeline(container, bookingsSet, itemsSet, options);
                 },
-                function (jqXHR, textStatus, errorThrown) {
-                    console.log("Fetch failed");
+                function (error) {
+                    console.error("Fetch failed", error);
+                    $("#bookings-timeline").empty().append(
+                        $("<div>", { class: "alert alert-danger", role: "alert" }).text(
+                            _("Unable to load the complete booking timeline. Reload the page to try again.")
+                        )
+                    );
                 }
             );
 
@@ -256,6 +268,7 @@
                         url: bookings_table_url,
                     },
                     embed: ["item", "patron", "pickup_library"],
+                    pageSizeLimit: patron_disclosure_biblio_bookings_page_size_limit,
                     columns: [
                         {
                             data: "booking_id",

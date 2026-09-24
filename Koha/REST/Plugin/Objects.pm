@@ -313,13 +313,22 @@ Returns the API representation of the passed resultset.
 
             # Grab user
             my $user = $c->stash('koha.user');
+            my ( $patron_disclosure_active, $patron_disclosure, $patron_reference_collector );
+            if ( $c->app->renderer->helpers->{'patron_disclosure.event'} ) {
+                $patron_disclosure_active   = $c->patron_disclosure->is_active;
+                $patron_disclosure          = $c->patron_disclosure->serialized_patron_collector;
+                $patron_reference_collector = $c->patron_disclosure->reference_collector;
+            }
 
             return $object->to_api(
                 {
-                    embed   => $embed,
-                    public  => $public,
-                    strings => $strings,
-                    user    => $user
+                    embed                                  => $embed,
+                    public                                 => $public,
+                    strings                                => $strings,
+                    user                                   => $user,
+                    patron_disclosure                      => $patron_disclosure,
+                    _patron_disclosure_active              => $patron_disclosure_active,
+                    _patron_disclosure_reference_collector => $patron_reference_collector,
                 }
             );
         }

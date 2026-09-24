@@ -48,6 +48,7 @@ use Koha::Checkouts::ReturnClaims;
 use Koha::CsvProfiles;
 use Koha::Patrons;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Patron::Disclosure;
 use Koha::Patron::Restriction::Types;
 use Koha::Plugins;
 use Koha::Database;
@@ -116,6 +117,16 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my $op                      = $query->param('op') // '';
 my $override_high_holds     = $query->param('override_high_holds');
 my $override_high_holds_tmp = $query->param('override_high_holds_tmp');
+my $circulation_state_changed;
+my $patron_disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my %patron_disclosure_classes;
+my $add_patron_disclosure_subject = sub {
+    my ( $patron_id, @classes ) = @_;
+    return unless $patron_disclosure_enabled;
+    die 'Patron disclosure subject ID must be a positive integer'
+        unless defined $patron_id && $patron_id =~ /\A[1-9][0-9]*\z/;
+    $patron_disclosure_classes{$patron_id}->{$_} = 1 for @classes;
+};
 
 my $sessionID = $query->cookie("CGISESSID");
 my $session   = get_session($sessionID);
@@ -151,6 +162,7 @@ if ( $op eq 'cud-confirm_hold' && $query->param('confirm_hold') ) {
 
     # diffBranchSend tells ModReserveAffect whether document is expected in this library or not,
     # i.e., whether to apply waiting status
+    $circulation_state_changed = 1;
     ModReserveAffect( $hold_itemnumber, $hold_borrowernumber, $diffBranchSend, $reserve_id, $desk_id );
 }
 
@@ -416,6 +428,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
 
         if ( $issuingimpossible->{'STATS'} ) {
 
+            $circulation_state_changed = 1;
             my ( $stats_return, $stats_messages, $stats_iteminformation, $stats_borrower ) =
                 AddReturn( $item->barcode, C4::Context->userenv->{'branch'}, undef, undef, 1 );
 
@@ -511,6 +524,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                             resolved_by => $patron_id,
                         }
                     );
+                    $circulation_state_changed = 1;
                     $template_params->{CLAIM_RESOLUTION} = $claim;
                 }
             }
@@ -617,6 +631,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         forced                 => [ keys %{$issuingimpossible} ]
                     }
                 );
+                $circulation_state_changed = 1 if $issue;
                 $template_params->{issue} = $issue;
                 $session->clear('auto_renew');
                 $inprocess = 1;
@@ -643,6 +658,46 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
             $template_params->{biblio}           = $biblio;
             $template_params->{itembiblionumber} = $biblio->biblionumber;
         }
+
+        if ( $template_params->{ISSUED_TO_ANOTHER} && $template_params->{issued_borrowernumber} ) {
+            $add_patron_disclosure_subject->(
+                $template_params->{issued_borrowernumber},
+                qw( identity circulation_current )
+            );
+        }
+        if (
+            (
+                   $template_params->{RESERVE_WAITING}
+                || $template_params->{RESERVED}
+                || $template_params->{TRANSFERRED}
+                || $template_params->{PROCESSING}
+            )
+            && $template_params->{resborrowernumber}
+            )
+        {
+            $add_patron_disclosure_subject->(
+                $template_params->{resborrowernumber},
+                qw( identity circulation_current )
+            );
+        }
+        if ( blessed( $template_params->{RECALLED} ) && $template_params->{RECALLED}->can('patron_id') ) {
+            $add_patron_disclosure_subject->(
+                $template_params->{RECALLED}->patron_id,
+                qw( identity circulation_current )
+            );
+        }
+        my $returned_from_another =
+               ref( $template_params->{alert} ) eq 'HASH'
+            && ref( $template_params->{alert}->{RETURNED_FROM_ANOTHER} ) eq 'HASH'
+            ? $template_params->{alert}->{RETURNED_FROM_ANOTHER}->{patron}
+            : undef;
+        if ( blessed($returned_from_another) && $returned_from_another->can('id') ) {
+            $add_patron_disclosure_subject->(
+                $returned_from_another->id,
+                qw( identity circulation_current )
+            );
+        }
+
         push @$checkout_infos, $template_params;
     }
     unless ($batch) {
@@ -698,7 +753,10 @@ if ($patron) {
         $noissues = 1;
     }
 
-    my $patron_charge_limits = $patron->is_patron_inside_charge_limits();
+    my $patron_charge_limits =
+          $patron_disclosure_enabled
+        ? $patron->is_patron_inside_charge_limits( { include_patron_ids => 1 } )
+        : $patron->is_patron_inside_charge_limits;
     if ( $patron_charge_limits->{noissuescharge}->{charge} > 0 ) {
         my $noissuescharge =
             $patron_charge_limits->{noissuescharge}->{limit} || 5;    # FIXME If noissuescharge == 0 then 5, why??
@@ -724,6 +782,10 @@ if ($patron) {
         if ( $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit} ) {
             $template->param( charges_guarantors_guarantees =>
                     $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{charge} );
+            if ($patron_disclosure_enabled) {
+                $add_patron_disclosure_subject->( $_, 'financial' )
+                    for @{ $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{patron_ids} };
+            }
             $noissues = 1 unless C4::Context->preference("allowfineoverride");
         }
     }
@@ -735,6 +797,10 @@ if ($patron) {
                 charges_guarantees       => 1,
                 chargesamount_guarantees => $patron_charge_limits->{NoIssuesChargeGuarantees}->{charge},
             );
+            if ($patron_disclosure_enabled) {
+                $add_patron_disclosure_subject->( $_, 'financial' )
+                    for @{ $patron_charge_limits->{NoIssuesChargeGuarantees}->{patron_ids} };
+            }
             $noissues = 1 unless C4::Context->preference("allowfineoverride");
         }
     }
@@ -769,6 +835,10 @@ if ($patron) {
         }
     );
     $template->param( patron_messages => $patron_messages );
+    if ($patron_disclosure_enabled) {
+        $add_patron_disclosure_subject->( $_, 'identity' )
+            for grep { defined $_ } $patron_messages->get_column('manager_id');
+    }
 
     if ( C4::Context->preference("WaitingNotifyAtCheckout") ) {
         # we need "->as_list" because in template this var is used in truth/fail if:
@@ -874,4 +944,31 @@ $template->param(
     logged_in_user          => $logged_in_user,
 );
 
-output_html_with_http_headers $query, $cookie, $template->output;
+my $extra_options;
+if ( $patron_disclosure_enabled && $patron && !$circulation_state_changed ) {
+    my @target_classes = (
+        @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+        @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+        qw( circulation_current financial communications )
+    );
+    push @target_classes, 'service_activity' if C4::Context->preference('CurbsidePickup');
+    $add_patron_disclosure_subject->( $patron->id, @target_classes );
+
+    $add_patron_disclosure_subject->( $_, qw( identity circulation_current ) ) for @relatives;
+
+    my @subjects = map {
+        {
+            patron_id    => $_,
+            data_classes => [ sort keys %{ $patron_disclosure_classes{$_} } ],
+        }
+    } sort { $a <=> $b } keys %patron_disclosure_classes;
+
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'circulation.checkout',
+            subjects => \@subjects,
+        }
+    };
+}
+
+output_html_with_http_headers( $query, $cookie, $template->output, undef, $extra_options );

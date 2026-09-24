@@ -123,6 +123,16 @@
             e['_str'] = e.branchname;
             return e;
         });
+
+        [% IF Koha.Preference('StaffPatronDataDisclosureLog') %]
+            const configured_patron_disclosure_bookings_max_subjects = Number("[% Koha.Preference('StaffPatronDataDisclosureMaxSubjects') | html %]");
+            const patron_disclosure_bookings_page_size_limit =
+                Number.isInteger(configured_patron_disclosure_bookings_max_subjects) && configured_patron_disclosure_bookings_max_subjects >= 2
+                    ? Math.min(1000, Math.floor(configured_patron_disclosure_bookings_max_subjects / 2))
+                    : undefined;
+        [% ELSE %]
+            const patron_disclosure_bookings_page_size_limit = undefined;
+        [% END %]
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         var coded_values = {
@@ -174,6 +184,7 @@
                         url: bookings_table_url,
                     },
                     embed: ["biblio", "item+strings", "item.checkout", "patron", "pickup_library"],
+                    pageSizeLimit: patron_disclosure_bookings_page_size_limit,
                     order: [[7, "asc"]],
                     columns: [
                         {

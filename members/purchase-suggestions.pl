@@ -24,6 +24,7 @@ use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 use Koha::Patrons;
+use Koha::Patron::Disclosure;
 use Koha::Suggestions;
 
 my $input = CGI->new;
@@ -61,4 +62,40 @@ my $suggestions = [
 
 $template->param( suggestions => $suggestions );
 
-output_html_with_http_headers $input, $cookie, $template->output;
+my $extra_options;
+if ( Koha::Patron::Disclosure->enabled ) {
+    my %subjects = ( $patron->id =>
+            {
+                map { $_ => 1 } (
+                    @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+                    @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+                    'service_activity'
+                )
+            } );
+    for my $suggestion ( @{$suggestions} ) {
+        my $manager = $suggestion->manager;
+        $subjects{ $manager->id }->{identity} = 1 if $manager;
+    }
+
+    my @disclosure_subjects = map {
+        {
+            patron_id    => $_,
+            data_classes => [ sort keys %{ $subjects{$_} } ],
+        }
+    } sort { $a <=> $b } keys %subjects;
+
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.suggestions.list',
+            subjects => \@disclosure_subjects,
+        }
+    };
+}
+
+output_html_with_http_headers(
+    $input,
+    $cookie,
+    $template->output,
+    undef,
+    $extra_options
+);

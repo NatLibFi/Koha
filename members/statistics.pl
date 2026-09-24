@@ -36,6 +36,7 @@ use C4::Members::Statistics qw(
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 use Koha::Patrons;
 use Koha::Patron::Categories;
+use Koha::Patron::Disclosure;
 
 my $input = CGI->new;
 
@@ -91,7 +92,27 @@ $template->param(
     count_total_actual_state    => $count_total_actual_state,
 );
 
-output_html_with_http_headers $input, $cookie, $template->output;
+my $extra_options;
+if ( Koha::Patron::Disclosure->enabled ) {
+    my @data_classes = (
+        @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+        @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+        qw( circulation_current circulation_history )
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.statistics.summary',
+            subjects => [ { patron_id => $patron->id, data_classes => \@data_classes } ],
+        }
+    };
+}
+output_html_with_http_headers(
+    $input,
+    $cookie,
+    $template->output,
+    undef,
+    $extra_options
+);
 
 =head1 FUNCTIONS
 

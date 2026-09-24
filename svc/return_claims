@@ -21,12 +21,15 @@ use Modern::Perl;
 
 use CGI;
 use JSON qw(to_json);
+use Try::Tiny;
 
 use C4::Auth qw(check_cookie_auth haspermission);
 use C4::Context;
+use C4::Output qw( output_with_http_headers );
 
 use Koha::AuthorisedValues;
 use Koha::DateUtils qw( dt_from_string output_pref );
+use Koha::Patron::Disclosure;
 use Koha::Patrons;
 
 my $input = CGI->new;
@@ -47,9 +50,36 @@ unless ( haspermission( $userid, { circulate => 'circulate_remaining_permissions
 
 my @sort_columns = qw/title notes created_on updated_on/;
 
-my $borrowernumber   = $input->param('borrowernumber');
+my $borrowernumber;
 my $offset           = $input->param('iDisplayStart');
 my $results_per_page = $input->param('iDisplayLength') || -1;
+
+my $disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my @disclosure_patron_ids;
+if ($disclosure_enabled) {
+    my @raw_borrowernumbers = $input->multi_param('borrowernumber');
+    my $resolved_id;
+    try {
+        $resolved_id = Koha::Patron::Disclosure->resolve_single_patron_id( \@raw_borrowernumbers );
+    } catch {
+        my $is_input_error = ref($_) eq 'Koha::Exceptions::BadParameter'
+            && ( $_->parameter // q{} ) eq 'patron_disclosure_subjects';
+        my ( $status, $error_code ) =
+            $is_input_error
+            ? ( '400 Bad Request', 'patron_disclosure_invalid_subjects' )
+            : ( '503 Service Unavailable', 'patron_disclosure_subject_resolution_unavailable' );
+        my $error = $status =~ /\A400/ ? 'Invalid request' : 'Service unavailable';
+        output_with_http_headers(
+            $input, undef, to_json( { error => $error, error_code => $error_code } ), 'json',
+            $status
+        );
+        exit;
+    };
+    @disclosure_patron_ids = ($resolved_id);
+    $borrowernumber        = $resolved_id;
+} else {
+    $borrowernumber = $input->param('borrowernumber');
+}
 
 my $sorting_column = $input->param('iSortCol_0') || q{};
 $sorting_column =
@@ -63,7 +93,8 @@ $sorting_direction = $sorting_direction eq 'asc' ? 'asc' : 'desc';
 $results_per_page = undef if ( $results_per_page == -1 );
 
 binmode STDOUT, ":encoding(UTF-8)";
-print $input->header( -type => 'application/json', -charset => 'UTF-8' );
+
+my %resolver_patron_ids;
 
 my $sql = qq{
     SELECT
@@ -85,14 +116,17 @@ my $sql = qq{
     ORDER BY $sorting_column $sorting_direction
 };
 
-my $dbh = C4::Context->dbh();
-my $sth = $dbh->prepare($sql);
-$sth->execute($borrowernumber);
+my $sth;
+if ( !$disclosure_enabled || @disclosure_patron_ids ) {
+    my $dbh = C4::Context->dbh();
+    $sth = $dbh->prepare($sql);
+    $sth->execute($borrowernumber);
+}
 
 my $resolved   = 0;
 my $unresolved = 0;
 my @return_claims;
-while ( my $claim = $sth->fetchrow_hashref() ) {
+while ( $sth && ( my $claim = $sth->fetchrow_hashref() ) ) {
     $claim->{created_on_formatted} = output_pref( { dt => dt_from_string( $claim->{created_on} ) } )
         if $claim->{created_on};
     $claim->{updated_on_formatted} = output_pref( { dt => dt_from_string( $claim->{updated_on} ) } )
@@ -101,7 +135,14 @@ while ( my $claim = $sth->fetchrow_hashref() ) {
         if $claim->{resolved_on};
 
     my $patron = $claim->{resolved_by} ? Koha::Patrons->find( $claim->{resolved_by} ) : undef;
-    $claim->{resolved_by_data} = $patron->unblessed if $patron;
+    if ($patron) {
+        $claim->{resolved_by_data} = {
+            borrowernumber => $patron->borrowernumber,
+            firstname      => $patron->firstname,
+            surname        => $patron->surname,
+        };
+        $resolver_patron_ids{ $patron->borrowernumber } = 1 if $disclosure_enabled;
+    }
 
     my $resolution = $claim->{resolution}
         ? Koha::AuthorisedValues->find(
@@ -127,4 +168,26 @@ my $data = {
     unresolved           => $unresolved
 };
 
-print to_json($data);
+my $extra_options;
+if ( $disclosure_enabled && @disclosure_patron_ids ) {
+    my @subjects = (
+        {
+            patron_id    => $disclosure_patron_ids[0],
+            data_classes => [qw( identity service_activity )],
+        },
+        map {
+            {
+                patron_id    => $_,
+                data_classes => ['identity'],
+            }
+        } sort { $a <=> $b } keys %resolver_patron_ids
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.return_claims.list',
+            subjects => \@subjects,
+        }
+    };
+}
+
+output_with_http_headers( $input, undef, to_json($data), 'json', undef, $extra_options );

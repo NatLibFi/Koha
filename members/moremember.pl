@@ -38,6 +38,7 @@ use Koha::Patron::Attribute::Types;
 use Koha::Patron::Restriction::Types;
 use Koha::Patron::Categories;
 use Koha::Patron::Messages;
+use Koha::Patron::Disclosure;
 use Koha::CsvProfiles;
 use Koha::Holds;
 use Koha::Patrons;
@@ -76,6 +77,7 @@ output_and_exit_if_error(
     $input, $cookie, $template,
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
+my $patron_disclosure_enabled = Koha::Patron::Disclosure->enabled;
 
 my $category      = $patron->category;
 my $category_type = $category->category_type;
@@ -124,10 +126,13 @@ if (    C4::Context->preference('ChildNeedsGuarantor')
 
 my $relatives_issues_count = Koha::Checkouts->count( { borrowernumber => \@relatives } );
 
+my $guarantees_fines;
+my $guarantees_financial_disclosed;
 if (@guarantees) {
-    my $total_amount =
+    $guarantees_fines =
         $patron->relationships_debt( { include_guarantors => 0, only_this_guarantor => 1, include_this_patron => 1 } );
-    $template->param( guarantees_fines => $total_amount );
+    $guarantees_financial_disclosed = $guarantees_fines > 0 if $patron_disclosure_enabled;
+    $template->param( guarantees_fines => $guarantees_fines );
 }
 
 # Calculate and display patron's age
@@ -197,6 +202,10 @@ my $patron_messages = Koha::Patron::Messages->search(
 if ( $patron_messages->count > 0 ) {
     $template->param( patron_messages => $patron_messages );
 }
+my @message_manager_ids;
+if ($patron_disclosure_enabled) {
+    @message_manager_ids = grep { defined $_ } $patron_messages->get_column('manager_id');
+}
 
 # Display the language description instead of the code
 # Note that this is certainly wrong
@@ -222,13 +231,17 @@ if ( C4::Context->preference('UseRecalls') ) {
 
 my $no_issues_charge_guarantees = C4::Context->preference("NoIssuesChargeGuarantees");
 $no_issues_charge_guarantees = undef unless looks_like_number($no_issues_charge_guarantees);
+my $guarantees_charge_limit_disclosed;
+my @guarantees_charge_limit_patron_ids;
 if ( defined $no_issues_charge_guarantees ) {
     my $guarantees_non_issues_charges = 0;
     my $guarantees                    = $patron->guarantee_relationships->guarantees;
     while ( my $g = $guarantees->next ) {
         $guarantees_non_issues_charges += $g->account->non_issues_charges;
+        push @guarantees_charge_limit_patron_ids, $g->id if $patron_disclosure_enabled;
     }
     if ( $guarantees_non_issues_charges > $no_issues_charge_guarantees ) {
+        $guarantees_charge_limit_disclosed = 1 if $patron_disclosure_enabled;
         $template->param(
             charges_guarantees       => 1,
             chargesamount_guarantees => $guarantees_non_issues_charges,
@@ -241,7 +254,10 @@ if ( $patron->has_overdues ) {
 }
 my $issues = $patron->checkouts;
 
-my $patron_charge_limits = $patron->is_patron_inside_charge_limits();
+my $patron_charge_limits =
+      $patron_disclosure_enabled
+    ? $patron->is_patron_inside_charge_limits( { include_patron_ids => 1 } )
+    : $patron->is_patron_inside_charge_limits;
 if ( $patron_charge_limits->{noissuescharge}->{charge} > 0 ) {
     $template->param(
         charges       => 1,
@@ -259,8 +275,10 @@ if ( $credits_balance < 0 ) {
 
 # Check the debt of this patrons guarantors *and* the guarantees of those guarantors
 my $no_issues_charge_guarantors = $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{limit};
+my $relatives_charge_limit_disclosed;
 if ($no_issues_charge_guarantors) {
     if ( $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit} ) {
+        $relatives_charge_limit_disclosed = 1 if $patron_disclosure_enabled;
         $template->param(
             noissues                      => 1,
             charges_guarantors_guarantees => $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{charge}
@@ -336,4 +354,75 @@ if ( keys %$consent_types ) {
     );
 }
 
-output_html_with_http_headers $input, $cookie, $template->output;
+my $extra_options;
+if ($patron_disclosure_enabled) {
+    my ( $disclosure_surface, @disclosure_classes, @related_patron_ids );
+    if ( defined $print && $print eq 'brief' ) {
+        $disclosure_surface = 'patrons.record.brief';
+        @disclosure_classes = qw( identity contact profile circulation_current );
+        @related_patron_ids = map { $_->id } ( @guarantees, @guarantors );
+    } else {
+        $disclosure_surface = 'patrons.record.details';
+        @disclosure_classes = qw(
+            identity
+            contact
+            profile
+            notes_restrictions
+            circulation_current
+            financial
+            communications
+            security_administration
+        );
+        push @disclosure_classes,
+            @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+            @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) };
+        push @disclosure_classes, 'documents_media'
+            if C4::Context->preference('patronimages') || C4::Context->preference('EnableBorrowerFiles');
+        push @disclosure_classes, 'extended_attributes' if C4::Context->preference('ExtendedPatronAttributes');
+        push @disclosure_classes, 'service_activity'
+            if C4::Context->preference('HouseboundModule') || C4::Context->preference('CurbsidePickup');
+        @related_patron_ids = ( ( map { $_->id } @guarantees ), @relatives, @message_manager_ids );
+    }
+
+    my %disclosure_classes_by_patron = (
+        $patron->id => { map { $_ => 1 } @disclosure_classes },
+    );
+    $disclosure_classes_by_patron{$_}->{identity} = 1 for grep { defined $_ } @related_patron_ids;
+
+    if ( !defined $print || $print ne 'brief' ) {
+        $disclosure_classes_by_patron{$_}->{circulation_current} = 1 for @relatives;
+
+        if ($guarantees_financial_disclosed) {
+            $disclosure_classes_by_patron{ $_->id }->{financial} = 1 for @guarantees;
+        }
+        if ($guarantees_charge_limit_disclosed) {
+            $disclosure_classes_by_patron{$_}->{financial} = 1 for @guarantees_charge_limit_patron_ids;
+        }
+        if ($relatives_charge_limit_disclosed) {
+            $disclosure_classes_by_patron{$_}->{financial} = 1
+                for @{ $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{patron_ids} };
+        }
+    }
+
+    my @disclosure_subjects = map {
+        {
+            patron_id    => $_,
+            data_classes => [ sort keys %{ $disclosure_classes_by_patron{$_} } ],
+        }
+    } sort { $a <=> $b } keys %disclosure_classes_by_patron;
+
+    $extra_options = {
+        patron_disclosure => {
+            surface  => $disclosure_surface,
+            subjects => \@disclosure_subjects,
+        }
+    };
+}
+
+output_html_with_http_headers(
+    $input,
+    $cookie,
+    $template->output,
+    undef,
+    $extra_options
+);

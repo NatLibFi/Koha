@@ -25,6 +25,7 @@ use C4::Output qw( output_html_with_http_headers );
 use C4::Context;
 use Koha::Patrons;
 use Koha::Account::Lines;
+use Koha::Patron::Disclosure;
 
 my $input = CGI->new;
 
@@ -42,7 +43,11 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 
 my $accountlines_id = $input->param('accountlines_id');
 
-my $accountline = Koha::Account::Lines->find($accountlines_id);
+my $accountline        = Koha::Account::Lines->find($accountlines_id);
+my $disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my $logged_in_user     = $disclosure_enabled ? Koha::Patrons->find($loggedinuser) : undef;
+my $patron;
+my %manager_patron_ids;
 
 if ($accountline) {
     my $account_offsets = Koha::Account::Offsets->search(
@@ -52,6 +57,20 @@ if ($accountline) {
         ],
         { order_by => 'created_on' }
     );
+
+    if ($disclosure_enabled) {
+        $manager_patron_ids{ $accountline->manager_id } = 1 if $accountline->manager_id;
+        for my $offset ( $account_offsets->search->as_list ) {
+            my $offset_accountline;
+            if ( defined $offset->credit_id && $offset->credit_id == $accountline->id ) {
+                $offset_accountline = $offset->debit;
+            } elsif ( defined $offset->debit_id && $offset->debit_id == $accountline->id ) {
+                $offset_accountline = $offset->credit;
+            }
+            $manager_patron_ids{ $offset_accountline->manager_id } = 1
+                if $offset_accountline && $offset_accountline->manager_id;
+        }
+    }
 
     $template->param(
         accountline                 => $accountline,
@@ -63,8 +82,46 @@ if ($accountline) {
         finesview => 1,
     );
 
-    my $patron = Koha::Patrons->find( $accountline->borrowernumber );
+    $patron = Koha::Patrons->find( $accountline->borrowernumber );
     $template->param( patron => $patron );
 }
 
-output_html_with_http_headers $input, $cookie, $template->output;
+my $extra_options;
+if ( $disclosure_enabled && $patron ) {
+    my %classes_by_patron = (
+        $patron->id => {
+            map { $_ => 1 } (
+                @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+                @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+                qw( circulation_current circulation_history financial )
+            )
+        },
+    );
+
+    for my $manager_id ( sort { $a <=> $b } keys %manager_patron_ids ) {
+        my $manager = Koha::Patrons->find($manager_id);
+        next unless $manager;
+
+        my $data_class =
+               $logged_in_user
+            && $logged_in_user->can_see_patron_infos($manager)
+            && !C4::Context->preference('HidePatronName') ? 'identity' : 'profile';
+        $classes_by_patron{$manager_id}->{$data_class} = 1;
+    }
+
+    my @subjects = map {
+        {
+            patron_id    => $_,
+            data_classes => [ sort keys %{ $classes_by_patron{$_} } ],
+        }
+    } sort { $a <=> $b } keys %classes_by_patron;
+
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.account.line_details',
+            subjects => \@subjects,
+        }
+    };
+}
+
+output_html_with_http_headers( $input, $cookie, $template->output, undef, $extra_options );

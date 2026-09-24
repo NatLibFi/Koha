@@ -54,6 +54,17 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: patrons.recalls.current
+      success_statuses:
+        - 200
+      strategies:
+        - path_patron
+      path_patron:
+        parameter: patron_id
+        data_classes:
+          - identity
+          - circulation_current
     x-koha-authorization:
       permissions:
         recalls: manage_recalls

@@ -166,6 +166,15 @@
             holdings: "[% PROCESS 'build_table' tab="holdings" | collapse | $tojson %]",
             otherholdings: "[% PROCESS 'build_table' tab="otherholdings" | collapse | $tojson %]",
         };
+        [% IF Koha.Preference('StaffPatronDataDisclosureLog') %]
+            const configured_patron_disclosure_item_max_subjects = Number("[% Koha.Preference('StaffPatronDataDisclosureMaxSubjects') | html %]");
+            const patron_disclosure_item_page_size_limit =
+                Number.isInteger(configured_patron_disclosure_item_max_subjects) && configured_patron_disclosure_item_max_subjects >= 4
+                    ? Math.min(1000, Math.floor(configured_patron_disclosure_item_max_subjects / 4))
+                    : undefined;
+        [% ELSE %]
+            const patron_disclosure_item_page_size_limit = undefined;
+        [% END %]
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         let items_selection = {};
@@ -1015,6 +1024,7 @@
                         }
                     },
                     ...dt_options,
+                    pageSizeLimit: patron_disclosure_item_page_size_limit,
                 },
                 items_table_settings[tab_id],
                 add_filters,

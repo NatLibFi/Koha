@@ -11,6 +11,79 @@ function cleanup() {
     const sql = "DELETE FROM borrower_attribute_types WHERE code=?";
     cy.task("query", { sql, values: [patron_attr_type] });
 }
+
+describe("Patron disclosure page-size ceiling", () => {
+    const table_id = "memberresultst";
+    const preference_names = [
+        "StaffPatronDataDisclosureLog",
+        "StaffPatronDataDisclosureMaxSubjects",
+        "PatronsPerPage",
+    ];
+
+    beforeEach(() => {
+        cy.login();
+        cy.title().should("eq", "Koha staff interface");
+        cy.window().then(win => {
+            win.localStorage.clear();
+        });
+        preference_names.forEach(name => {
+            cy.task("query", {
+                sql: "SELECT value FROM systempreferences WHERE variable=?",
+                values: [name],
+            }).then(rows => {
+                cy.wrap(rows[0].value).as(`syspref_${name}`);
+            });
+        });
+    });
+
+    afterEach(function () {
+        preference_names.forEach(name => {
+            cy.set_syspref(name, this[`syspref_${name}`]);
+        });
+    });
+
+    it('removes "All" and clamps an unsafe configured length', () => {
+        cy.task("buildSampleObjects", {
+            object: "patron",
+            count: 15,
+            values: {},
+        }).then(patrons => {
+            patrons = patrons.map(p => ({ ...p, account_balance: 0 }));
+            cy.intercept("GET", "/api/v1/patrons*", {
+                statusCode: 200,
+                body: patrons,
+                headers: {
+                    "X-Base-Total-Count": baseTotalCount,
+                    "X-Total-Count": baseTotalCount,
+                },
+            }).as("searchPatrons");
+
+            cy.set_syspref("StaffPatronDataDisclosureLog", 1);
+            cy.set_syspref("StaffPatronDataDisclosureMaxSubjects", 15);
+            cy.set_syspref("PatronsPerPage", 100).then(() => {
+                cy.visit("/cgi-bin/koha/members/members-home.pl");
+                cy.get("form.patron_search_form input[type='submit']").click();
+
+                cy.wait("@searchPatrons").then(interception => {
+                    expect(interception.request.query._per_page).to.equal("15");
+                });
+                cy.get(`#${table_id}`).then($table => {
+                    expect($table.DataTable().page.len()).to.equal(15);
+                });
+                cy.get(
+                    `#${table_id}_wrapper select.dt-input option[value='-1']`
+                ).should("not.exist");
+                cy.get(
+                    `#${table_id}_wrapper select.dt-input option[value='100']`
+                ).should("not.exist");
+                cy.get(
+                    `#${table_id}_wrapper select.dt-input option[value='15']`
+                ).should("exist");
+            });
+        });
+    });
+});
+
 describe("ExtendedPatronAttributes", () => {
     beforeEach(() => {
         cleanup();

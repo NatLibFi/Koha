@@ -13,6 +13,17 @@ Logging:
                   0: "Don't log"
             - changes to patron records and patron restrictions.
         -
+            - pref: StaffPatronDataDisclosureLog
+              choices:
+                  1: Log
+                  0: "Don't log"
+            - covered patron data disclosures from the staff interface and core REST operations. This staged feature does not cover every Koha data access channel.
+        -
+            - "Allow at most"
+            - pref: StaffPatronDataDisclosureMaxSubjects
+              class: integer
+            - unique patron subjects in one logged disclosure response. This must be a positive integer; use at least 4 to keep the audited catalogue items table available.
+        -
             - pref: ApiKeyLog
               choices:
                   1: Log

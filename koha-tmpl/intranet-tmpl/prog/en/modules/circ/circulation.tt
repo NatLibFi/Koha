@@ -1183,6 +1183,15 @@
         table_settings_bookings_table = [% TablesSettings.GetTableSettings( 'members', 'moremember', 'bookings-table', 'json' ) | $raw %]
         CAN_user_circulate_manage_bookings = [% CAN_user_circulate_manage_bookings | $raw %]
         patron_borrowernumber = [% patron.borrowernumber | $raw %]
+        [% IF Koha.Preference('StaffPatronDataDisclosureLog') %]
+            const configured_patron_disclosure_bookings_max_subjects = Number("[% Koha.Preference('StaffPatronDataDisclosureMaxSubjects') | html %]");
+            const patron_disclosure_bookings_page_size_limit =
+                Number.isInteger(configured_patron_disclosure_bookings_max_subjects) && configured_patron_disclosure_bookings_max_subjects >= 2
+                    ? Math.min(1000, Math.floor(configured_patron_disclosure_bookings_max_subjects / 2))
+                    : undefined;
+        [% ELSE %]
+            const patron_disclosure_bookings_page_size_limit = undefined;
+        [% END %]
 
         [% IF borrowernumber and patron %]
             if( Cookies.get("holdfor") != [% patron.borrowernumber | html %]){

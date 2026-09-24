@@ -341,6 +341,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -370,6 +371,15 @@
         description: Under maintenance
         schema:
           $ref: ../swagger.yaml#/definitions/error
+    x-koha-patron-disclosure:
+      surface: catalogue.bookings.by_record
+      success_statuses:
+        - 200
+      strategies:
+        - serialized_patrons
+        - patron_references
+      max_page_size: 1000
+      subjects_per_page_item: 1
     x-koha-authorization:
       permissions:
         circulate: "manage_bookings"
@@ -420,6 +430,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "403":
@@ -441,6 +452,15 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: catalogue.checkouts.by_record
+      success_statuses:
+        - 200
+      strategies:
+        - serialized_patrons
+        - patron_references
+      max_page_size: 1000
+      subjects_per_page_item: 2
     x-koha-authorization:
       permissions:
         - circulate: circulate_remaining_permissions
@@ -520,6 +540,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -552,6 +573,15 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: catalogue.items.patron_status
+      success_statuses:
+        - 200
+      strategies:
+        - serialized_patrons
+        - patron_references
+      max_page_size: 1000
+      subjects_per_page_item: 4
     x-koha-authorization:
       permissions:
         catalogue: "1"
@@ -728,6 +758,12 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: catalogue.biblio_pickup_locations.for_patron
+      success_statuses:
+        - 200
+      strategies:
+        - explicit
     x-koha-authorization:
       permissions:
         reserveforothers: place_holds

@@ -74,6 +74,12 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure:
+      surface: patrons.holds.list
+      success_statuses:
+        - 200
+      strategies:
+        - explicit
     x-koha-authorization:
       permissions:
         borrowers:

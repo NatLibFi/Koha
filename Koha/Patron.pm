@@ -20,9 +20,10 @@ package Koha::Patron;
 
 use Modern::Perl;
 
+use Carp               qw( croak );
 use JSON               qw( encode_json decode_json );
 use List::MoreUtils    qw( any none uniq notall zip6);
-use Scalar::Util       qw( blessed looks_like_number );
+use Scalar::Util       qw( blessed looks_like_number refaddr );
 use Struct::Diff       qw( diff );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
@@ -635,6 +636,19 @@ Returns the amount owed by the patron's guarantors *and* the other guarantees of
 sub relationships_debt {
     my ( $self, $params ) = @_;
 
+    return $self->relationships_debt_details($params)->{amount};
+}
+
+=head3 relationships_debt_details
+
+Returns the amount from C<relationships_debt> together with the exact patron
+IDs whose account balances contributed to that amount.
+
+=cut
+
+sub relationships_debt_details {
+    my ( $self, $params ) = @_;
+
     my $include_guarantors  = $params->{include_guarantors};
     my $only_this_guarantor = $params->{only_this_guarantor};
     my $include_this_patron = $params->{include_this_patron};
@@ -656,12 +670,15 @@ sub relationships_debt {
 
     my $non_issues_charges = 0;
     my $seen = $include_this_patron ? {} : { $self->id => 1 };    # For tracking members already added to the total
+    my %patron_ids;
     foreach my $guarantor (@guarantors) {
         if ( !$only_this_guarantor && $seen->{ $guarantor->id } ) {
             next;
         }
-        $non_issues_charges += $guarantor->account->non_issues_charges
-            if $include_guarantors && !$seen->{ $guarantor->id };
+        if ( $include_guarantors && !$seen->{ $guarantor->id } ) {
+            $non_issues_charges += $guarantor->account->non_issues_charges;
+            $patron_ids{ $guarantor->id } = 1;
+        }
 
         # We've added what the guarantor owes, not added in that guarantor's guarantees as well
         my @guarantees                    = map { $_->guarantee } $guarantor->guarantee_relationships->as_list;
@@ -669,6 +686,7 @@ sub relationships_debt {
         foreach my $guarantee (@guarantees) {
             next if $seen->{ $guarantee->id };
             $guarantees_non_issues_charges += $guarantee->account->non_issues_charges;
+            $patron_ids{ $guarantee->id } = 1;
 
             # Mark this guarantee as seen so we don't double count a guarantee linked to multiple guarantors
             $seen->{ $guarantee->id } = 1;
@@ -678,7 +696,10 @@ sub relationships_debt {
         $seen->{ $guarantor->id } = 1;
     }
 
-    return $non_issues_charges;
+    return {
+        amount     => $non_issues_charges,
+        patron_ids => [ sort { $a <=> $b } keys %patron_ids ],
+    };
 }
 
 =head3 housebound_profile
@@ -3106,6 +3127,20 @@ suitable for API output.
 sub to_api {
     my ( $self, $params ) = @_;
 
+    $params = defined $params ? {%$params} : {};
+
+    croak 'A Patron serialized by a covered operation requires the serialized_patrons disclosure strategy'
+        if $params->{_patron_disclosure_active} && !$params->{patron_disclosure};
+
+    my $is_accessible;
+    my $observer     = $params->{_to_api_accessibility_observer};
+    my $self_address = refaddr($self);
+    $params->{_to_api_accessibility_observer} = sub {
+        my ( $object, $accessible ) = @_;
+        $is_accessible = $accessible if refaddr($object) == $self_address;
+        $observer->(@_) if ref($observer) eq 'CODE';
+    };
+
     my $json_patron = $self->SUPER::to_api($params);
 
     return unless $json_patron;
@@ -3121,6 +3156,31 @@ sub to_api {
         : Mojo::JSON->false;
 
     $json_patron->{self_renewal_available} = $self->is_eligible_for_self_renewal();
+
+    if ( my $disclosure = $params->{patron_disclosure} ) {
+        my %disclosed_fields;
+
+        if ($is_accessible) {
+            $disclosed_fields{$_} = 1 for keys %{$json_patron};
+        } else {
+            my $mapping = $self->to_api_mapping;
+            for my $field ( @{ $self->unredact_list } ) {
+                my $api_field = exists $mapping->{$field} ? $mapping->{$field} : $field;
+                $disclosed_fields{$api_field} = 1 if defined $api_field;
+            }
+
+            $disclosed_fields{$_}       = 1 for qw( restricted expired self_renewal_available );
+            $disclosed_fields{$_}       = 1 for keys %{ $params->{embed} // {} };
+            $disclosed_fields{_strings} = 1 if $params->{strings};
+        }
+
+        $disclosure->add_api_subject(
+            {
+                patron_id => $self->id,
+                fields    => [ sort grep { exists $json_patron->{$_} } keys %disclosed_fields ],
+            }
+        );
+    }
 
     return $json_patron;
 }
@@ -3623,12 +3683,16 @@ my $patron_charge_limits = $patron->is_patron_inside_charge_limits( { patron => 
 Checks the current account balance for a patron and any guarantors/guarantees and compares it with any charge limits in place
 Takes into account patron category level charge limits in the first instance and defaults to global sysprefs if not set
 
+With C<include_patron_ids>, the two relationship-derived entries also contain
+C<patron_ids>, the exact patrons whose balances contributed to each aggregate.
+
 =cut
 
 sub is_patron_inside_charge_limits {
     my ( $self, $args ) = @_;
 
     my $borrowernumber       = $args->{borrowernumber};
+    my $include_patron_ids   = $args->{include_patron_ids};
     my $patron               = $self || Koha::Patrons->find( { borrowernumber => $borrowernumber } );
     my $patron_category      = $patron->category;
     my $patron_charge_limits = {};
@@ -3641,13 +3705,15 @@ sub is_patron_inside_charge_limits {
 
     my $non_issues_charges            = $patron->account->non_issues_charges;
     my $guarantees_non_issues_charges = 0;
-    my $guarantors_non_issues_charges = 0;
+    my @guarantees_non_issues_patron_ids;
+    my $guarantors_non_issues_charge_detail = { amount => 0, patron_ids => [] };
 
     # Check the debt of this patrons guarantees
     if ( defined $no_issues_charge_guarantees && looks_like_number($no_issues_charge_guarantees) ) {
         my @guarantees = map { $_->guarantee } $patron->guarantee_relationships->as_list;
         foreach my $g (@guarantees) {
             $guarantees_non_issues_charges += $g->account->non_issues_charges;
+            push @guarantees_non_issues_patron_ids, $g->id;
         }
     }
 
@@ -3655,7 +3721,7 @@ sub is_patron_inside_charge_limits {
     if ( defined $no_issues_charge_guarantors_with_guarantees
         && looks_like_number($no_issues_charge_guarantors_with_guarantees) )
     {
-        $guarantors_non_issues_charges = $patron->relationships_debt(
+        $guarantors_non_issues_charge_detail = $patron->relationships_debt_details(
             { include_guarantors => 1, only_this_guarantor => 0, include_this_patron => 1 } );
     }
 
@@ -3665,18 +3731,28 @@ sub is_patron_inside_charge_limits {
     $patron_charge_limits->{noissuescharge}->{overlimit} = 1
         if $no_issues_charge && $non_issues_charges > $no_issues_charge;
 
-    $patron_charge_limits->{NoIssuesChargeGuarantees} =
-        { limit => $no_issues_charge_guarantees, charge => $guarantees_non_issues_charges, overlimit => 0 };
+    $patron_charge_limits->{NoIssuesChargeGuarantees} = {
+        limit     => $no_issues_charge_guarantees,
+        charge    => $guarantees_non_issues_charges,
+        overlimit => 0
+    };
+    $patron_charge_limits->{NoIssuesChargeGuarantees}->{patron_ids} =
+        [ sort { $a <=> $b } uniq @guarantees_non_issues_patron_ids ]
+        if $include_patron_ids;
     $patron_charge_limits->{NoIssuesChargeGuarantees}->{overlimit} = 1
         if $no_issues_charge_guarantees && $guarantees_non_issues_charges > $no_issues_charge_guarantees;
 
     $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees} = {
-        limit     => $no_issues_charge_guarantors_with_guarantees, charge => $guarantors_non_issues_charges,
+        limit     => $no_issues_charge_guarantors_with_guarantees,
+        charge    => $guarantors_non_issues_charge_detail->{amount},
         overlimit => 0
     };
+    $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{patron_ids} =
+        $guarantors_non_issues_charge_detail->{patron_ids}
+        if $include_patron_ids;
     $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit} = 1
         if $no_issues_charge_guarantors_with_guarantees
-        && $guarantors_non_issues_charges > $no_issues_charge_guarantors_with_guarantees;
+        && $guarantors_non_issues_charge_detail->{amount} > $no_issues_charge_guarantors_with_guarantees;
 
     return $patron_charge_limits;
 }

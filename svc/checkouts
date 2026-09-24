@@ -21,9 +21,11 @@ use Modern::Perl;
 
 use CGI;
 use JSON qw(to_json);
+use Try::Tiny;
 
 use C4::Auth        qw(check_cookie_auth haspermission);
 use C4::Circulation qw(GetIssuingCharges CanBookBeRenewed GetRenewCount );
+use C4::Output      qw( output_with_http_headers );
 use C4::Overdues    qw(GetFine);
 use C4::Context;
 
@@ -32,6 +34,7 @@ use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::ILL::ISO18626::Requests;
+use Koha::Patron::Disclosure;
 
 my $input = CGI->new;
 
@@ -55,6 +58,30 @@ my @borrowernumber   = $input->multi_param('borrowernumber');
 my $offset           = $input->param('iDisplayStart');
 my $results_per_page = $input->param('iDisplayLength') || -1;
 
+my $disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my @disclosure_patron_ids;
+if ($disclosure_enabled) {
+    my $resolved_ids;
+    try {
+        $resolved_ids = Koha::Patron::Disclosure->resolve_patron_ids( \@borrowernumber );
+    } catch {
+        my $is_input_error = ref($_) eq 'Koha::Exceptions::BadParameter'
+            && ( $_->parameter // q{} ) eq 'patron_disclosure_subjects';
+        my ( $status, $error_code ) =
+            $is_input_error
+            ? ( '400 Bad Request', 'patron_disclosure_invalid_subjects' )
+            : ( '503 Service Unavailable', 'patron_disclosure_subject_resolution_unavailable' );
+        my $error = $status =~ /\A400/ ? 'Invalid request' : 'Service unavailable';
+        output_with_http_headers(
+            $input, undef, to_json( { error => $error, error_code => $error_code } ), 'json',
+            $status
+        );
+        exit;
+    };
+    @disclosure_patron_ids = @{$resolved_ids};
+    @borrowernumber        = @disclosure_patron_ids;
+}
+
 my $sorting_column = $input->param('iSortCol_0') || q{};
 $sorting_column = ( $sorting_column && $sort_columns[$sorting_column] ) ? $sort_columns[$sorting_column] : 'issuedate';
 
@@ -64,7 +91,6 @@ $sorting_direction = $sorting_direction eq 'asc' ? 'asc' : 'desc';
 $results_per_page = undef if ( $results_per_page == -1 );
 
 binmode STDOUT, ":encoding(UTF-8)";
-print $input->header( -type => 'application/json', -charset => 'UTF-8' );
 
 my @parameters;
 my $sql = '
@@ -143,9 +169,12 @@ push( @parameters, @borrowernumber );
 
 $sql .= " ORDER BY $sorting_column $sorting_direction ";
 
-my $dbh = C4::Context->dbh();
-my $sth = $dbh->prepare($sql);
-$sth->execute(@parameters);
+my $sth;
+if ( !$disclosure_enabled || @borrowernumber ) {
+    my $dbh = C4::Context->dbh();
+    $sth = $dbh->prepare($sql);
+    $sth->execute(@parameters);
+}
 
 my $item_level_itypes          = C4::Context->preference('item-level_itypes');
 my $claims_returned_lost_value = C4::Context->preference('ClaimReturnedLostValue');
@@ -156,7 +185,7 @@ my $itemtypes = { map { $_->{itemtype} => $_->{translated_description} }
 
 my @checkouts_today;
 my @checkouts_previous;
-while ( my $c = $sth->fetchrow_hashref() ) {
+while ( $sth && ( my $c = $sth->fetchrow_hashref() ) ) {
     my ($charge) = GetIssuingCharges( $c->{itemnumber}, $c->{borrowernumber} );
     my $fine = GetFine( $c->{itemnumber}, $c->{borrowernumber} );
 
@@ -349,4 +378,20 @@ $data->{'iTotalDisplayRecords'} = scalar @checkouts;
 $data->{'sEcho'}                = $input->param('sEcho') || undef;
 $data->{'aaData'}               = \@checkouts;
 
-print to_json($data);
+my $extra_options;
+if ( $disclosure_enabled && @disclosure_patron_ids ) {
+    my @subjects = map {
+        {
+            patron_id    => $_,
+            data_classes => [qw( identity circulation_current financial service_activity )],
+        }
+    } @disclosure_patron_ids;
+    $extra_options = {
+        patron_disclosure => {
+            surface  => @subjects > 1 ? 'patrons.checkouts.current_batch' : 'patrons.checkouts.current',
+            subjects => \@subjects,
+        }
+    };
+}
+
+output_with_http_headers( $input, undef, to_json($data), 'json', undef, $extra_options );

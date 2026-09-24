@@ -40,6 +40,7 @@ use Koha::Patron::Restriction::Types;
 use Koha::Cities;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Libraries;
+use Koha::Patron::Disclosure;
 use Koha::Patrons;
 use Koha::Patron::Attribute::Types;
 use Koha::Patron::Categories;
@@ -79,6 +80,7 @@ if ( C4::Context->preference('SMSSendDriver') eq 'Email' ) {
 my $modify       = $input->param('modify');
 my $delete       = $input->param('cud-delete');
 my $op           = $input->param('op') || q{};
+my $requested_op = $op;
 my $destination  = $input->param('destination');
 my $cardnumber   = $input->param('cardnumber');
 my $check_member = $input->param('check_member');
@@ -124,19 +126,19 @@ push @guarantors, @existing_guarantors;
 
 ## Deal with debarments
 $template->param( restriction_types => scalar Koha::Patron::Restriction::Types->search() );
+my $patron_state_changed;
 my @debarments_to_remove = $input->multi_param('remove_debarment');
 foreach my $d (@debarments_to_remove) {
-    DelDebarment($d);
+    $patron_state_changed = 1 if DelDebarment($d);
 }
 if ( $input->param('add_debarment') ) {
-
     my $expiration = $input->param('debarred_expiration');
     $expiration =
         $expiration
         ? dt_from_string($expiration)->ymd
         : undef;
 
-    AddDebarment(
+    $patron_state_changed = 1 if AddDebarment(
         {
             borrowernumber => $borrowernumber,
             type           => scalar $input->param('debarred_type') // 'MANUAL',
@@ -279,6 +281,7 @@ if (@delete_guarantor) {
             my $r = Koha::Patron::Relationships->find($id);
             if ($r) {
                 $r->delete();
+                $patron_state_changed = 1;
                 push @deleted_guarantors, $id;
             }
         }
@@ -947,7 +950,144 @@ if ( C4::Context->preference('TranslateNotices') ) {
 }
 
 $template->param( messages => \@messages );
-output_html_with_http_headers $input, $cookie, $template->output;
+
+my $extra_options;
+my $patron_disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my %displayed_related_patron_ids;
+if ( $patron_disclosure_enabled && !$patron_state_changed ) {
+    $displayed_related_patron_ids{$_} = 1 for map { $_->id } grep { blessed($_) && $_->can('id') } @existing_guarantors;
+    $displayed_related_patron_ids{ $guarantor->id } = 1 if blessed($guarantor) && $guarantor->can('id');
+    if ($nok) {
+        $displayed_related_patron_ids{$_} = 1 for map { $_->id } grep { blessed($_) && $_->can('id') } @guarantors;
+    }
+}
+
+if ( $patron_disclosure_enabled && $check_patron && !$patron_state_changed && $requested_op eq 'cud-insert' ) {
+    my @match_classes = ('identity');
+    push @match_classes, 'profile' unless $logged_in_user->can_see_patron_infos($check_patron);
+    my @subjects = (
+        {
+            patron_id    => $check_patron->id,
+            data_classes => \@match_classes,
+        },
+        map {
+            {
+                patron_id    => $_,
+                data_classes => ['identity'],
+            }
+        } grep { $_ != $check_patron->id } sort { $a <=> $b } keys %displayed_related_patron_ids
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.record.duplicate_match',
+            subjects => \@subjects,
+        }
+    };
+} elsif ( $patron_disclosure_enabled
+    && $patron
+    && !$patron_state_changed
+    && ( $requested_op eq 'edit_form' || $requested_op eq 'duplicate' || ( $requested_op eq 'cud-save' && $nok ) ) )
+{
+    my %classes_by_step = (
+        1 => [qw( identity contact profile )],
+        2 => [qw( identity contact )],
+        3 => [
+            qw(
+                identity
+                profile
+                notes_restrictions
+                circulation_current
+                circulation_history
+                communications
+                security_administration
+            )
+        ],
+        4 => [qw( identity extended_attributes )],
+        5 => [qw( identity contact communications )],
+        6 => [qw( identity contact )],
+        7 => [qw( identity service_activity )],
+    );
+    my @displayed_steps = $step ? ($step) : sort { $a <=> $b } keys %classes_by_step;
+    my %target_classes = map { $_ => 1 }
+        @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) };
+    $target_classes{identity} = 1;
+    $target_classes{$_} = 1 for map { @{ $classes_by_step{$_} // [] } } @displayed_steps;
+    my @subjects = (
+        {
+            patron_id    => $patron->id,
+            data_classes => [ sort keys %target_classes ],
+        }
+    );
+
+    if ( !$step || $step == 1 ) {
+        push @subjects, map {
+            {
+                patron_id    => $_,
+                data_classes => ['identity'],
+            }
+        } sort { $a <=> $b } keys %displayed_related_patron_ids;
+
+    }
+
+    $extra_options = {
+        patron_disclosure => {
+            surface  => $requested_op eq 'duplicate' ? 'patrons.record.duplicate' : 'patrons.record.edit',
+            subjects => \@subjects,
+        }
+    };
+} elsif ( $patron_disclosure_enabled
+    && !$patron_state_changed
+    && %displayed_related_patron_ids
+    && ( $requested_op eq 'add_form' || ( $requested_op eq 'cud-insert' && $nok ) ) )
+{
+    my %direct_guarantor_classes = ( identity => 1 );
+    if ( blessed($guarantor) && $guarantor->can('id') && $op eq 'add_form' ) {
+        for my $field (@prefill_fields) {
+            $direct_guarantor_classes{ $field eq 'contactnote' ? 'notes_restrictions' : 'contact' } = 1
+                unless $field eq 'surname';
+        }
+    }
+    my @subjects = map {
+        my $classes =
+               blessed($guarantor)
+            && $guarantor->can('id')
+            && $_ == $guarantor->id
+            ? [ sort keys %direct_guarantor_classes ]
+            : ['identity'];
+        {
+            patron_id    => $_,
+            data_classes => $classes,
+        }
+    } sort { $a <=> $b } keys %displayed_related_patron_ids;
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.record.create_form',
+            subjects => \@subjects,
+        }
+    };
+} elsif ( $patron_disclosure_enabled && $patron && !$patron_state_changed ) {
+    my @subjects = (
+        {
+            patron_id => $patron->id,
+            data_classes =>
+                Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ),
+        },
+        map {
+            {
+                patron_id    => $_,
+                data_classes => ['identity'],
+            }
+        } sort { $a <=> $b } keys %displayed_related_patron_ids
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.record.edit',
+            subjects => \@subjects,
+        }
+    };
+}
+
+output_html_with_http_headers( $input, $cookie, $template->output, undef, $extra_options );
 
 sub parse_extended_patron_attributes {
     my ($input) = @_;

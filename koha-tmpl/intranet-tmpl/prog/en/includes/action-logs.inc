@@ -12,6 +12,8 @@
         <span>Authorities</span>[% UNLESS Koha.Preference('AuthoritiesLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="AuthoritiesLog"></i>[% END %]
     [% CASE 'MEMBERS' %]
         <span>Patrons</span>[% UNLESS Koha.Preference('BorrowersLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="BorrowersLog"></i>[% END %]
+    [% CASE 'PATRON_DISCLOSURE' %]
+        <span>Patron data disclosures</span>[% UNLESS Koha.Preference('StaffPatronDataDisclosureLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="StaffPatronDataDisclosureLog"></i>[% END %]
     [% CASE 'ACQUISITIONS' %]
         <span>Acquisitions</span>[% UNLESS Koha.Preference('AcquisitionLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="AcquisitionLog"></i>[% END %]
     [% CASE 'SERIAL' %]
@@ -59,6 +61,8 @@
         <span>Add</span>
     [% CASE 'DELETE' %]
         <span>Delete</span>
+    [% CASE 'DISCLOSE' %]
+        <span>Disclose</span>
     [% CASE 'MODIFY' %]
         <span>Modify</span>
     [% CASE 'REVOKE' %]

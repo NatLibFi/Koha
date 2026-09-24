@@ -25,6 +25,7 @@ use C4::Members;
 use C4::Context;
 use C4::Serials;
 use Koha::Patrons;
+use Koha::Patron::Disclosure;
 use CGI::Session;
 
 my $query = CGI->new;
@@ -59,4 +60,24 @@ $template->param(
     routinglistview => 1,
 );
 
-output_html_with_http_headers $query, $cookie, $template->output;
+my $extra_options;
+if ( Koha::Patron::Disclosure->enabled ) {
+    my @data_classes = (
+        @{ Koha::Patron::Disclosure->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+        @{ Koha::Patron::Disclosure->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+        'service_activity'
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.routing_lists.list',
+            subjects => [ { patron_id => $patron->id, data_classes => \@data_classes } ],
+        }
+    };
+}
+output_html_with_http_headers(
+    $query,
+    $cookie,
+    $template->output,
+    undef,
+    $extra_options
+);

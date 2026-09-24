@@ -798,6 +798,8 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('StaffLangSelectorMode','footer'),
 ('StaffLoginLibraryBasedOnIP', '1'),
 ('StaffLoginRestrictLibraryByIP','0'),
+('StaffPatronDataDisclosureLog','0'),
+('StaffPatronDataDisclosureMaxSubjects','1000'),
 ('StaffSearchResultsDisplayBranch','holdingbranch'),
 ('StaffSerialIssueDisplayCount','3'),
 ('staffShibOnly','0'),

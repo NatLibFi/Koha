@@ -153,6 +153,62 @@ describe("Booking Modal Basic Tests", () => {
         cy.get("[data-bs-dismiss='modal']").should("exist");
     });
 
+    it("should fetch complete booking resources as bounded pages", () => {
+        const endpoint = `/api/v1/bookings?biblio_id=${testData.biblio.biblio_id}`;
+
+        cy.intercept("GET", "/api/v1/bookings*", request => {
+            expect(request.query).not.to.have.property("_per_page");
+            expect(request.query._order_by).to.equal("booking_id");
+            const page = Number(request.query._page);
+            const body =
+                page === 1
+                    ? [{ booking_id: 1 }, { booking_id: 2 }]
+                    : [{ booking_id: 3 }];
+            request.reply({
+                headers: { "X-Total-Count": "3" },
+                body,
+            });
+        }).as("getBookingPages");
+
+        cy.visit(
+            `/cgi-bin/koha/catalogue/detail.pl?biblionumber=${testData.biblio.biblio_id}`
+        );
+
+        cy.window()
+            .then(window =>
+                (window as any).fetchAllKohaApiPages(endpoint, "booking_id")
+            )
+            .then(records => {
+                expect(records.map(record => record.booking_id)).to.deep.equal([
+                    1, 2, 3,
+                ]);
+            });
+        cy.get("@getBookingPages.all").should("have.length", 2);
+    });
+
+    it("should block submission when booking pages repeat", () => {
+        cy.intercept("GET", "/api/v1/bookings*", {
+            headers: { "X-Total-Count": "4" },
+            body: [{ booking_id: 1 }, { booking_id: 2 }],
+        });
+        cy.visit(
+            `/cgi-bin/koha/catalogue/detail.pl?biblionumber=${testData.biblio.biblio_id}`
+        );
+        cy.get('[data-bs-target="#placeBookingModal"]').first().click();
+        cy.get("#booking_result")
+            .should("be.visible")
+            .and(
+                "contain.text",
+                "Unable to load complete booking availability"
+            );
+        cy.get("#placeBookingForm button[type='submit']").should("be.disabled");
+        cy.get("#placeBookingForm").trigger("submit");
+        cy.get("#booking_result").should(
+            "contain.text",
+            "Complete booking availability has not been loaded"
+        );
+    });
+
     it("should enable fields progressively based on user selections", () => {
         // Setup API intercepts to wait for real API calls instead of arbitrary timeouts
         cy.intercept(
