@@ -54,6 +54,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: GET /patrons/{patron_id}/recalls
     x-koha-authorization:
       permissions:
         recalls: manage_recalls

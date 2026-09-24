@@ -43,6 +43,7 @@ t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', 1000 );
 
 my $t = Test::Mojo->new('Koha::REST::V1');
 my $current_actor_id;
+my $last_disclosure_action_id = 0;
 
 # Mojolicious runs after_dispatch hooks in reverse registration order. This
 # later hook must therefore contribute its subject before Koha finalizes the
@@ -69,9 +70,18 @@ sub disclosure_logs {
             module => Koha::Patron::Disclosure::MODULE,
             action => Koha::Patron::Disclosure::ACTION,
             user   => $current_actor_id,
+            action_id => { '>' => $last_disclosure_action_id },
         },
         { order_by => 'action_id' }
     );
+}
+
+sub clear_disclosure_logs {
+    my ($latest) = disclosure_logs()->search(
+        {}, { order_by => { -desc => 'action_id' }, rows => 1 }
+    )->get_column('action_id');
+    $last_disclosure_action_id = $latest if defined $latest;
+    return;
 }
 
 sub payload {
@@ -103,6 +113,7 @@ sub build_actor {
     $actor->set_password( { password => $password, skip_validation => 1 } );
     $actor->discard_changes;
     $current_actor_id = $actor->id;
+    $last_disclosure_action_id = 0;
     return ( $actor, $password );
 }
 
@@ -261,7 +272,7 @@ subtest 'disabled, rejected, and failed responses disclose no unaudited Patron b
     $t->get_ok( $credentials . '/api/v1/patrons/' . $target->id )
         ->status_is(200)
         ->json_is( '/surname' => 'AUDIT_PRIVATE_SENTINEL' );
-    is( disclosure_logs()->count, 0, 'preference off leaves the response unchanged and writes no rows' );
+    is( disclosure_logs()->count, 0, 'config off leaves the response unchanged and writes no rows' );
 
     t::lib::Mocks::mock_config( 'patron_data_disclosure_log', 1 );
     $t->get_ok( $credentials . '/api/v1/patrons?patron_id=' . $target->id . '&_per_page=-1' )
@@ -308,6 +319,346 @@ subtest 'disabled, rejected, and failed responses disclose no unaudited Patron b
     }
 
     t::lib::Mocks::mock_preference( 'AccessControlAllowOrigin', '' );
+    $schema->storage->txn_rollback;
+    done_testing;
+};
+
+subtest 'nested item embeds log only Patrons serialized in one response' => sub {
+    $schema->storage->txn_begin;
+    clear_disclosure_logs();
+
+    my ( $actor, $password ) = build_actor();
+    my $biblio          = $builder->build_sample_biblio;
+    my $checkout_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $hold_patron     = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $recall_patron   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $claim_patron    = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $unrelated       = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $checkout_item   = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $hold_item       = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $recall_item     = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $claim_item      = $builder->build_sample_item( { biblionumber => $biblio->id } );
+
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $checkout_patron->id,
+                itemnumber     => $checkout_item->id,
+                branchcode     => $checkout_item->holdingbranch,
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $hold_patron->id,
+                biblionumber   => $biblio->id,
+                itemnumber     => $hold_item->id,
+                branchcode     => $hold_item->holdingbranch,
+                found          => undef,
+                priority       => 1,
+                reservedate    => dt_from_string()->subtract( days => 1 )->ymd,
+                suspend        => 0,
+                waitingdate    => undef,
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Recalls',
+            value => {
+                patron_id         => $recall_patron->id,
+                biblio_id         => $biblio->id,
+                item_id           => $recall_item->id,
+                pickup_library_id => $recall_item->holdingbranch,
+                status            => 'requested',
+                completed         => 0,
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts::ReturnClaims',
+            value => {
+                itemnumber     => $claim_item->id,
+                borrowernumber => $claim_patron->id,
+                created_by     => $actor->id,
+            },
+        }
+    );
+
+    my $path = '/api/v1/biblios/' . $biblio->id . '/items?_order_by=item_id';
+    $t->get_ok( '//'
+            . $actor->userid
+            . ":$password\@$path" => { 'x-koha-embed' => 'checkout.patron,first_hold.patron,recall.patron' } )
+        ->status_is(200);
+
+    my @representations;
+    for my $item ( @{ $t->tx->res->json } ) {
+        for my $relation (qw( checkout first_hold recall )) {
+            push @representations, $item->{$relation}->{patron}
+                if ref( $item->{$relation} ) eq 'HASH' && ref( $item->{$relation}->{patron} ) eq 'HASH';
+        }
+    }
+    my %response_subjects = map  { $_->{patron_id} => 1 } @representations;
+    my @response_ids      = sort { $a <=> $b } keys %response_subjects;
+    my @expected_ids      = sort { $a <=> $b } map { $_->id } ( $checkout_patron, $hold_patron, $recall_patron );
+    is_deeply( \@response_ids, \@expected_ids, 'fixture serialized all three distinct nested Patron subjects' );
+
+    my @logs = disclosure_logs()->as_list;
+    is_deeply( [ map { 0 + $_->object } @logs ], \@expected_ids, 'only serialized Patron IDs are logged' );
+    ok( !grep( { $_->object == $unrelated->id } @logs ), 'unrelated server-side Patron is not logged' );
+    is(
+        scalar( keys %{ { map { payload($_)->{event_id} => 1 } @logs } } ),
+        1,
+        'all nested patrons share one response event ID'
+    );
+    is_deeply(
+        [ map { payload($_)->{surface} } @logs ],
+        [ ('catalogue.items.patron_status') x @logs ],
+        'nested rows use the stable item-status surface'
+    );
+
+    clear_disclosure_logs();
+    $t->get_ok( '//'
+            . $actor->userid
+            . ":$password\@$path" => { 'x-koha-embed' => 'checkout,first_hold,recall,return_claims' } )->status_is(200);
+    my @reference_ids =
+        sort { $a <=> $b } map { $_->id } ( $checkout_patron, $hold_patron, $recall_patron, $claim_patron );
+    is_deeply(
+        [ map { 0 + $_->object } disclosure_logs()->as_list ],
+        \@reference_ids,
+        'bare patron-owner references in non-Patron representations are logged'
+    );
+
+    clear_disclosure_logs();
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path" )->status_is(200);
+    is( disclosure_logs()->count, 0, 'the same item response without Patron embeds creates no disclosure row' );
+
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path&_per_page=-1" )
+        ->status_is(400)
+        ->json_is( '/error_code' => 'patron_disclosure_page_size_exceeded' );
+    is( disclosure_logs()->count, 0, 'an unbounded item request is rejected before disclosure' );
+
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', 2 );
+    $t->get_ok( '//'
+            . $actor->userid
+            . ":$password\@$path" => { 'x-koha-embed' => 'checkout.patron,first_hold.patron,recall.patron' } )
+        ->status_is(400)
+        ->json_is( '/error_code' => 'patron_disclosure_page_size_exceeded' );
+    is( disclosure_logs()->count, 0, 'the fan-out ceiling rejects work before writing a nested event' );
+    t::lib::Mocks::mock_config( 'patron_data_disclosure_max_subjects', 1000 );
+
+    $schema->storage->txn_rollback;
+    done_testing;
+};
+
+subtest 'staff booking APIs log exact booking and checkout patrons' => sub {
+    $schema->storage->txn_begin;
+    clear_disclosure_logs();
+
+    my ( $actor, $password ) = build_actor();
+    my $booking_patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $checkout_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio          = $builder->build_sample_biblio;
+    my $item            = $builder->build_sample_item( { biblionumber => $biblio->id, bookable => 1 } );
+    my $booking         = $builder->build_object(
+        {
+            class => 'Koha::Bookings',
+            value => {
+                biblio_id         => $biblio->id,
+                item_id           => $item->id,
+                patron_id         => $booking_patron->id,
+                pickup_library_id => $item->holdingbranch,
+                start_date        => dt_from_string->add( days => 2 )->truncate( to => 'day' ),
+                end_date          => dt_from_string->add( days => 4 )->truncate( to => 'day' ),
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $checkout_patron->id,
+                itemnumber     => $item->id,
+                branchcode     => $item->holdingbranch,
+            },
+        }
+    );
+
+    my $credentials = '//' . $actor->userid . ":$password\@";
+    my $path        = '/api/v1/bookings?biblio_id=' . $biblio->id;
+    $t->get_ok( $credentials . $path => { 'x-koha-embed' => 'item.checkout,patron' } )->status_is(200);
+
+    my @logs = disclosure_logs()->as_list;
+    is_deeply(
+        [ sort { $a <=> $b } map { 0 + $_->object } @logs ],
+        [ sort { $a <=> $b } ( $booking_patron->id, $checkout_patron->id ) ],
+        'the booking owner and nested current-checkout owner are exact subjects'
+    );
+    is(
+        scalar( keys %{ { map { payload($_)->{event_id} => 1 } @logs } } ),
+        1,
+        'booking and checkout patrons share one response event'
+    );
+    my %classes = map { $_->object => payload($_)->{data_classes} } @logs;
+    ok( grep( { $_ eq 'service_activity' } @{ $classes{ $booking_patron->id } } ), 'booking activity is classified' );
+    is_deeply(
+        $classes{ $checkout_patron->id },
+        [qw( circulation_current identity )],
+        'the nested checkout owner is current circulation data'
+    );
+
+    clear_disclosure_logs();
+    $path = '/api/v1/biblios/' . $biblio->id . '/bookings';
+    $t->get_ok( $credentials . $path => { 'x-koha-embed' => 'patron' } )->status_is(200);
+    my $log = disclosure_logs()->single;
+    is( 0 + $log->object,         $booking_patron->id,            'record bookings identify the exact patron' );
+    is( payload($log)->{surface}, 'catalogue.bookings.by_record', 'record-booking surface is stable' );
+
+    clear_disclosure_logs();
+    $path = '/api/v1/biblios/' . $biblio->id . '/checkouts';
+    $t->get_ok( $credentials . $path )->status_is(200);
+    $log = disclosure_logs()->single;
+    is( 0 + $log->object,         $checkout_patron->id,            'record checkouts identify the exact patron' );
+    is( payload($log)->{surface}, 'catalogue.checkouts.by_record', 'record-checkout surface is stable' );
+
+    for my $pickup_case (
+        {
+            path    => '/api/v1/biblios/' . $biblio->id . '/pickup_locations?patron_id=' . $booking_patron->id,
+            surface => 'catalogue.biblio_pickup_locations.for_patron',
+            label   => 'record',
+        },
+        {
+            path    => '/api/v1/items/' . $item->id . '/pickup_locations?patron_id=' . $booking_patron->id,
+            surface => 'catalogue.item_pickup_locations.for_patron',
+            label   => 'item',
+        },
+        )
+    {
+        clear_disclosure_logs();
+        $t->get_ok( $credentials . $pickup_case->{path} )->status_is(200);
+        $log = disclosure_logs()->single;
+        is(
+            0 + $log->object, $booking_patron->id,
+            "$pickup_case->{label} pickup eligibility identifies the exact patron"
+        );
+        is( payload($log)->{surface}, $pickup_case->{surface}, "$pickup_case->{label} pickup surface is stable" );
+        is_deeply(
+            payload($log)->{data_classes},
+            [qw( identity service_activity )],
+            "$pickup_case->{label} pickup eligibility is classified"
+        );
+    }
+
+    for my $unbounded_path (
+        '/api/v1/bookings?biblio_id=' . $biblio->id . '&_per_page=-1',
+        '/api/v1/biblios/' . $biblio->id . '/bookings?_per_page=-1',
+        '/api/v1/biblios/' . $biblio->id . '/checkouts?_per_page=-1'
+        )
+    {
+        clear_disclosure_logs();
+        $t->get_ok( $credentials . $unbounded_path )
+            ->status_is(400)
+            ->json_is( '/error_code' => 'patron_disclosure_page_size_exceeded' );
+        is( disclosure_logs()->count, 0, 'an unbounded booking workflow response writes no audit row' );
+    }
+
+    $booking->delete;
+    $schema->storage->txn_rollback;
+    done_testing;
+};
+
+subtest 'empty patron activity response still identifies its path Patron' => sub {
+    $schema->storage->txn_begin;
+    clear_disclosure_logs();
+
+    my ( $actor, $password ) = build_actor();
+    my $target = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $path   = '/api/v1/patrons/' . $target->id . '/checkouts';
+
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path" )->status_is(200)->json_is( [] );
+    my $log = disclosure_logs()->single;
+    is( 0 + $log->object,         $target->id,                 'path Patron is logged for an empty representation' );
+    is( payload($log)->{surface}, 'patrons.checkouts.current', 'activity surface is stable' );
+    is_deeply(
+        payload($log)->{data_classes},
+        [qw( circulation_current identity )],
+        'the path identifier and activity class are explicit'
+    );
+
+    clear_disclosure_logs();
+    $path = '/api/v1/patrons/' . $target->id . '/holds';
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path" )->status_is(200)->json_is( [] );
+    $log = disclosure_logs()->single;
+    is( 0 + $log->object,         $target->id,          'an empty current-holds response logs its explicit target' );
+    is( payload($log)->{surface}, 'patrons.holds.list', 'current and historical holds share a stable list surface' );
+    is_deeply(
+        payload($log)->{data_classes},
+        [qw( circulation_current identity )],
+        'current holds include the path identity and current class'
+    );
+
+    clear_disclosure_logs();
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path?old=1" )->status_is(200)->json_is( [] );
+    $log = disclosure_logs()->single;
+    is( 0 + $log->object, $target->id, 'an empty old-holds response logs its explicit target' );
+    is_deeply(
+        payload($log)->{data_classes},
+        [qw( circulation_history identity )],
+        'old holds include the path identity and history class'
+    );
+
+    clear_disclosure_logs();
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path?_per_page=-1" )->status_is(200);
+    is( disclosure_logs()->count, 1, 'a single-subject activity response needs no audit-only page ceiling' );
+
+    $schema->storage->txn_rollback;
+    done_testing;
+};
+
+subtest 'serialized staff patron data remains an auditable subject' => sub {
+    $schema->storage->txn_begin;
+
+    my ( $actor, $password ) = build_actor();
+    my $target = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $issuer = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item   = $builder->build_sample_item;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $target->id,
+                itemnumber     => $item->id,
+                branchcode     => $item->holdingbranch,
+                issuer_id      => $issuer->id,
+            },
+        }
+    );
+
+    my $path = '/api/v1/patrons/' . $target->id . '/checkouts';
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path" => { 'x-koha-embed' => 'issuer' } )->status_is(200);
+
+    my @logs = disclosure_logs()->as_list;
+    is_deeply(
+        [ sort { $a <=> $b } map { 0 + $_->object } @logs ],
+        [ sort { $a <=> $b } ( $target->id, $issuer->id ) ],
+        'the scoped customer and serialized staff account are both exact disclosure subjects'
+    );
+    is(
+        scalar( keys %{ { map { payload($_)->{event_id} => 1 } @logs } } ),
+        1,
+        'customer and staff subjects share the response event ID'
+    );
+
+    clear_disclosure_logs();
+    $t->get_ok( '//' . $actor->userid . ":$password\@$path?_per_page=-1" )
+        ->status_is(400)
+        ->json_is( '/error_code' => 'patron_disclosure_page_size_exceeded' );
+    is( disclosure_logs()->count, 0, 'an unbounded checkout request is rejected before disclosure' );
+
     $schema->storage->txn_rollback;
     done_testing;
 };
