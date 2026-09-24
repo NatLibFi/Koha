@@ -248,6 +248,68 @@ my %REST_OPERATIONS = (
         success_statuses => { 200 => 1 },
         strategies       => { serialized_patrons => 1 },
     },
+    'GET /biblios/{biblio_id}/bookings' => {
+        surface          => 'catalogue.bookings.by_record',
+        success_statuses => { 200 => 1 },
+        strategies       => { serialized_patrons => 1, patron_references => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 1,
+        fixed_subjects         => 0,
+    },
+    'GET /biblios/{biblio_id}/checkouts' => {
+        surface          => 'catalogue.checkouts.by_record',
+        success_statuses => { 200 => 1 },
+        strategies       => { serialized_patrons => 1, patron_references => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 2,
+        fixed_subjects         => 0,
+    },
+    'GET /biblios/{biblio_id}/items' => {
+        surface          => 'catalogue.items.patron_status',
+        success_statuses => { 200 => 1 },
+        strategies       => { serialized_patrons => 1, patron_references => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 4,
+        fixed_subjects         => 0,
+    },
+    'GET /biblios/{biblio_id}/pickup_locations' => {
+        surface          => 'catalogue.biblio_pickup_locations.for_patron',
+        success_statuses => { 200 => 1 },
+        strategies       => { explicit => 1 },
+    },
+    'GET /bookings' => {
+        surface          => 'bookings.search.results',
+        success_statuses => { 200 => 1 },
+        strategies       => { serialized_patrons => 1, patron_references => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 2,
+        fixed_subjects         => 0,
+    },
+    'GET /items/{item_id}/pickup_locations' => {
+        surface          => 'catalogue.item_pickup_locations.for_patron',
+        success_statuses => { 200 => 1 },
+        strategies       => { explicit => 1 },
+    },
+    'GET /patrons/{patron_id}/checkouts' => {
+        surface          => 'patrons.checkouts.current',
+        success_statuses => { 200 => 1 },
+        strategies       => { path_patron => 1, serialized_patrons => 1 },
+        max_page_size          => 1000,
+        subjects_per_page_item => 1,
+        fixed_subjects         => 1,
+        path_patron => { parameter => 'patron_id', data_classes => [qw( identity circulation_current )] },
+    },
+    'GET /patrons/{patron_id}/holds' => {
+        surface          => 'patrons.holds.list',
+        success_statuses => { 200 => 1 },
+        strategies       => { explicit => 1 },
+    },
+    'GET /patrons/{patron_id}/recalls' => {
+        surface          => 'patrons.recalls.current',
+        success_statuses => { 200 => 1 },
+        strategies       => { path_patron => 1 },
+        path_patron => { parameter => 'patron_id', data_classes => [qw( identity circulation_current )] },
+    },
 );
 
 sub rest_operation {
