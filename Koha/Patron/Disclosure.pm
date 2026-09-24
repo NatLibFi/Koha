@@ -30,14 +30,13 @@ use Koha::Database;
 use Koha::Exceptions;
 use Koha::Exceptions::PatronDisclosure;
 use Koha::Patron::Disclosure::Definitions;
+use Koha::Patron::Disclosure::Staff;
 use Koha::Logger;
 
 use constant MODULE               => 'PATRON_DISCLOSURE';
 use constant ACTION               => 'DISCLOSE';
 use constant CONFIG_ENABLED       => 'patron_data_disclosure_log';
 use constant CONFIG_MAX_SUBJECTS  => 'patron_data_disclosure_max_subjects';
-use constant RAW_INPUT_MULTIPLIER => 4;
-use constant MAX_PATRON_ID        => 2_147_483_647;
 
 my %AUTH_SOURCES         = map { $_ => 1 } qw( session basic oauth );
 my %INTERFACES           = map { $_ => 1 } qw( intranet api );
@@ -194,138 +193,36 @@ event.
 sub max_subjects {
     my $value = C4::Context->config(CONFIG_MAX_SUBJECTS);
     $value = 1000 unless defined $value;
-    return _positive_integer( $value, CONFIG_MAX_SUBJECTS );
+    Koha::Exceptions::PatronDisclosure->throw( reason => 'invalid_subject_limit' )
+        unless defined $value && !ref($value) && $value =~ /\A[1-9][0-9]*\z/;
+    return 0 + $value;
 }
 
-=head3 resolve_patron_ids
+=head3 resolve_patron_ids, resolve_single_patron_id
 
-Validates and canonicalizes request-supplied patron IDs, bounds both raw and
-unique input before any patron activity query. It returns all normalized IDs
-only when every ID belongs to an existing patron; mixed existing/nonexistent
-input is rejected as one request. The raw-input ceiling permits a bounded
-number of duplicates while the configured event limit remains the
-unique-subject limit.
+Compatibility wrappers for existing event callers. New service code uses
+C<Koha::Patron::Disclosure::Staff> directly.
 
 =cut
 
 sub resolve_patron_ids {
-    my ( $class, $raw_ids ) = @_;
-
-    croak 'Patron disclosure subject input must be an array reference' unless ref($raw_ids) eq 'ARRAY';
-
-    my $subject_limit   = $class->max_subjects;
-    my $raw_input_limit = $subject_limit * RAW_INPUT_MULTIPLIER;
-    _invalid_patron_ids() if @{$raw_ids} > $raw_input_limit;
-
-    my %normalized_ids;
-    for my $raw_id ( @{$raw_ids} ) {
-        my $patron_id = _patron_id($raw_id);
-        $normalized_ids{$patron_id} = 1;
-    }
-
-    _invalid_patron_ids() if scalar keys %normalized_ids > $subject_limit;
-
-    my @normalized_ids = sort { $a <=> $b } keys %normalized_ids;
-    return [] unless @normalized_ids;
-
-    require Koha::Patrons;
-    my @existing_ids =
-        map { 0 + $_ } Koha::Patrons->search(
-        { borrowernumber => { -in => \@normalized_ids } },
-        { order_by       => 'borrowernumber' }
-        )->get_column('borrowernumber');
-
-    my %existing_ids = map { $_ => 1 } @existing_ids;
-    _invalid_patron_ids()
-        unless @existing_ids == @normalized_ids && !grep { !$existing_ids{$_} } @normalized_ids;
-
-    return \@existing_ids;
+    shift;
+    return Koha::Patron::Disclosure::Staff->resolve_patron_ids(@_);
 }
-
-=head3 resolve_single_patron_id
-
-Requires exactly one request-supplied patron ID and applies the same bounded,
-canonical, existence-resolved contract as C<resolve_patron_ids>.
-
-=cut
 
 sub resolve_single_patron_id {
-    my ( $class, $raw_ids ) = @_;
-
-    croak 'Patron disclosure subject input must be an array reference' unless ref($raw_ids) eq 'ARRAY';
-    _invalid_patron_ids() unless @{$raw_ids} == 1;
-
-    my $resolved_ids = $class->resolve_patron_ids($raw_ids);
-    return $resolved_ids->[0];
+    shift;
+    return Koha::Patron::Disclosure::Staff->resolve_single_patron_id(@_);
 }
-
-=head3 staff_sidebar_data_classes
-
-Returns the data classes represented by C<circ-menu.inc>. Conditional classes
-follow the system preferences used by that include.
-
-=cut
 
 sub staff_sidebar_data_classes {
-    my ( $class, $params ) = @_;
-
-    $params //= {};
-    _assert_hashref( $params, 'staff sidebar parameters' );
-    _assert_known_keys( $params, ['logged_in_user'], 'staff sidebar parameters' );
-
-    my $logged_in_user = $params->{logged_in_user};
-    croak 'logged_in_user must be a patron object'
-        if defined $logged_in_user && ( !blessed($logged_in_user) || !$logged_in_user->can('has_permission') );
-
-    my @classes = qw( identity profile notes_restrictions security_administration );
-
-    push @classes, 'contact' unless C4::Context->preference('HidePersonalPatronDetailOnCirculation');
-    push @classes, 'documents_media'     if C4::Context->preference('patronimages');
-    push @classes, 'extended_attributes' if C4::Context->preference('ExtendedPatronAttributes');
-    push @classes, 'service_activity'    if C4::Context->preference('TrackLastPatronActivityTriggers');
-    push @classes, 'communications'
-        if $logged_in_user && $logged_in_user->has_permission( { serials => '*' } );
-
-    return [ sort @classes ];
+    shift;
+    return Koha::Patron::Disclosure::Staff->staff_sidebar_data_classes(@_);
 }
 
-=head3 staff_toolbar_data_classes
-
-Returns the data classes represented by C<members-toolbar.inc>. Conditional
-classes follow the staff permissions and system preferences used by that
-include. Negative conditional state is still disclosure when the control is
-rendered, so subject values do not suppress their class.
-
-=cut
-
 sub staff_toolbar_data_classes {
-    my ( $class, $params ) = @_;
-
-    $params //= {};
-    _assert_hashref( $params, 'staff toolbar parameters' );
-    _assert_known_keys( $params, ['logged_in_user'], 'staff toolbar parameters' );
-
-    my $logged_in_user = $params->{logged_in_user};
-    croak 'logged_in_user must be a patron object'
-        if defined $logged_in_user && ( !blessed($logged_in_user) || !$logged_in_user->can('has_permission') );
-
-    my %classes = ( identity => 1 );
-    if ($logged_in_user) {
-        my $can_edit = $logged_in_user->has_permission( { borrowers => 'edit_borrowers' } );
-        if ($can_edit) {
-            $classes{communications}          = 1;
-            $classes{profile}                 = 1;
-            $classes{security_administration} = 1;
-            $classes{notes_restrictions}      = 1
-                if $logged_in_user->has_permission( { borrowers => 'delete_borrowers' } );
-        }
-        if ( $logged_in_user->has_permission( { circulate => 'circulate_remaining_permissions' } ) ) {
-            $classes{circulation_current} = 1;
-            $classes{financial}           = 1;
-            $classes{profile}             = 1;
-        }
-    }
-    return [ sort keys %classes ];
+    shift;
+    return Koha::Patron::Disclosure::Staff->staff_toolbar_data_classes(@_);
 }
 
 =head2 Object methods
@@ -563,20 +460,5 @@ sub _positive_integer {
     return 0 + $value;
 }
 
-sub _patron_id {
-    my ($value) = @_;
-
-    _invalid_patron_ids()
-        unless defined $value
-        && !ref($value)
-        && $value =~ /\A[1-9][0-9]*\z/
-        && ( length($value) < 10 || ( length($value) == 10 && $value le MAX_PATRON_ID ) );
-
-    return 0 + $value;
-}
-
-sub _invalid_patron_ids {
-    Koha::Exceptions::BadParameter->throw( parameter => 'patron_disclosure_subjects' );
-}
 
 1;
