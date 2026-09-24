@@ -430,6 +430,10 @@ sub _build_order_atom {
     if ($result_set) {
         my $model_param = _from_api_param( $param, $result_set );
         $param = $model_param if defined $model_param;
+
+        my $source = _result_source($result_set);
+        $param = "me.$param"
+            if $param !~ /\./ && $source && $source->has_column($param);
     }
 
     if (   $string =~ m/^\+/
