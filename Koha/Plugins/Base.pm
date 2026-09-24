@@ -273,7 +273,10 @@ sub get_plugin_http_path {
 sub go_home {
     my ( $self, $params ) = @_;
 
-    print $self->{'cgi'}->redirect("/cgi-bin/koha/plugins/plugins-home.pl");
+    my @options = ( -uri => "/cgi-bin/koha/plugins/plugins-home.pl" );
+    push @options, ( -cookie => $self->{_auth_cookies} ) if $self->{_auth_cookies};
+
+    print $self->{'cgi'}->redirect(@options);
 }
 
 =head2 output_html
@@ -288,6 +291,8 @@ Note: this is a wrapper function for C4::Output::output_with_http_headers
 
 sub output_html {
     my ( $self, $data, $status, $extra_options, $cookie ) = @_;
+    $cookie //= $self->{_auth_cookies};
+
     output_with_http_headers( $self->{cgi}, $cookie, $data, 'html', $status, $extra_options );
 }
 
@@ -326,8 +331,10 @@ Note: this is a wrapper function for C4::Output::output_with_http_headers
 =cut
 
 sub output {
-    my ( $self, $data, $content_type, $status, $extra_options ) = @_;
-    output_with_http_headers( $self->{cgi}, undef, $data, $content_type, $status, $extra_options );
+    my ( $self, $data, $content_type, $status, $extra_options, $cookie ) = @_;
+    $cookie //= $self->{_auth_cookies};
+
+    output_with_http_headers( $self->{cgi}, $cookie, $data, $content_type, $status, $extra_options );
 }
 
 =head2 _version_compare
