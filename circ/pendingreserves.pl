@@ -278,7 +278,6 @@ foreach my $bibnum (@biblionumbers) {
     my $fields = {
         collections     => 'ccode',
         locations       => 'location',
-        callnumbers     => 'itemcallnumber',
         enumchrons      => 'enumchron',
         copynumbers     => 'copynumber',
         barcodes        => 'barcode',
@@ -289,6 +288,14 @@ foreach my $bibnum (@biblionumbers) {
         $hold_info->{$key} =
             [ uniq map { defined $_->$field ? $_->$field : () } @$items ];
     }
+
+    my @items_by_callnumber = sort {
+        ( $a->cn_sort // $a->itemcallnumber ) cmp( $b->cn_sort // $b->itemcallnumber )
+            || $a->itemnumber <=> $b->itemnumber
+    } grep { defined $_->itemcallnumber } @$items;
+    $hold_info->{callnumbers} = [ uniq map { $_->itemcallnumber } @items_by_callnumber ];
+    $hold_info->{callnumber_sort} =
+        @items_by_callnumber ? ( $items_by_callnumber[0]->cn_sort // $items_by_callnumber[0]->itemcallnumber ) : q{};
 
     if ( $res_info->item_group ) {
         $hold_info->{barcodes} = [
