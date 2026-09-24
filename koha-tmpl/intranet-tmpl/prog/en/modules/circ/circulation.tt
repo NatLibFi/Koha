@@ -8,6 +8,7 @@
 [% USE ItemTypes %]
 [% USE Price %]
 [% USE AuthorisedValues %]
+[% USE PatronDisclosure %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -1171,6 +1172,8 @@
         table_settings_bookings_table = [% TablesSettings.GetTableSettings( 'members', 'moremember', 'bookings-table', 'json' ) | $raw %]
         CAN_user_circulate_manage_bookings = [% CAN_user_circulate_manage_bookings | $raw %]
         patron_borrowernumber = [% patron.borrowernumber | $raw %]
+        const patron_disclosure_bookings_page_size_limit =
+            [% PatronDisclosure.page_size_limit('GET /bookings') || 'undefined' %];
 
         [% IF borrowernumber and patron %]
             if( Cookies.get("holdfor") != [% patron.borrowernumber | html %]){

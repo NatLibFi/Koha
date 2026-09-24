@@ -27,6 +27,8 @@ use C4::Members;
 use C4::Letters qw( GetPreparedLetter EnqueueLetter );
 use Koha::Patrons;
 use Koha::Patron::Categories;
+use Koha::Patron::Disclosure;
+use Koha::Patron::Disclosure::Staff;
 use Koha::Patron::Password::Recovery qw( SendPasswordRecoveryEmail ValidateBorrowernumber );
 
 my $input = CGI->new;
@@ -64,6 +66,7 @@ if ( $op eq 'cud-resend_notice' ) {
 
         # redirect to self to avoid form submission on refresh
         print $input->redirect("/cgi-bin/koha/members/notices.pl?borrowernumber=$borrowernumber");
+        exit;
     }
 }
 
@@ -121,6 +124,7 @@ if ( $op eq 'send_welcome' ) {
 
     # redirect to self to avoid form submission on refresh
     print $input->redirect("/cgi-bin/koha/members/notices.pl?borrowernumber=$borrowernumber");
+    exit;
 }
 
 if ( $op eq 'send_password_reset' ) {
@@ -135,6 +139,7 @@ if ( $op eq 'send_password_reset' ) {
 
     # redirect to self to avoid form submission on refresh
     print $input->redirect("/cgi-bin/koha/members/notices.pl?borrowernumber=$borrowernumber");
+    exit;
 }
 
 # Getting the messages
@@ -146,5 +151,20 @@ $template->param(
     borrowernumber  => $borrowernumber,
     sentnotices     => 1,
 );
-output_html_with_http_headers $input, $cookie, $template->output;
 
+my $extra_options;
+if ( Koha::Patron::Disclosure->enabled ) {
+    my @data_classes = (
+        @{ Koha::Patron::Disclosure::Staff->staff_sidebar_data_classes( { logged_in_user => $logged_in_user } ) },
+        @{ Koha::Patron::Disclosure::Staff->staff_toolbar_data_classes( { logged_in_user => $logged_in_user } ) },
+        'communications'
+    );
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.notices.list',
+            subjects => [ { patron_id => $patron->id, data_classes => \@data_classes } ],
+        }
+    };
+}
+
+output_html_with_http_headers( $input, $cookie, $template->output, undef, $extra_options );
