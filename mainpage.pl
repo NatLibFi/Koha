@@ -72,6 +72,9 @@ $template->param(
     daily_quote => Koha::Quotes->get_daily_quote(),
 );
 
+warn "YOU ASKED ME to WARN." if $query->param('do_warn');
+die "YOU ASKED ME to DIE." if $query->param('do_die');
+
 my $branch =
     (      C4::Context->preference("IndependentBranchesPatronModifications")
         || C4::Context->preference("IndependentBranches") )
@@ -91,8 +94,25 @@ if ( C4::Context->only_my_library ) {
     $template->param( pendingsuggestions => $local_pendingsuggestions_count );
 } else {
     my $pendingsuggestions = Koha::Suggestions->search( { status => "ASKED", archived => 0 } );
+    if( ! C4::Context->userenv() or ! C4::Context->userenv()->{'branch'} ) {
+        # DEBUG: ... add [NTWIP] to warn later?
+        use Data::Dumper ();
+        warn "DIE DEBUG: "
+            . ( ! C4::Context->userenv()
+                ? "->userenv() is undef!"
+                : ! C4::Context->userenv()->{'branch'}
+                    ? "->userenv()->{'branch'} is undef!"
+                    : '' )
+            . ($ENV{HTTP_REFERER} ? "\n\tRef: $ENV{HTTP_REFERER}" : '')
+            . Data::Dumper->new( [{
+                userenv => C4::Context->userenv(),
+            }],[ __PACKAGE__ . ":" . __LINE__ ])->Sortkeys(sub{return [sort { lc $a cmp lc $b } keys %{ $_[0] }];})->Maxdepth(4)->Indent(1)->Purity(0)->Deepcopy(1)->Dump
+        ."\n"; # [NTWIP] ?
+    }
     my $local_pendingsuggestions_count =
-        $pendingsuggestions->search( { 'me.branchcode' => C4::Context->userenv()->{'branch'} } )->count();
+        C4::Context->userenv() && defined C4::Context->userenv()->{'branch'}
+        ? $pendingsuggestions->search( { 'me.branchcode' => C4::Context->userenv()->{'branch'} } )->count()
+        : '';
     my $pendingsuggestions_count = $pendingsuggestions->count();
     $template->param(
         all_pendingsuggestions => $pendingsuggestions_count != $local_pendingsuggestions_count
