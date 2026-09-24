@@ -213,7 +213,7 @@
             [% END %]
             [% IF ( CAN_user_tools_view_system_logs ) %]
                 <li [% IF logview %]class="active"[% END %]>
-                    <a href="/cgi-bin/koha/tools/viewlog.pl?do_it=1&amp;modules=MEMBERS&amp;modules=CIRCULATION&amp;modules=APIKEYS&amp;object=[% patron.borrowernumber | uri %]&amp;src=circ">Modification log</a>
+                    <a href="/cgi-bin/koha/tools/viewlog.pl?do_it=1&amp;modules=MEMBERS&amp;modules=CIRCULATION&amp;modules=APIKEYS&amp;modules=PATRON_DISCLOSURE&amp;object=[% patron.borrowernumber | uri %]&amp;src=circ">Modification and disclosure log</a>
                 </li>
             [% END %]
             [% IF CAN_user_borrowers_edit_borrowers %]
