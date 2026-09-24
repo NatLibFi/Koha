@@ -255,7 +255,12 @@ sub request_cgi {
         $request = POST $uri, Content => [ map { $_ => $params->{$_} } sort keys %{$params} ];
         $request->header( Referer => "http://localhost/$script" );
     } else {
-        $uri->query_form(%{$params});
+        $uri->query_form(
+            map {
+                my $key = $_;
+                map { $key => $_ } ( ref( $params->{$key} ) eq 'ARRAY' ? @{ $params->{$key} } : $params->{$key} )
+            } sort keys %{$params}
+        );
         $request = GET $uri;
     }
     $request->header( Cookie => 'CGISESSID=' . $session->id );
@@ -628,6 +633,39 @@ subtest 'a covered CGI read fails closed when the real audit write fails' => sub
         ['Patron disclosure audit failed for surface patrons.alerts.list (reason=unclassified)'],
         'the failure log contains the surface but no actor or patron data'
     );
+
+    done_testing;
+};
+
+subtest 'the system-log viewer preserves disclosure filters from patron context' => sub {
+    clear_disclosure_logs();
+    my $response = request_cgi(
+        'tools/viewlog.pl', 'GET',
+        {
+            do_it   => 1,
+            src     => 'circ',
+            object  => $patron->id,
+            modules => [ 'MEMBERS', 'CIRCULATION', 'APIKEYS', 'PATRON_DISCLOSURE' ],
+            actions => 'DISCLOSE',
+        }
+    );
+
+    is( $response->code, 200, 'the real CGI renders the patron-context log viewer' );
+    like( $response->content, qr/name="modules" value="PATRON_DISCLOSURE"/, 'the patron-context form preserves the disclosure module' );
+    like( $response->content, qr/name="modules" value="APIKEYS"/, 'the patron-context form preserves the pre-existing API key module' );
+    like( $response->content, qr/name="actions" value="DISCLOSE" checked="checked"/, 'the disclosure action remains selected' );
+
+    $response = request_cgi(
+        'tools/viewlog.pl', 'GET',
+        { do_it => 1, modules => 'PATRON_DISCLOSURE', actions => 'DISCLOSE' }
+    );
+    is( $response->code, 200, 'the general log viewer renders' );
+    like( $response->content, qr/Patron data disclosures/, 'the disclosure module has a translated label' );
+    like( $response->content, qr/PATRON_DISCLOSURE: _\("Patron data disclosures"\)/,
+        'the rendered table has a disclosure module label' );
+    like( $response->content, qr/DISCLOSE: _\("Disclose"\)/,
+        'the rendered table has a disclosure action label' );
+    is( disclosure_logs()->count, 0, 'viewing the system log is outside this slice and creates no false disclosure event' );
 
     done_testing;
 };
