@@ -20,9 +20,10 @@ package Koha::Patron;
 
 use Modern::Perl;
 
+use Carp               qw( croak );
 use JSON               qw( encode_json decode_json );
 use List::MoreUtils    qw( any none uniq notall zip6);
-use Scalar::Util       qw( blessed looks_like_number );
+use Scalar::Util       qw( blessed looks_like_number refaddr );
 use Struct::Diff       qw( diff );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
@@ -3346,6 +3347,21 @@ suitable for API output.
 sub to_api {
     my ( $self, $params ) = @_;
 
+    my $context = $params && $params->{_patron_disclosure};
+    my $is_accessible;
+    if ($context) {
+        croak 'A Patron serialized by a covered operation requires the serialized_patrons disclosure strategy'
+            unless $context->{policy}->{strategies}->{serialized_patrons};
+        $params = {%$params};
+        my $observer     = $params->{_to_api_accessibility_observer};
+        my $self_address = refaddr($self);
+        $params->{_to_api_accessibility_observer} = sub {
+            my ( $object, $accessible ) = @_;
+            $is_accessible = $accessible if refaddr($object) == $self_address;
+            $observer->(@_) if ref($observer) eq 'CODE';
+        };
+    }
+
     my $json_patron = $self->SUPER::to_api($params);
 
     return unless $json_patron;
@@ -3371,6 +3387,34 @@ sub to_api {
         && !$self->is_accessible($params) )
     {
         delete $json_patron->{notification_summary};
+    }
+
+    if ($context) {
+        croak 'Patron visibility was not observed during serialization'
+            unless defined $is_accessible;
+        my $disclosure = $context->{event};
+        my %disclosed_fields;
+
+        if ($is_accessible) {
+            $disclosed_fields{$_} = 1 for keys %{$json_patron};
+        } else {
+            my $mapping = $self->to_api_mapping;
+            for my $field ( @{ $self->unredact_list } ) {
+                my $api_field = exists $mapping->{$field} ? $mapping->{$field} : $field;
+                $disclosed_fields{$api_field} = 1 if defined $api_field;
+            }
+
+            $disclosed_fields{$_}       = 1 for qw( restricted expired self_renewal_available );
+            $disclosed_fields{$_}       = 1 for keys %{ $params->{embed} // {} };
+            $disclosed_fields{_strings} = 1 if $params->{strings};
+        }
+
+        $disclosure->add_api_subject(
+            {
+                patron_id => $self->id,
+                fields    => [ sort grep { exists $json_patron->{$_} } keys %disclosed_fields ],
+            }
+        );
     }
 
     return $json_patron;

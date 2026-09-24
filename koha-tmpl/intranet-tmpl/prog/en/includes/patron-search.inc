@@ -230,6 +230,8 @@
 [%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
 [%# empty_table_settings: boolean, default off. If true, it will ensure no table_settings are utilized %]
 [% BLOCK patron_search_js %]
+    [% USE PatronDisclosure %]
+    [% SET patron_disclosure_search = 0 %]
 
     [% IF redirect_if_one_result && !redirect_url %]
         <script nonce="[% Koha.CSPNonce | $raw %]">
@@ -317,7 +319,9 @@
             var patron_search_url = '/api/v1/ill/users';
         [% CASE %]
             var patron_search_url = '/api/v1/patrons';
+            [% SET patron_disclosure_search = 1 %]
         [% END %]
+        var patron_disclosure_search_page_size_limit = [% (patron_disclosure_search && PatronDisclosure.page_size_limit('GET /patrons')) || 'undefined' | html %];
 
 
         if (!Koha.patron_searches) {
@@ -369,6 +373,7 @@
             default_sort_column,
             embed,
             patron_search_url,
+            patron_disclosure_search_page_size_limit,
         };
     </script>
     [% INCLUDE 'datatables.inc' %]
@@ -412,6 +417,7 @@
                 default_sort_column,
                 embed,
                 patron_search_url,
+                patron_disclosure_search_page_size_limit,
             } = Koha.patron_searches[current_table_id];
 
             function get_patron_search_form() {
@@ -894,6 +900,7 @@
                         autoWidth: false,
                         lengthMenu,
                         pageLength: Koha.prefs.PatronsPerPage,
+                        pageSizeLimit: patron_disclosure_search_page_size_limit,
                         ...(sticky_header
                             ? {
                                   initComplete: function (settings, json) {
