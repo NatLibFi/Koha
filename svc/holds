@@ -25,11 +25,14 @@ use JSON qw(to_json);
 use C4::Auth qw(check_cookie_auth);
 use C4::Charset;
 use C4::Context;
+use C4::Output qw( output_with_http_headers );
 
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Holds;
 use Koha::ItemTypes;
 use Koha::Libraries;
+use Koha::Patron::Disclosure;
+use Koha::Patron::Disclosure::Staff;
 
 my $input = CGI->new;
 
@@ -44,27 +47,46 @@ if ( $auth_status ne "ok" ) {
 
 my $branch = C4::Context->userenv->{'branch'};
 
-my $schema = Koha::Database->new()->schema();
-
 my @sort_columns = qw/reservedate title itemcallnumber barcode expirationdate priority/;
 
-my $borrowernumber    = $input->param('borrowernumber');
+my $borrowernumber;
 my $offset            = $input->param('iDisplayStart');
 my $results_per_page  = $input->param('iDisplayLength');
 my $sorting_direction = $input->param('sSortDir_0') || 'desc';
 my $iSortCol          = $input->param('iSortCol_0') // 0;
 my $sorting_column    = $sort_columns[$iSortCol]    // 'reservedate';
 
-binmode STDOUT, ":encoding(UTF-8)";
-print $input->header( -type => 'application/json', -charset => 'UTF-8' );
+my $disclosure_enabled = Koha::Patron::Disclosure->enabled;
+my @disclosure_patron_ids;
+if ($disclosure_enabled) {
+    my @raw_borrowernumbers = $input->multi_param('borrowernumber');
+    my ( $resolved_ids, $input_error ) = Koha::Patron::Disclosure::Staff->resolve_service_patron_ids( \@raw_borrowernumbers, 1 );
+    if ($input_error) {
+        output_with_http_headers(
+            $input, undef,
+            to_json( { error => $input_error->{error}, error_code => $input_error->{error_code} } ),
+            'json', $input_error->{status}
+        );
+        exit;
+    }
+    @disclosure_patron_ids = @{$resolved_ids};
+    $borrowernumber        = $resolved_ids->[0];
+} else {
+    $borrowernumber = $input->param('borrowernumber');
+}
 
-my $holds_rs = Koha::Holds->search(
-    { borrowernumber => $borrowernumber },
-    { order_by       => { "-$sorting_direction" => $sorting_column } }
-);
+binmode STDOUT, ":encoding(UTF-8)";
+
+my $holds_rs;
+if ( !$disclosure_enabled || @disclosure_patron_ids ) {
+    $holds_rs = Koha::Holds->search(
+        { borrowernumber => $borrowernumber },
+        { order_by       => { "-$sorting_direction" => $sorting_column } }
+    );
+}
 
 my @holds;
-while ( my $h = $holds_rs->next() ) {
+while ( $holds_rs && ( my $h = $holds_rs->next() ) ) {
     my $item       = $h->item();
     my $item_group = $h->item_group();
 
@@ -169,4 +191,16 @@ $data->{'iTotalDisplayRecords'} = scalar @holds;
 $data->{'sEcho'}                = $input->param('sEcho') || undef;
 $data->{'aaData'}               = \@holds;
 
-print to_json($data);
+my $extra_options;
+if ( $disclosure_enabled && @disclosure_patron_ids ) {
+    $extra_options = {
+        patron_disclosure => {
+            surface  => 'patrons.holds.list',
+            subjects => [
+                { patron_id => $disclosure_patron_ids[0], data_classes => [qw( identity circulation_current )] }
+            ],
+        }
+    };
+}
+
+output_with_http_headers( $input, undef, to_json($data), 'json', undef, $extra_options );
