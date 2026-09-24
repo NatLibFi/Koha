@@ -48,6 +48,13 @@ sub list {
     my $old = $c->param('old');
     $c->req->params->remove('old');
 
+    $c->patron_disclosure->add_subject(
+        {
+            patron_id    => $patron->id,
+            data_classes => [ 'identity', $old ? 'circulation_history' : 'circulation_current' ],
+        }
+    );
+
     return try {
         my $holds_set =
               $old
