@@ -18,8 +18,11 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
+use Email::Sender::Failure::Multi;
+use Email::Sender::Failure::Permanent;
+use Email::Sender::Failure::Temporary;
 use Test::MockModule;
 use Test::Exception;
 
@@ -266,6 +269,72 @@ subtest 'send_or_die() tests' => sub {
     my $from = $args->{from};
     is( $from, 'sender@example.com',         'If "from" is not explicitly passed, extract from Sender header' );
     is( $email->header_str('Sender'), undef, 'The Sender header is unset' );
+};
+
+subtest 'exception_message() tests' => sub {
+
+    my $permanent = Email::Sender::Failure::Permanent->new(
+        {
+            message => "550 5.1.1 Mailbox unavailable\r\n  recipient=user\@example.com",
+            code    => 550,
+        }
+    );
+    my $temporary = Email::Sender::Failure::Temporary->new(
+        {
+            message => "421 4.3.0 Temporary server failure",
+            code    => 421,
+        }
+    );
+    my $multi = Email::Sender::Failure::Multi->new(
+        {
+            message  => "Delivery failed for multiple recipients\nserver responses unavailable",
+            failures => [ $permanent, $temporary ],
+        }
+    );
+
+    like( "$permanent", qr/Trace begun/, 'The failure fixture stringifies with a stack trace' );
+
+    my @failure_cases = (
+        {
+            exception => $permanent,
+            expected  => '550 5.1.1 Mailbox unavailable recipient=user@example.com',
+            name      => 'permanent failure',
+        },
+        {
+            exception => $temporary,
+            expected  => '421 4.3.0 Temporary server failure',
+            name      => 'temporary failure',
+        },
+        {
+            exception => $multi,
+            expected  => 'Delivery failed for multiple recipients server responses unavailable',
+            name      => 'multi failure',
+        },
+    );
+
+    foreach my $case (@failure_cases) {
+        my $message = Koha::Email->exception_message( $case->{exception} );
+        is( $message, $case->{expected}, "$case->{name} uses its message without stringification" );
+        unlike( $message, qr/Trace begun/, "$case->{name} diagnostic excludes the stack trace" );
+    }
+
+    my $plain_exception = "\r\n  SMTP connection refused  \r\nsecondary diagnostic\r\n\r\nTrace begun\r\nFrame 0";
+    is(
+        Koha::Email->exception_message($plain_exception),
+        'SMTP connection refused',
+        'A plain string uses only its first nonempty diagnostic line'
+    );
+
+    is( Koha::Email->exception_message(undef),     '', 'An undefined exception has an empty diagnostic' );
+    is( Koha::Email->exception_message(''),        '', 'An empty exception has an empty diagnostic' );
+    is( Koha::Email->exception_message(" \r\n\t"), '', 'A whitespace-only exception has an empty diagnostic' );
+    is(
+        Koha::Email->exception_message("\nTrace begun\nFrame 0"),
+        '',
+        'A stack trace without a diagnostic has an empty diagnostic'
+    );
+
+    done_testing;
 };
 
 subtest 'is_valid' => sub {
