@@ -101,6 +101,9 @@ properties:
   non_priority:
     description: Set this hold as non priority
     type: boolean
+  closed_stack_request_slip_printed:
+    description: Flag to track if closed stack request slip was printed
+    type: boolean
   item_type_id:
     type:
       - string

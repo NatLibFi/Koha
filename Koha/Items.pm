@@ -109,6 +109,16 @@ sub filter_by_for_hold {
         notforloan => { '<=' => 0 },    # items with negative or zero notforloan value are holdable
         ( C4::Context->preference('AllowHoldsOnDamagedItems') ? () : ( damaged => 0 ) ),
         ( C4::Context->only_my_library()                      ? ( homebranch => C4::Context::mybranch() ) : () ),
+        -or => [
+            { is_closed_stack => 0 },
+            {
+                is_closed_stack => 1,
+                -or             => [
+                    { 'reserves.reserve_id' => { '!=', undef } },
+                    { 'issue.issue_id'      => { '!=', undef } },
+                ],
+            },
+        ],
     };
 
     if ( C4::Context->preference("item-level_itypes") ) {
@@ -116,6 +126,10 @@ sub filter_by_for_hold {
             {
                 %$params,
                 itype => { -not_in => \@hold_not_allowed_itypes },
+            },
+            {
+                distinct => 1,
+                join     => [ 'issue', 'reserves' ],
             }
         );
     } else {
@@ -125,7 +139,8 @@ sub filter_by_for_hold {
                 'biblioitem.itemtype' => { -not_in => \@hold_not_allowed_itypes },
             },
             {
-                join => 'biblioitem',
+                distinct => 1,
+                join     => [ 'biblioitem', 'issue', 'reserves' ],
             }
         );
     }
@@ -370,6 +385,21 @@ sub filter_by_available {
             'me.itype'      => { -not_in => \@item_types_notforloan },
         }
     );
+}
+
+=head3 filter_by_closed_stack
+
+  my $filterd_items = $items->filter_by_closed_stack;
+
+Returns a new resultset, containing only those items that are flagged as
+"closed stack".
+
+=cut
+
+sub filter_by_closed_stack {
+    my ($self) = @_;
+
+    return $self->search( { is_closed_stack => 1 } );
 }
 
 =head3 move_to_biblio
