@@ -166,6 +166,9 @@
             holdings: "[% PROCESS 'build_table' tab="holdings" | collapse | $tojson %]",
             otherholdings: "[% PROCESS 'build_table' tab="otherholdings" | collapse | $tojson %]",
         };
+        [% USE PatronDisclosure %]
+        const patron_disclosure_item_page_size_limit =
+            [% PatronDisclosure.page_size_limit('GET /biblios/{biblio_id}/items') || 'undefined' %];
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         let items_selection = {};
@@ -1015,6 +1018,7 @@
                         }
                     },
                     ...dt_options,
+                    pageSizeLimit: patron_disclosure_item_page_size_limit,
                 },
                 items_table_settings[tab_id],
                 add_filters,

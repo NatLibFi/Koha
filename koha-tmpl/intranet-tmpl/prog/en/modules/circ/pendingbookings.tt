@@ -123,6 +123,10 @@
             e['_str'] = e.branchname;
             return e;
         });
+
+        [% USE PatronDisclosure %]
+        const patron_disclosure_bookings_page_size_limit =
+            [% PatronDisclosure.page_size_limit('GET /bookings') || 'undefined' %];
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         var coded_values = {
@@ -174,6 +178,7 @@
                         url: bookings_table_url,
                     },
                     embed: ["biblio", "item+strings", "item.checkout", "patron", "pickup_library"],
+                    pageSizeLimit: patron_disclosure_bookings_page_size_limit,
                     order: [[7, "asc"]],
                     columns: [
                         {

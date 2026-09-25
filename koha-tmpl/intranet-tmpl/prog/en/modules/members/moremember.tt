@@ -844,6 +844,9 @@
         table_settings_bookings_table = [% TablesSettings.GetTableSettings( 'members', 'moremember', 'bookings-table', 'json' ) | $raw %]
         CAN_user_circulate_manage_bookings = [% CAN_user_circulate_manage_bookings | $raw %]
         patron_borrowernumber = [% patron.borrowernumber | $raw %]
+        [% USE PatronDisclosure %]
+        const patron_disclosure_bookings_page_size_limit =
+            [% PatronDisclosure.page_size_limit('GET /bookings') || 'undefined' %];
 
         var amountlimit = "[% Koha.Preference('FineNoRenewals') | html %]";
         var fines = "[% fines | $Price %]";
