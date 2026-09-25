@@ -19,10 +19,11 @@
 
 use Modern::Perl;
 use File::Basename qw(dirname);
-use Test::More tests => 111;
+use Test::More tests => 112;
 use Test::NoWarnings;
 
 use Test::MockModule;
+use Test::MockObject;
 use Test::Warn;
 use Test::Exception;
 
@@ -1771,6 +1772,108 @@ subtest 'Email delivery failures' => sub {
     unlike(
         $message->{response_message}, qr/stale Mail::Sendmail error/,
         'A stale Mail::Sendmail global does not affect the stored response'
+    );
+};
+
+subtest 'Persistent SMTP transport failures' => sub {
+
+    plan tests => 13;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->{branchcode},
+                email      => 'recipient@example.org',
+            }
+        }
+    );
+
+    $dbh->do(q|DELETE FROM message_queue|);
+    my @message_ids;
+    foreach my $number ( 1 .. 3 ) {
+        push @message_ids,
+            C4::Letters::EnqueueLetter(
+            {
+                letter => {
+                    content      => "message $number",
+                    metadata     => 'metadata',
+                    code         => 'TEST_MESSAGE',
+                    content_type => 'text/plain',
+                    title        => "message $number",
+                },
+                borrowernumber         => $patron->borrowernumber,
+                to_address             => $patron->email,
+                message_transport_type => 'email',
+                from_address           => 'from@example.org',
+            }
+            );
+    }
+
+    my @transports;
+    my $disconnect_count   = 0;
+    my $mocked_smtp_server = Test::MockModule->new('Koha::SMTP::Server');
+    $mocked_smtp_server->mock(
+        'transport',
+        sub {
+            my $transport = Test::MockObject->new;
+            $transport->mock(
+                'disconnect',
+                sub {
+                    $disconnect_count++;
+                    die "disconnect failed\n";
+                }
+            );
+            push @transports, $transport;
+            return $transport;
+        }
+    );
+
+    my @send_transports;
+    my $send_count        = 0;
+    my $mocked_koha_email = Test::MockModule->new('Koha::Email');
+    $mocked_koha_email->mock(
+        'send_or_die',
+        sub {
+            my ( $email, $args ) = @_;
+            push @send_transports, $args->{transport};
+            $send_count++;
+            Email::Sender::Failure::Temporary->throw(
+                {
+                    message =>
+                        'from@example.org failed after MAIL FROM: 421 4.3.0 Too many messages in this connection',
+                    code => 421,
+                }
+            ) if $send_count == 2;
+            return;
+        }
+    );
+
+    my $messages_processed;
+    warning_is {
+        $messages_processed = C4::Letters::SendQueuedMessages( { type => 'email' } );
+    }
+    undef, 'Transport cleanup does not replace or log the delivery failure';
+
+    is( $messages_processed, 2,              'Two successful deliveries are counted' );
+    is( $send_count,         3,              'All three deliveries are attempted' );
+    is( scalar @transports,  2,              'A fresh transport is built after the failure' );
+    is( $disconnect_count,   1,              'The failed transport is disconnected once' );
+    is( $send_transports[0], $transports[0], 'The first delivery uses the first transport' );
+    is( $send_transports[1], $transports[0], 'The cached transport is reused until it fails' );
+    is( $send_transports[2], $transports[1], 'The next delivery uses a fresh transport' );
+
+    my @messages        = map  { C4::Letters::GetMessage($_) } @message_ids;
+    my @sent_messages   = grep { $_->{status} eq 'sent' } @messages;
+    my @failed_messages = grep { $_->{status} eq 'failed' } @messages;
+    is( scalar @messages,                    3, 'All test messages remain available for inspection' );
+    is( scalar @sent_messages,               2, 'Two messages are marked sent' );
+    is( scalar @failed_messages,             1, 'Only the delivery that raised an exception is marked failed' );
+    is( $failed_messages[0]->{failure_code}, 'SENDMAIL', 'The original delivery failure code is retained' );
+    is(
+        $failed_messages[0]->{response_message},
+        'from@example.org failed after MAIL FROM: 421 4.3.0 Too many messages in this connection',
+        'A disconnect failure does not replace the delivery response'
     );
 };
 
