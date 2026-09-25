@@ -326,12 +326,14 @@
     <script nonce="[% Koha.CSPNonce | $raw %]">
         function update_tab_display() {
             let selected_type = $('input[name="recordtype"]:checked').val();
-            if (selected_type == "authority") {
-                $("a[href='#shelves_tab_panel']").parent().hide();
-                $("a[href='#uploadfile_tab_panel']").tab("show");
-            } else if (selected_type == "biblio") {
-                $("a[href='#shelves_tab_panel']").parent().show();
-                $("a[href='#uploadfile_tab_panel']").tab("show");
+            const shelves_tab_panel = $("a[href='#shelves_tab_panel']");
+            if (selected_type != 'biblio') {
+                shelves_tab_panel.parent().hide();
+                if (shelves_tab_panel.hasClass("active") || $("#shelves_tab_panel").hasClass("active")) {
+                    $("a[href='#uploadfile_tab_panel']").tab("show");
+                }
+            } else {
+                shelves_tab_panel.parent().show();
             }
         }
         $(document).ready(function () {
