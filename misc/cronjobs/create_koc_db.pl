@@ -433,7 +433,7 @@ returns a hash of column names to their types.
 sub get_columns_and_types_of_table {
     my $table_name = shift;
 
-    my $column_info = $dbh_mysql->selectall_arrayref("SHOW COLUMNS FROM $table_name");
+    my $column_info = $dbh_mysql->selectall_arrayref("SHOW COLUMNS FROM " . $dbh_mysql->quote_identifier($table_name));
     my %columns     = map { $_->[0] => $_->[1] } @$column_info;
     return %columns;
 
