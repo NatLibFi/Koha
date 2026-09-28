@@ -19,6 +19,7 @@ package Koha::Util::Navigation;
 
 use Modern::Perl;
 use C4::Context;
+use URI;
 
 =head1 NAME
 
@@ -73,6 +74,15 @@ sub local_referer {
             $rv = $1;
         }
     }
+    if ($rv) {
+
+        # The "Log out" link is a GET with '?logout.x=1'
+        # Do not send back the logout parameter
+        my $rv_uri = URI->new($rv);
+        $rv_uri->query_param_delete('logout.x');
+        $rv = $rv_uri->path_query;
+    }
+
     $rv =~ s/(?<=[?&])language=[\w-]+(&|$)// if $rv and $params->{remove_language};
     return $rv // $fallback;
 }
