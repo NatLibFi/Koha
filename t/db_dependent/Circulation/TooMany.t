@@ -16,13 +16,13 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 12;
+use Test::More tests => 13;
 use C4::Context;
 
 use C4::Members;
 use C4::Items;
 use C4::Biblio;
-use C4::Circulation qw( TooMany AddIssue );
+use C4::Circulation qw( TooMany AddIssue CanBookBeIssued );
 use C4::Context;
 
 use Koha::DateUtils qw( dt_from_string );
@@ -49,7 +49,8 @@ $dbh->do(q|DELETE FROM itemtypes|);
 Koha::CirculationRules->search()->delete();
 
 my $builder = t::lib::TestBuilder->new();
-t::lib::Mocks::mock_preference( 'item-level_itypes', 1 );    # Assuming the item type is defined at item level
+t::lib::Mocks::mock_preference( 'item-level_itypes',     1 );    # Assuming the item type is defined at item level
+t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
 
 my $branch = $builder->build(
     {
@@ -1225,10 +1226,182 @@ subtest 'HomeOrHoldingBranch is used' => sub {
     teardown();
 };
 
+subtest 'MaxCheckoutsHardLimit' => sub {
+    plan tests => 15;
+
+    my $hard_limit_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $category->{categorycode},
+                branchcode   => $branch->{branchcode},
+            },
+        }
+    );
+    my $hard_limit_item = $builder->build_sample_item(
+        {
+            homebranch    => $branch->{branchcode},
+            holdingbranch => $branch->{branchcode},
+        }
+    );
+    my $other_branch_item = $builder->build_sample_item(
+        {
+            homebranch    => $branch2->{branchcode},
+            holdingbranch => $branch2->{branchcode},
+        }
+    );
+    my $candidate = $builder->build_sample_item(
+        {
+            homebranch    => $branch->{branchcode},
+            holdingbranch => $branch->{branchcode},
+        }
+    );
+
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => $branch->{branchcode},
+            categorycode => $category->{categorycode},
+            itemtype     => undef,
+            rules        => {
+                maxissueqty       => 99,
+                maxonsiteissueqty => 99,
+                issuelength       => 14,
+                lengthunit        => 'days',
+            },
+        }
+    );
+    t::lib::Mocks::mock_userenv( { patron => $hard_limit_patron } );
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
+    is( C4::Circulation::TooMany( $hard_limit_patron, $candidate ), undef, 'Blank value disables the hard limit' );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 'invalid' );
+    is( C4::Circulation::TooMany( $hard_limit_patron, $candidate ), undef, 'Invalid values do not block circulation' );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 0 );
+    is_deeply(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        {
+            reason      => 'TOO_MANY_CHECKOUTS_HARD_LIMIT',
+            count       => 0,
+            max_allowed => 0,
+        },
+        'A zero hard limit blocks all new checkouts'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 2 );
+    C4::Circulation::AddIssue( $hard_limit_patron, $hard_limit_item->barcode, dt_from_string() );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        undef,
+        'A checkout below the global hard limit is allowed'
+    );
+
+    C4::Circulation::AddIssue(
+        $hard_limit_patron, $other_branch_item->barcode, dt_from_string(), undef, undef, undef,
+        { onsite_checkout => 1 }
+    );
+    is_deeply(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        {
+            reason      => 'TOO_MANY_CHECKOUTS_HARD_LIMIT',
+            count       => 2,
+            max_allowed => 2,
+        },
+        'The hard limit counts active checkouts globally across libraries and checkout types'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 1 );
+    is_deeply(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        {
+            reason      => 'TOO_MANY_CHECKOUTS_HARD_LIMIT',
+            count       => 2,
+            max_allowed => 1,
+        },
+        'The hard limit blocks when the patron is already above it'
+    );
+
+    Koha::CirculationRules->set_rule(
+        {
+            branchcode   => $branch->{branchcode},
+            categorycode => $category->{categorycode},
+            itemtype     => undef,
+            rule_name    => 'maxissueqty',
+            rule_value   => 0,
+        }
+    );
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 2 );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate )->{reason},
+        'TOO_MANY_CHECKOUTS_HARD_LIMIT',
+        'The global hard limit takes precedence over circulation rules'
+    );
+
+    Koha::CirculationRules->set_rule(
+        {
+            branchcode   => $branch->{branchcode},
+            categorycode => $category->{categorycode},
+            itemtype     => undef,
+            rule_name    => 'maxissueqty',
+            rule_value   => 99,
+        }
+    );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $hard_limit_item, { switch_onsite_checkout => 1 } ),
+        undef,
+        'A count-neutral on-site checkout switch is allowed at the hard limit'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 1 );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $hard_limit_item, { switch_onsite_checkout => 1 } ),
+        undef,
+        'A count-neutral on-site checkout switch is allowed above the hard limit'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        undef,
+        'Blank value disables the hard limit for patrons with existing checkouts'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 'invalid' );
+    is(
+        C4::Circulation::TooMany( $hard_limit_patron, $candidate ),
+        undef,
+        'Invalid values do not become an accidental zero limit'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 2 );
+    t::lib::Mocks::mock_preference( 'AllowTooManyOverride',  0 );
+    my ( $impossible, $confirmation ) = C4::Circulation::CanBookBeIssued( $hard_limit_patron, $candidate->barcode );
+    is_deeply(
+        [ map { $impossible->{$_} } qw( TOO_MANY current_loan_count max_loans_allowed ) ],
+        [ 'TOO_MANY_CHECKOUTS_HARD_LIMIT', 2, 2 ],
+        'The hard limit is a blocker when staff override is disabled'
+    );
+    ok( !exists $confirmation->{TOO_MANY}, 'No override confirmation is offered when staff override is disabled' );
+
+    t::lib::Mocks::mock_preference( 'AllowTooManyOverride', 1 );
+    ( $impossible, $confirmation ) = C4::Circulation::CanBookBeIssued( $hard_limit_patron, $candidate->barcode );
+    ok( !exists $impossible->{TOO_MANY}, 'The hard limit is not impossible when staff override is enabled' );
+    is_deeply(
+        [ map { $confirmation->{$_} } qw( TOO_MANY current_loan_count max_loans_allowed ) ],
+        [ 'TOO_MANY_CHECKOUTS_HARD_LIMIT', 2, 2 ],
+        'The hard limit becomes an explicit staff confirmation'
+    );
+
+    t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
+    t::lib::Mocks::mock_preference( 'AllowTooManyOverride',  0 );
+    teardown();
+};
+
 $schema->storage->txn_rollback;
 
 sub teardown {
     $dbh->do(q|DELETE FROM issues|);
     $dbh->do(q|DELETE FROM circulation_rules|);
 }
-
