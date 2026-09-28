@@ -160,7 +160,7 @@ if ( $op eq 'add_form' ) {
     my @tagsubfield                 = $input->multi_param('tagsubfield');
     my @liblibrarian                = $input->multi_param('liblibrarian');
     my @libopac                     = $input->multi_param('libopac');
-    my @kohafield                   = '' . $input->param('kohafield');
+    my @kohafield                   = '' . $input->param('kohafield'); # isn't this better than "scalar ..."?
     my @tab                         = $input->multi_param('tab');
     my @seealso                     = $input->multi_param('seealso');
     my @ohidden                     = $input->multi_param('ohidden');
