@@ -117,7 +117,7 @@
                                                 <th class="hq-collection">Collection</th>
                                                 <th class="hq-location">Shelving location</th>
                                                 <th class="hq-itemtype">Item type</th>
-                                                <th class="hq-callnumber">Call number</th>
+                                                <th class="hq-callnumber string-sort">Call number</th>
                                                 <th class="hq-copynumber">Copy number</th>
                                                 <th class="hq-enumchron">Enumeration</th>
                                                 <th class="hq-barcode">Barcode</th>
@@ -249,7 +249,7 @@
                                                     <td class="hq-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => itemsloo.item.ccode ) | html %]</td>
                                                     <td class="hq-location">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => itemsloo.item.location ) | html %]</td>
                                                     <td class="hq-itemtype">[% ItemTypes.GetDescription( itemsloo.item.effective_itemtype ) | html %]</td>
-                                                    <td class="hq-callnumber"><span class="itemcallnumber">[% itemsloo.item.itemcallnumber | html %]</span></td>
+                                                    <td class="hq-callnumber" data-order="[% itemsloo.item.cn_sort | html %]"><span class="itemcallnumber">[% itemsloo.item.itemcallnumber | html %]</span></td>
                                                     <td class="hq-copynumber">[% itemsloo.item.copynumber | html %]</td>
                                                     <td class="hq-enumchron">[% itemsloo.item.enumchron | html %]</td>
                                                     <td class="hq-barcode">
