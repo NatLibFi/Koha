@@ -148,7 +148,7 @@
                                                 Any available from item group <em>[% hold_info.item_group.description | html %]</em>.
                                             [% END %]
                                         </td>
-                                        <td>
+                                        <td data-order="[% hold_info.callnumber_sort | html %]">
                                             [% IF ( hold_info.callnumbers.size ) %]
                                                 <ul>
                                                     [% FOREACH callnumber IN hold_info.callnumbers %]
