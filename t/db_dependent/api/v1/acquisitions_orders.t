@@ -64,11 +64,12 @@ subtest 'list() tests' => sub {
         {
             class => 'Koha::Acquisition::Orders',
             value => {
-                basketno         => $basket->basketno,
-                orderstatus      => 'new',
-                biblionumber     => $biblio->biblionumber,
-                quantityreceived => 0,
-                quantity         => 1,
+                basketno                => $basket->basketno,
+                orderstatus             => 'new',
+                biblionumber            => $biblio->biblionumber,
+                quantityreceived        => 0,
+                quantity                => 1,
+                datecancellationprinted => undef,
             }
         }
     );
@@ -138,13 +139,24 @@ subtest 'list() tests' => sub {
     is( scalar @{ $result->tx->res->json }, 2, 'Two orders fetched' );
 
     # Mark $another_order as cancelled
-    $another_order->set( { orderstatus => 'cancelled' } )->store;
+    $another_order->set( { orderstatus => 'cancelled', datecancellationprinted => '2025-01-01' } )->store;
+
+    my $order_with_inconsistent_status = $order->unblessed;
+    delete $order_with_inconsistent_status->{ordernumber};
+    $order_with_inconsistent_status->{orderstatus}             = 'ordered';
+    $order_with_inconsistent_status->{datecancellationprinted} = '2025-01-01';
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Orders',
+            value => $order_with_inconsistent_status,
+        }
+    );
 
     $result =
         $t->get_ok( "//$userid:$password@/api/v1/acquisitions/orders?only_active=1&biblio_id=" . $biblio->biblionumber )
         ->status_is( 200, "only_active parameter accepted" );
 
-    is( scalar @{ $result->tx->res->json }, 1, 'Only one order is active' );
+    is( scalar @{ $result->tx->res->json }, 1, 'Only one order without a cancellation date is active' );
 
     # Warn on unsupported query parameter
     $t->get_ok("//$userid:$password@/api/v1/acquisitions/orders?order_blah=blah")
