@@ -371,7 +371,7 @@ if ( $op eq 'cud-delete-order' ) {
 } elsif ( $op eq 'cud-reopen' ) {
     ReopenBasket( scalar $query->param('basketno') );
     print $query->redirect( '/cgi-bin/koha/acqui/basket.pl?basketno=' . $basket->{'basketno'} );
-} elsif ( $op eq 'cud-ediorder' ) {
+} elsif ( $op eq 'cud-ediorder' or $op eq 'ediorder' ) {
     $template->param( booksellername => $bookseller->name );
     edi_close_and_order();
 } elsif ( $op eq 'cud-mod_users' ) {
