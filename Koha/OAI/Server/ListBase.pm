@@ -104,7 +104,10 @@ STAGELOOP:
                 (SELECT DISTINCT(biblionumber) FROM deleteditems main JOIN biblio USING (biblionumber) WHERE $where
                 $order_limit)
                   UNION
+                (SELECT DISTINCT(biblionumber) FROM holdings main WHERE $where $order_limit)
+                  UNION
                 (SELECT DISTINCT(biblionumber) FROM items main WHERE $where $order_limit)";
+            push @bind_params, @part_bind_params;
             push @bind_params, @part_bind_params;
             push @bind_params, @part_bind_params;
             $sql = "SELECT biblionumber FROM ($sql) main $order_limit";
@@ -117,6 +120,8 @@ STAGELOOP:
                     SELECT timestamp FROM deleteditems WHERE biblionumber = ?
                     UNION
                     SELECT timestamp FROM items WHERE biblionumber = ?
+                    UNION
+                    SELECT timestamp FROM holdings WHERE biblionumber = ?
                 ) bi
             ";
         } else {
@@ -152,7 +157,7 @@ STAGELOOP:
             }
             my @params = ($biblionumber);
             if ( $include_items && !$deleted ) {
-                push @params, $deleted ? ($biblionumber) : ( $biblionumber, $biblionumber );
+                push @params, $deleted ? ( $biblionumber, $biblionumber ) : ( $biblionumber, $biblionumber, $biblionumber );
             }
             $ts_sth->execute(@params) || die( 'Could not execute statement: ' . $ts_sth->errstr );
 

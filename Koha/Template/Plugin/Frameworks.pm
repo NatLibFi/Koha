@@ -55,4 +55,12 @@ sub GetName {
     return $frameworktext;
 }
 
+sub all {
+    my ( $self, $params ) = @_;
+
+    my $frameworks = Koha::BiblioFrameworks->search( {}, { order_by => ['frameworktext'] } );
+
+    return $frameworks;
+}
+
 1;

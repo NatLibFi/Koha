@@ -15,6 +15,7 @@ $(document).ready(function () {
     $("fieldset.rows input, fieldset.rows select").addClass("noEnterSubmit");
     /* Inline edit/delete links */
     var biblionumber = $("input[name='biblionumber']").val();
+    var holding_id = $("input[name='holding_id']").val();
     $("tr.editable").each(function () {
         $(this)
             .find("td:not(:first)")
@@ -51,7 +52,7 @@ $(document).ready(function () {
         if (confirm(MSG_CONFIRM_ADD_ITEM)) {
             window.location.href =
                 "/cgi-bin/koha/cataloguing/additem.pl?biblionumber=" +
-                biblionumber;
+                biblionumber + (holding_id ? "&holding_id=" + holding_id : "");
         }
     });
 
