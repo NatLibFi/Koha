@@ -280,16 +280,22 @@
                                 <sup>
                                     <label for="to_field_regex">RegEx</label>
                                     <input type="checkbox" name="to_field_regex" id="to_field_regex" />
+                                </sup>
 
-                                    <span name="to_field_regex_value_block" id="to_field_regex_value_block" style="display:none;">
+                                <span name="to_field_regex_value_block" id="to_field_regex_value_block" style="display:none;">
+                                    <sup>
                                         s/<input type="text" name="to_regex_search" id="to_regex_search" placeholder="regex pattern" />/<input
                                             type="text"
                                             name="to_regex_replace"
                                             id="to_regex_replace"
                                             placeholder="regex replacement"
-                                        />/<input type="text" name="to_regex_modifiers" id="to_regex_modifiers" placeholder="ig" size="3" />
-                                    </span>
-                                </sup>
+                                        />/<input type="text" name="to_regex_modifiers" id="to_regex_modifiers" aria-describedby="to_regex_modifiers_hint" placeholder="igT" size="3" />
+                                    </sup>
+                                    <span class="hint" id="to_regex_modifiers_hint"
+                                        >Use <code>T</code> to expand MARC placeholders in the replacement: <code>{{245$a}}</code>, <code>{{245$a?}}</code> for an optional value, <code>{{245$a[2]}}</code> for one occurrence, or
+                                        <code>{{245$a?b}}</code> for a fallback.</span
+                                    >
+                                </span>
                             </span>
                         </span>
                     </div>
