@@ -32,6 +32,7 @@ function toInt(value) {
     return isNaN(parsed) ? 0 : parsed;
 }
 
+
 /**
  * Normalize a date to start of day using dayjs
  * @param {Date|string|dayjs} date - Date to normalize
@@ -402,45 +403,38 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
     let periodPicker = $("#period").get(0)._flatpickr;
 
     if (!dataFetched) {
+        $("#booking_result").empty().removeClass("alert alert-danger");
+        $("#placeBookingForm button[type='submit']").prop("disabled", true);
         // Fetch list of bookable items
-        let itemsFetch = $.ajax({
-            url:
-                "/api/v1/biblios/" +
-                biblionumber +
-                "/items?bookable=1" +
-                "&_per_page=-1",
-            dataType: "json",
-            type: "GET",
-            headers: {
+        const itemsFetch = fetchAllKohaApiPages(
+            "/api/v1/biblios/" + biblionumber + "/items?bookable=1",
+            "item_id",
+            {
                 "x-koha-embed": "item_type",
-            },
-        });
+            }
+        );
 
         // Fetch list of existing bookings
-        let bookingsFetch = $.ajax({
-            url:
-                "/api/v1/bookings?biblio_id=" +
+        const bookingsFetch = fetchAllKohaApiPages(
+            "/api/v1/bookings?biblio_id=" +
                 biblionumber +
-                "&_per_page=-1" +
                 '&q={"status":{"-in":["new","pending","active"]}}',
-            dataType: "json",
-            type: "GET",
-        });
+            "booking_id"
+        );
 
         // Fetch list of current checkouts
-        let checkoutsFetch = $.ajax({
-            url: "/api/v1/biblios/" + biblionumber + "/checkouts?_per_page=-1",
-            dataType: "json",
-            type: "GET",
-        });
+        const checkoutsFetch = fetchAllKohaApiPages(
+            "/api/v1/biblios/" + biblionumber + "/checkouts",
+            "checkout_id"
+        );
 
         // Update item select2 and period flatpickr
-        $.when(itemsFetch, bookingsFetch, checkoutsFetch).then(
-            function (itemsFetch, bookingsFetch, checkoutsFetch) {
+        Promise.all([itemsFetch, bookingsFetch, checkoutsFetch]).then(
+            function ([itemsResponse, bookingsResponse, checkoutsResponse]) {
                 // Set variables
-                bookable_items = itemsFetch[0];
-                bookings = bookingsFetch[0];
-                checkouts = checkoutsFetch[0];
+                bookable_items = itemsResponse;
+                bookings = bookingsResponse;
+                checkouts = checkoutsResponse;
 
                 // Merge current checkouts into bookings
                 for (checkout of checkouts) {
@@ -2122,6 +2116,10 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
 
                 // Set the flag to indicate that data has been fetched
                 dataFetched = true;
+                $("#placeBookingForm button[type='submit']").prop(
+                    "disabled",
+                    false
+                );
 
                 // Set form values
                 setFormValues(
@@ -2133,8 +2131,13 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                     periodPicker
                 );
             },
-            function (jqXHR, textStatus, errorThrown) {
-                console.log("Fetch failed");
+            function (error) {
+                console.error("Fetch failed", error);
+                showBookingError(
+                    __(
+                        "Unable to load complete booking availability. Close the window and try again."
+                    )
+                );
             }
         );
     } else {
@@ -2327,6 +2330,13 @@ function refreshBookingsTable() {
 
 $("#placeBookingForm").on("submit", function (e) {
     e.preventDefault();
+
+    if (!dataFetched) {
+        showBookingError(
+            __("Complete booking availability has not been loaded.")
+        );
+        return;
+    }
 
     const url = "/api/v1/bookings";
     const start_date = $("#booking_start_date").val();

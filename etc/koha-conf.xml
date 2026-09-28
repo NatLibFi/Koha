@@ -79,6 +79,8 @@
  <authorityservershadow>1</authorityservershadow>
  <pluginsdir>__PLUGINS_DIR__</pluginsdir> <!-- This entry can be repeated to use multiple directories -->
  <enable_plugins>0</enable_plugins>
+ <patron_data_disclosure_log>0</patron_data_disclosure_log>
+ <patron_data_disclosure_max_subjects>1000</patron_data_disclosure_max_subjects>
  <upload_path></upload_path>
  <tmp_path></tmp_path>
  <intranetdir>__INTRANET_CGI_DIR__</intranetdir>

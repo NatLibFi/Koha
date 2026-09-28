@@ -138,6 +138,8 @@ sub authenticate_api_request {
     my ( $c, $params ) = @_;
 
     my $user;
+    my $auth_source;
+    my $api_client_id;
 
     $c->stash( 'is_public' => 1 )
         if $params->{is_public};
@@ -174,8 +176,11 @@ sub authenticate_api_request {
         );
 
         if ($valid_token) {
-            my $patron_id = Koha::ApiKeys->find( $valid_token->{client_id} )->patron_id;
-            $user = Koha::Patrons->find($patron_id);
+            my $api_key   = Koha::ApiKeys->find( $valid_token->{client_id} );
+            my $patron_id = $api_key->patron_id;
+            $user          = Koha::Patrons->find($patron_id);
+            $auth_source   = 'oauth';
+            $api_client_id = $api_key->client_id;
         } else {
 
             # If we have "Authorization: Bearer" header and oauth authentication
@@ -207,7 +212,8 @@ sub authenticate_api_request {
         unless ( C4::Context->preference('RESTBasicAuth') ) {
             Koha::Exceptions::Authentication::Required->throw( error => 'Basic authentication disabled' );
         }
-        $user = $c->_basic_auth($authorization_header);
+        $user        = $c->_basic_auth($authorization_header);
+        $auth_source = 'basic' if $user;
         unless ($user) {
 
             # If we have "Authorization: Basic" header and authentication
@@ -273,7 +279,10 @@ sub authenticate_api_request {
         }
     }
 
-    $c->stash( 'koha.user' => $user );
+    $auth_source = 'session' if $user && !$auth_source;
+
+    $c->stash( 'koha.user'        => $user );
+    $c->stash( 'koha.auth_source' => $auth_source );
     C4::Context->interface('api');
 
     if ( $user and !$cookie_auth ) {    # cookie-auth sets this and more, don't mess with that
@@ -307,6 +316,17 @@ sub authenticate_api_request {
     if ( ( defined($permissions) and haspermission( $user->userid, $permissions ) ) ) {
 
         validate_query_parameters( $c, $spec );
+        $c->patron_disclosure->initialize(
+            {
+                spec          => $spec,
+                actor_id      => $user->id,
+                auth_source   => $auth_source,
+                api_client_id => $api_client_id,
+                is_public     => $params->{is_public},
+                is_plugin     => $params->{is_plugin},
+            }
+        );
+        $c->patron_disclosure->validate_page_size;
 
         # Everything is ok
         return 1;

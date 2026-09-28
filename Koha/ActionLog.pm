@@ -60,8 +60,9 @@ sub librarian {
 
 Returns the related I<Koha::Patron> object joined on the C<object> column.
 Only meaningful for rows where C<object> is a borrowernumber (MEMBERS,
-CIRCULATION, FINES and APIKEYS modules); for other modules the join may
-match an unrelated patron and the caller must filter by C<module>.
+CIRCULATION, FINES, APIKEYS and PATRON_DISCLOSURE modules); for other
+modules the join may match an unrelated patron and the caller must filter by
+C<module>.
 
 =cut
 

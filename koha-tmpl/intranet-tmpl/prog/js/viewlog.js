@@ -355,7 +355,8 @@ function renderObject(data, type, row) {
         mod == "MEMBERS" ||
         mod == "CIRCULATION" ||
         mod == "FINES" ||
-        mod == "APIKEYS"
+        mod == "APIKEYS" ||
+        mod == "PATRON_DISCLOSURE"
     ) {
         var patron = row.patron;
         var name;

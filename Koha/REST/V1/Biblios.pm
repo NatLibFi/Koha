@@ -526,6 +526,13 @@ sub pickup_locations {
             $_;
         } @response;
 
+        $c->patron_disclosure->add_subject(
+            {
+                patron_id    => $patron->id,
+                data_classes => [qw( identity service_activity )],
+            }
+        );
+
         return $c->render(
             status  => 200,
             openapi => \@response
