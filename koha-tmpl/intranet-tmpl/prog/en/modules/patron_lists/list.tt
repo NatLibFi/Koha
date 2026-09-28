@@ -52,7 +52,7 @@
 [% WRAPPER 'main-container.inc' aside="tools-menu" %]
     <h1>[% list.name | html %]</h1>
 
-    [% IF ( not_found.size > 0 ) %]
+    [% IF not_found.size AND ( not_found.size > 0 ) %]
         [% IF id_column == 'borrowernumbers' %]
             <div class="alert alert-warning"><p>Warning, the following borrowernumbers were not found:</p></div>
         [% ELSE %]
@@ -74,7 +74,7 @@
         </table>
     [% END %]
 
-    [% IF ( existed.size > 0 ) %]
+    [% IF existed.size AND ( existed.size > 0 ) %]
         [% IF id_column == 'borrowernumbers' %]
             <div class="alert alert-warning"><p>Warning, the following borrowernumbers were already in this list:</p></div>
         [% ELSE %]

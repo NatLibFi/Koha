@@ -311,9 +311,9 @@ if ( $op and $op eq 'cud-serialchangestatus' ) {
             my $index = -1;
             for ( my $i = 0 ; $i < scalar(@serialids) ; $i++ ) {
                 if (
-                    $itemhash{$item}->{serial} eq $serialids[$i]
-                    || (   $itemhash{$item}->{serial} == $newserial
-                        && $serialids[$i] eq 'NEW' )
+                    defined $itemhash{$item}->{serial} && $itemhash{$item}->{serial} eq $serialids[$i]
+                    || (   $serialids[$i] eq 'NEW' && defined $newserial
+                        && $itemhash{$item}->{serial} == $newserial )
                     )
                 {
                     $index = $i;

@@ -53,9 +53,9 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
 
 my $do_it           = $input->param('do_it') ? 1 : 0;
 my $line            = "items.homebranch";
-my $line_input      = $input->param("Line");
+my $line_input      = $input->param("Line") // '';
 my $column          = "items.itype";
-my $column_input    = $input->param("Column");
+my $column_input    = $input->param("Column") // '';
 my $cellvalue       = "items";
 my $cellvalue_input = $input->param("Cellvalue");       # one of 'items', 'biblios', 'deleteditems'
 my @filters         = $input->multi_param("Filter");
@@ -66,7 +66,7 @@ my $output_input     = $input->param("output");
 my $basename         = "Export";
 my $basename_input   = $input->param("basename");
 
-our $sep = C4::Context->csv_delimiter( scalar $input->param("sep") );
+our $sep = C4::Context->csv_delimiter( scalar $input->param("sep") // '' );
 
 my $item_itype;
 
