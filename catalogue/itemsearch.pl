@@ -57,7 +57,7 @@ if ( defined $format and $format eq 'json' ) {
     }
 
     push @q, '' if @q == 0;
-    my @op = $cgi->multi_param('op');
+    my @op = grep { $_ ne 'cud-login' } $cgi->multi_param('op');
     my @c  = $cgi->multi_param('c');
     for my $column (@columns) {
         my $search      = $column->{search}->{value};
@@ -173,7 +173,7 @@ if ( defined $format and $format ne 'shareable' ) {
     my @c           = $param_names{'c[]'}  ? $cgi->multi_param('c[]')  : $cgi->multi_param('c');
     my @fields      = $param_names{'f[]'}  ? $cgi->multi_param('f[]')  : $cgi->multi_param('f');
     my @q           = $param_names{'q[]'}  ? $cgi->multi_param('q[]')  : $cgi->multi_param('q');
-    my @op          = $param_names{'op[]'} ? $cgi->multi_param('op[]') : $cgi->multi_param('op');
+    my @op          = grep { $_ ne 'cud-login' } ( $param_names{'op[]'} ? $cgi->multi_param('op[]') : $cgi->multi_param('op') );
 
     my $f;
     for ( my $i = 0 ; $i < @fields ; $i++ ) {
