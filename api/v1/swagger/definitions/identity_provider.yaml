@@ -29,6 +29,7 @@ properties:
     type: string
     enum:
       - email
+      - phone
       - userid
       - cardnumber
   config:
