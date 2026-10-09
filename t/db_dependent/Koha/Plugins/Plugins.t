@@ -482,7 +482,7 @@ subtest 'Koha::Plugin::Test' => sub {
 
 subtest 'Handler::run() skips disabled plugins' => sub {
 
-    plan tests => 5;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -515,6 +515,24 @@ subtest 'Handler::run() skips disabled plugins' => sub {
     Koha::Plugins::Handler->run( { class => "Koha::Plugin::Test", method => 'enable', enable_plugins => 1 } );
     $plugin = Koha::Plugin::Test->new( { enable_plugins => 1, cgi => CGI->new } );
     ok( $plugin->is_enabled, 'Handler::run() allows enable method on disabled plugin' );
+
+    local *STDOUT;
+    my $stdout;
+    open STDOUT, '>', \$stdout;
+
+    my $staff_login_cookie = CGI->new->cookie( -name => 'CGISESSID', -value => 'plugin-auth-session' );
+    Koha::Plugins::Handler->run(
+        {
+            class          => "Koha::Plugin::Test",
+            method         => 'test_output_html',
+            enable_plugins => 1,
+            cgi            => CGI->new,
+            auth_cookies   => [$staff_login_cookie],
+        }
+    );
+
+    like( $stdout, qr{Set-Cookie: CGISESSID=plugin-auth-session}, 'Handler::run() passes staff login cookies to plugin output' );
+    like( $stdout, qr{¡Hola output_html!}, 'Handler::run() emits plugin output' );
 
     $schema->storage->txn_rollback;
 };
