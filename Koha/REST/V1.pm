@@ -117,6 +117,8 @@ sub startup {
                 $c->res->body($xml);
             }
 
+            $c->patron_disclosure->finalize;
+
             return;
         }
     );
@@ -221,6 +223,7 @@ sub startup {
     $self->plugin('Koha::App::Plugin::Language');
     $self->plugin('Koha::REST::Plugin::Pagination');
     $self->plugin('Koha::REST::Plugin::Query');
+    $self->plugin('Koha::REST::Plugin::PatronDisclosure');
     $self->plugin('Koha::REST::Plugin::Objects');
     $self->plugin('Koha::REST::Plugin::Exceptions');
     $self->plugin('Koha::REST::Plugin::Responses');

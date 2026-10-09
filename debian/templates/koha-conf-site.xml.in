@@ -266,6 +266,8 @@ __END_SRU_PUBLICSERVER__
  <authorityservershadow>1</authorityservershadow>
  <pluginsdir>__PLUGINS_DIR__</pluginsdir> <!-- This entry can be repeated to use multiple directories -->
  <enable_plugins>0</enable_plugins>
+ <patron_data_disclosure_log>0</patron_data_disclosure_log>
+ <patron_data_disclosure_max_subjects>1000</patron_data_disclosure_max_subjects>
  <upload_path>__UPLOAD_PATH__</upload_path>
  <tmp_path>__TMP_PATH__</tmp_path>
  <intranetdir>/usr/share/koha/intranet/cgi-bin</intranetdir>
