@@ -190,6 +190,47 @@ sub create {
     return $email;
 }
 
+=head3 exception_message
+
+    my $message = Koha::Email->exception_message($exception);
+
+Returns a compact, stack-free diagnostic for an email delivery exception.
+For exception objects that provide a C<message> method, that value is used
+without stringifying the exception. String exceptions are reduced to their
+first nonempty line before a C<Trace begun> stack trace. An empty diagnostic
+returns an empty string.
+
+=cut
+
+sub exception_message {
+    my ( $class, $exception ) = @_;
+
+    my $has_message = blessed($exception) && $exception->can('message');
+    my $message     = $has_message ? $exception->message : $exception;
+
+    return '' if !defined $message || ref $message;
+
+    $message =~ s/\r\n?/\n/g;
+    my ($stack_free_message) = split /^[\t ]*Trace begun\b/m, $message, 2;
+    $message = $stack_free_message // '';
+
+    if ($has_message) {
+        $message =~ s/^\s+|\s+$//g;
+        $message =~ s/\s+/ /g;
+        return $message;
+    }
+
+    foreach my $line ( split /\n/, $message ) {
+        $line =~ s/^\s+|\s+$//g;
+        next unless length $line;
+
+        $line =~ s/[\t ]+/ /g;
+        return $line;
+    }
+
+    return '';
+}
+
 =head3 send_or_die
 
     $email->send_or_die({ transport => $transport [, $args] });
