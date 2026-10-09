@@ -408,11 +408,14 @@ my ( undef, $barcode_subfield ) = GetMarcFromKohaField('items.barcode');
 # get option values for TaxRates syspref
 my @gst_values = map { option => $_ + 0.0 }, split( '\|', C4::Context->preference("TaxRates") );
 
+my $rr_qty = $input->param('rr_quantity_to_order');
+
 my $quantity =
-      $input->param('rr_quantity_to_order')
-    ? $input->param('rr_quantity_to_order')
-    : $data->{'quantity'};
-$quantity //= 0;
+    defined $rr_qty
+        ? $rr_qty
+        : $data->{quantity};
+
+$quantity //= ( $basketobj->effective_create_items eq 'ordering' ? 0 : 1 );
 
 # Get additional fields
 my $record;
