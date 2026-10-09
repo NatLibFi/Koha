@@ -591,7 +591,8 @@ sub _new_Zconn {
     $elementSetName = 'marcxml';
 
     my $host = _common_config( $server, 'listen' );
-    $host = $host->{content};
+    # TODO: was update from community in Bug 41102. Anyway added "// ''"
+    $host = $host->{content} // '';
     my $serverinfo = _common_config( $server, 'serverinfo' );
     my $user       = $serverinfo->{user};
     my $password   = $serverinfo->{password};
