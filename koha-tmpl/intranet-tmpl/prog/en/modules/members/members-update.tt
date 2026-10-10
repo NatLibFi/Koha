@@ -190,7 +190,7 @@
                                 &nbsp;|&nbsp; <a target="_blank" href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% pm.borrowernumber | html %]">Patron details</a>
                             </div>
 
-                            [% IF borrowers.$borrowernumber.gonenoaddress > 0 %]
+                            [% IF borrowers.$borrowernumber.gonenoaddress AND borrowers.$borrowernumber.gonenoaddress > 0 %]
                                 <div class="alert alert-info" style="margin-top:.8em">
                                     <h4>Patron's address in doubt</h4>
                                     <p>The <strong class="gonenoaddress">Address correction needed</strong> flag is set for this patron. If this modification request resolves the issue, please unset the flag.</p>
