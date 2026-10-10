@@ -128,14 +128,28 @@ sub GetPrefParams {
             : 10;
     } elsif ( $data->{'type'} eq 'Textarea' ) {
         $params->{'type_textarea'} = 1;
-        $data->{options} =~ /(.*)\|(.*)/;
-        $params->{'cols'} = $1;
-        $params->{'rows'} = $2;
+        if(defined $data->{options}) {
+            $data->{options} =~ /(.*)\|(.*)/;
+            $params->{'cols'} = $1;
+            $params->{'rows'} = $2;
+        }
+        else {
+            warn "Undefined 'options' (NULL in systempreferences DB) for type Textarea for variable '$data->{'variable'}'";
+            $params->{'cols'} = 70;
+            $params->{'rows'} = 10;
+        }
     } elsif ( $data->{'type'} eq 'Htmlarea' ) {
         $params->{'type_htmlarea'} = 1;
-        $data->{options} =~ /(.*)\|(.*)/;
-        $params->{'cols'} = $1;
-        $params->{'rows'} = $2;
+        if(defined $data->{options}) {
+            $data->{options} =~ /(.*)\|(.*)/;
+            $params->{'cols'} = $1;
+            $params->{'rows'} = $2;
+        }
+        else {
+            warn "Undefined 'options' (NULL in systempreferences DB) for type Htmlarea for variable '$data->{'variable'}'";
+            $params->{'cols'} = 70;
+            $params->{'rows'} = 10;
+        }
     } elsif ( $data->{'type'} eq 'Themes' ) {
         $params->{'type_choice'} = 1;
         my $type = '';
