@@ -146,6 +146,13 @@ Acquisitions:
                 1: Enable
                 0:  Disable
             - automatic order line creation from MARC records.
+        -
+            - Calculate "Estimated delivery date" in acquistion orders relative to basket
+            - pref: EstimateDeliveryByBasketDate
+              default: no
+              choices:
+                  1: Opening date
+                  0: Closing date
     Printing:
         -
             - Use the
