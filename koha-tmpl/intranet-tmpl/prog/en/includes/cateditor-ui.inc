@@ -402,6 +402,19 @@
             } );
         }
 
+        [% IF marcflavour == 'MARC21' %]
+        function addMissingMandatory008( record ) {
+            if ( record.field('008') ) return;
+
+            let fieldInfo = KohaBackend.GetTagInfo( record.frameworkcode || '', '008' );
+            if ( !fieldInfo || fieldInfo.mandatory != '1' ) return;
+
+            let field008 = new MARC.Field( '008', ' ', ' ', [] );
+            field008.addSubfield( [ '@', '' ] );
+            record.addFieldGrouped( field008 );
+        }
+        [% END %]
+
         function loadRecord( recid, editor, callback ) {
             var parts = recid.split('/');
             if ( parts.length != 2 ) return false;
@@ -412,6 +425,9 @@
                 if ( !record.error ) {
                     var remove_control_num = ([% IF Koha.Preference('autoControlNumber') == 'OFF' %] false [% ELSE %] true [% END %]) && (parts[0] === 'duplicate');
                     if( remove_control_num ){ record.removeField("001"); }
+                    [% IF marcflavour == 'MARC21' %]
+                    if ( parts[0] === 'catalog' ) addMissingMandatory008( record );
+                    [% END %]
                     if( parts[0] === 'duplicate' ) {
                         let today = new Date();
                         let field008 = record.field('008');
