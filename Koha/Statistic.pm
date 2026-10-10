@@ -98,7 +98,9 @@ sub new {
     my @missing = grep { !exists $params->{$_} } @mandatory_keys;
     Koha::Exceptions::MissingParameter->throw( parameter => join( ',', @missing ) ) if @missing;
 
-    my $datetime = $params->{datetime} ? $params->{datetime} : dt_from_string();
+    my $datetime = $params->{datetime}
+        ? $params->{datetime}
+        : Koha::Database->new->schema->storage->datetime_parser->format_datetime( dt_from_string() );
     return $class->SUPER::new(
         {
             borrowernumber => $params->{borrowernumber},    # no longer sending empty string (changed 2023)
