@@ -46,10 +46,12 @@ my $op                  = $query->param('op') || q{};
 my $branch              = $query->param('branch');
 my $desk_id             = $query->param('desk_id');
 my $register_id         = $query->param('register_id');
+my $framework           = $query->param('framework');
 my $holding_framework   = $query->param('holding_framework');
 my $userenv_branch      = C4::Context->userenv->{'branch'}      || '';
 my $userenv_desk        = C4::Context->userenv->{'desk_id'}     || '';
 my $userenv_register_id = C4::Context->userenv->{'register_id'} || '';
+my $userenv_framework   = C4::Context->userenv->{'default_framework'} || '';
 my $userenv_holding_framework = C4::Context->userenv->{'default_holding_framework'} // 'HLD';
 my $updated;
 
@@ -109,6 +111,13 @@ if ( defined($register_id)
     $register_id = $userenv_register_id;
 }
 
+if ( defined($framework) and ( $userenv_framework ne $framework ) ) {
+    $session->param( 'default_framework', $framework );
+    $updated = 1;
+} else {
+    $framework = $userenv_framework;
+}
+
 if ( defined($holding_framework) and ( $userenv_holding_framework ne $holding_framework ) ) {
     $session->param( 'default_holding_framework', $holding_framework );
     $updated = 1;
@@ -127,6 +136,7 @@ $template->param(
     referer => $referer,
     branch  => $branch,
     desk_id => $desk_id,
+    framework => $framework,
     holding_framework => $holding_framework,
 );
 
