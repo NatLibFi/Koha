@@ -6,6 +6,7 @@
         [% Koha.Preference('IntranetSlipPrinterJS') | $raw %]
     [% ELSE %]
         let autoprint = true;
+        [% UNLESS keep_open %]
         // Register before printing: window.print() may dispatch afterprint
         // before it returns, so a handler added afterwards never runs.
         window.addEventListener('afterprint', function () {
@@ -13,6 +14,7 @@
                 window.close();
             }, 100);
         });
+        [% END %]
         window.addEventListener('load', function() {
             window.print();
         });
