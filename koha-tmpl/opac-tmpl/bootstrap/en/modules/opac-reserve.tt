@@ -14,7 +14,7 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title
     >[% FILTER collapse %]
-        [% t("Placing a hold") | html %]
+        [% closed_stack_request ? t("Closed stack request") : t("Placing a hold") | html %]
         &rsaquo; [% PROCESS 'library_name_title' %]
     [% END %]</title
 >
@@ -29,13 +29,21 @@
 <main class="main">
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item bc_active= 1 %]
-            <span>Placing a hold</span>
+            [% IF closed_stack_request %]
+                <span>Closed stack request</span>
+            [% ELSE %]
+                <span>Placing a hold</span>
+            [% END %]
         [% END %]
     [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container-fluid">
         <div id="holds" class="maincontent">
-            <h1>Placing a hold</h1>
+            [% IF closed_stack_request %]
+                <h1>Closed stack request</h1>
+            [% ELSE %]
+                <h1>Placing a hold</h1>
+            [% END %]
             [% IF ( message ) %]
                 <div id="holdmessages" class="alert alert-warning">
                     <h2>Sorry, you cannot place holds.</h2>
@@ -106,7 +114,11 @@
 
             [% UNLESS ( message ) %]
                 [% UNLESS ( none_available ) %]
-                    <h2>Confirm holds for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% IF closed_stack_request %]
+                        <h2>Confirm closed stack request for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% ELSE %]
+                        <h2>Confirm holds for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% END %]
                 [% END # / UNLESS none_available %]
 
                 [% IF ( new_reserves_allowed ) %]
@@ -129,6 +141,11 @@
                             </fieldset>
                         </div>
                     [% END %]
+
+                    [% IF closed_stack_request %]
+                        <input type="hidden" name="closed_stack_request" value="1" />
+                    [% END %]
+
                     <!-- These values are set dynamically by js -->
                     <input type="hidden" name="biblionumbers" id="biblionumbers" />
                     <input type="hidden" name="selecteditems" id="selections" />
@@ -138,9 +155,9 @@
                                 [% IF bibitemloo.forced_hold_level %]
                                     <div class="alert alert-info forced_hold_level">
                                         [% IF bibitemloo.forced_hold_level == 'item' %]
-                                            <span>You already have at least one item level hold on this title. All further holds must be item level.</span>
+                                            <span>Hold policy requires holds to be item level.</span>
                                         [% ELSE %]
-                                            <span>You already have at least one record level hold on this title. All further holds must be record level.</span>
+                                            <span>Hold policy requires holds to be record level.</span>
                                         [% END %]
                                     </div>
                                 [% END %]
@@ -273,7 +290,7 @@
                                                 </li>
                                             [% END %]
 
-                                            [% UNLESS ( singleBranchMode ) %]
+                                            [% UNLESS ( singleBranchMode || closed_stack_request ) %]
                                                 [% IF ( bibitemloo.holdable && Koha.Preference('OPACAllowUserToChooseBranch')) %]
                                                     <li class="branch">
                                                         <label for="branch_[% bibitemloo.biblionumber | html %]">Pick up location:</label>
