@@ -82,6 +82,17 @@
     [% END %]
 [% END %]
 
+[% BLOCK options_for_holding_frameworks %]
+    <option value="">Default</option>
+    [% FOREACH h IN holding_frameworks %]
+        [% IF selected == h.frameworkcode %]
+            <option value="[% prefix | html %][% h.frameworkcode | html %]" selected="selected">[% h.frameworktext | html %]</option>
+        [% ELSE %]
+            <option value="[% prefix | html %][% h.frameworkcode | html %]">[% h.frameworktext | html %]</option>
+        [% END %]
+    [% END %]
+[% END %]
+
 [% BLOCK biblio_a_href -%]
     [%- IF Koha.Preference('IntranetBiblioDefaultView') == 'marc' && Koha.Preference('viewMARC') -%]
         [%- SET this_biblio_href = "/cgi-bin/koha/catalogue/MARCdetail.pl?biblionumber=" -%]

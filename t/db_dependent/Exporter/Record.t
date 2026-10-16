@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::Warn;
 use t::lib::TestBuilder;
 
@@ -35,7 +35,10 @@ use Koha::Database;
 use Koha::Biblio;
 use Koha::Biblioitem;
 use Koha::Exporter::Record;
+use Koha::Biblio::Metadata;
 use Koha::Biblio::Metadatas;
+use Koha::BiblioFramework;
+use Koha::BiblioFrameworks;
 
 use t::lib::TestBuilder;
 
@@ -82,6 +85,60 @@ Koha::Biblio::Metadata->new(
     { biblionumber => $bad_biblio->id, format => 'marcxml', metadata => 'something wrong', schema => $marcflavour } )
     ->store();
 my $bad_biblionumber = $bad_biblio->id;
+
+# Add a framework for holdings
+my $frameworkcode = 'HLD';
+my $existing_mss = Koha::MarcSubfieldStructures->search({frameworkcode => $frameworkcode});
+$existing_mss->delete() if $existing_mss;
+my $existing_fw = Koha::BiblioFrameworks->find({frameworkcode => $frameworkcode});
+$existing_fw->delete() if $existing_fw;
+Koha::BiblioFramework->new({
+    frameworkcode => $frameworkcode,
+    frameworktext => 'Holdings'
+})->store();
+Koha::MarcSubfieldStructure->new({
+    frameworkcode => $frameworkcode,
+    tagfield => 852,
+    tagsubfield => 'b',
+    kohafield => 'holdings.holdingbranch'
+})->store();
+Koha::MarcSubfieldStructure->new({
+    frameworkcode => $frameworkcode,
+    tagfield => 852,
+    tagsubfield => 'c',
+    kohafield => 'holdings.location'
+})->store();
+Koha::MarcSubfieldStructure->new({
+    frameworkcode => $frameworkcode,
+    tagfield => 942,
+    tagsubfield => 'n',
+    kohafield => 'holdings.suppress'
+})->store();
+Koha::MarcSubfieldStructure->new({
+    frameworkcode => $frameworkcode,
+    tagfield => 999,
+    tagsubfield => 'c',
+    kohafield => 'biblio.biblionumber'
+})->store();
+Koha::MarcSubfieldStructure->new({
+    frameworkcode => $frameworkcode,
+    tagfield => 999,
+    tagsubfield => 'e',
+    kohafield => 'holdings.holding_id'
+})->store();
+
+my $builder = t::lib::TestBuilder->new;
+my $holdingbranch = $builder->build({ source => 'Branch' });
+
+my $holding_marc_1 = MARC::Record->new();
+$holding_marc_1->leader('00202cx  a22000973  4500');
+$holding_marc_1->append_fields(
+    MARC::Field->new('852', '8', ' ', b => $holdingbranch->{branchcode}, c => 'Location', k => '1973', h => 'Tb', t => 'Copy 1')
+);
+my $holding = Koha::Holding->new();
+$holding->biblionumber($biblionumber_1);
+$holding->set_marc({ record => $holding_marc_1 });
+$holding->store();
 
 my $item_1_1 = $builder->build_sample_item(
     {
@@ -221,6 +278,63 @@ subtest 'export iso2709' => sub {
     my $title         = $second_record->subfield( $title_field_tag, 'a' );
     $title = Encode::encode( 'UTF-8', $title );
     is( $title, $biblio_2_title, 'Export ISO2709: The title is correctly encoded' );
+};
+
+subtest 'export xml with holdings' => sub {
+    plan tests => 3;
+    my $generated_xml_file = '/tmp/test_export.xml';
+    Koha::Exporter::Record::export(
+        {   record_type     => 'bibs',
+            record_ids      => [ $biblionumber_1, $biblionumber_2 ],
+            format          => 'xml',
+            output_filepath => $generated_xml_file,
+            export_holdings => 1,
+        }
+    );
+
+    my $generated_xml_content = read_file( $generated_xml_file );
+    $MARC::File::XML::_load_args{BinaryEncoding} = 'utf-8';
+    open my $fh, '<', $generated_xml_file;
+    my $records = MARC::Batch->new( 'XML', $fh );
+    my @records;
+    # The following statement produces
+    # Use of uninitialized value in concatenation (.) or string at /usr/share/perl5/MARC/File/XML.pm line 398, <$fh> chunk 5.
+    # Why?
+    while ( my $record = $records->next ) {
+        push @records, $record;
+    }
+    is( scalar( @records ), 3, 'Export XML with holdings: 3 records should have been exported' );
+    my $holding_record = $records[1];
+    my $branch = $holding_record->subfield('852', 'b');
+    is( $branch, $holdingbranch->{branchcode}, 'Export XML with holdings: The holdings record contains correct branch code' );
+    my $location = $holding_record->subfield('852', 'c');
+    is( $location, 'Location', 'Export XML with holdings: The holdings record contains correct location' );
+};
+
+subtest 'export iso2709 with holdings' => sub {
+    plan tests => 3;
+    my $generated_mrc_file = '/tmp/test_export.mrc';
+    # Get all item infos
+    Koha::Exporter::Record::export(
+        {   record_type     => 'bibs',
+            record_ids      => [ $biblionumber_1, $biblionumber_2 ],
+            format          => 'iso2709',
+            output_filepath => $generated_mrc_file,
+            export_holdings => 1,
+        }
+    );
+
+    my $records = MARC::File::USMARC->in( $generated_mrc_file );
+    my @records;
+    while ( my $record = $records->next ) {
+        push @records, $record;
+    }
+    is( scalar( @records ), 3, 'Export ISO2709 with holdings: 3 records should have been exported' );
+    my $holding_record = $records[1];
+    my $branch = $holding_record->subfield('852', 'b');
+    is( $branch, $holdingbranch->{branchcode}, 'Export ISO2709 with holdings: The holdings record contains correct branch code' );
+    my $location = $holding_record->subfield('852', 'c');
+    is( $location, 'Location', 'Export ISO2709 with holdings: The holdings record contains correct location' );
 };
 
 subtest 'export without record_type' => sub {

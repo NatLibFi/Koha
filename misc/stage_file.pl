@@ -131,7 +131,7 @@ sub process_batch {
             C4::ImportBatch::RecordsFromISO2709File( $params->{input_file}, $record_type, $params->{encoding} );
     } elsif ( $format eq 'MARCXML' ) {
         ( $errors, $marc_records ) =
-            C4::ImportBatch::RecordsFromMARCXMLFile( $params->{input_file}, $params->{encoding} );
+            C4::ImportBatch::RecordsFromMARCXMLFile( $params->{input_file}, $record_type, $params->{encoding} );
     }
     warn( join ',', @$errors ) if @$errors;
     my $num_input_records = ($marc_records) ? scalar(@$marc_records) : 0;

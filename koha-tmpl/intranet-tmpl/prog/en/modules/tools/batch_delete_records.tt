@@ -87,12 +87,13 @@
             [% INCLUDE 'csrf-token.inc' %]
             <fieldset class="rows">
                 <legend>Record type</legend>
-                <ol>
-                    <li><label for="biblio_type">Bibliographic: </label><input type="radio" name="recordtype" value="biblio" id="biblio_type" checked="checked" /></li>
-                    <li><label for="authority_type">Authorities: </label><input type="radio" name="recordtype" value="authority" id="authority_type" /></li>
-                    <li class="skip_open_orders">
-                        <input type="checkbox" name="skip_open_orders" id="skip_open_orders" checked />
-                        <label for="skip_open_orders">Skip bibliographic records with open acquisition orders</label>
+                <ol class="radio">
+                    <li><label for="biblio_type"><input type="radio" name="recordtype" value="biblio" id="biblio_type" checked="checked" /> Bibliographic records</label>
+                    </li>
+                    <li class="skip_open_orders" style="margin-left: 21px;">
+                        <label for="skip_open_orders"><input type="checkbox" name="skip_open_orders" id="skip_open_orders" checked /> Skip bibliographic records with open acquisition orders</label>
+                    </li>
+                    <li><label for="authority_type"><input type="radio" name="recordtype" value="authority" id="authority_type" /> Authorities</label>
                     </li>
                 </ol>
             </fieldset>
@@ -268,15 +269,24 @@
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         var MSG_CANNOT_BE_DELETED = _("This record cannot be deleted, at least one item is currently checked out.");
-        $(document).ready(function () {
-            $("input[type='radio']").click(function () {
-                if ($(this).attr("id") == "authority_type") {
-                    $("a[href='#shelves_tab_panel']").parent().hide();
-                    $("li.skip_open_orders").hide();
-                } else if ($(this).attr("id") == "biblio_type") {
-                    $("a[href='#shelves_tab_panel']").parent().show();
-                    $("li.skip_open_orders").show();
+        function update_tab_display(){
+            const selected_type = $('input[name="recordtype"]:checked').val();
+            const shelves_tab_panel = $("a[href='#shelves_tab_panel']");
+            if (selected_type != 'biblio') {
+                shelves_tab_panel.parent().hide();
+                $("li.skip_open_orders").hide();
+                if (shelves_tab_panel.hasClass("active") || $("#shelves_tab_panel").hasClass("active")) {
+                    $("a[href='#uploadfile_tab_panel']").tab("show");
                 }
+            } else {
+                shelves_tab_panel.parent().show();
+                $("li.skip_open_orders").show();
+            }
+        }
+        $(document).ready(function () {
+            update_tab_display();
+            $("input[type='radio']").click(function() {
+                update_tab_display();
             });
 
             $("#selectall").click(function (e) {
