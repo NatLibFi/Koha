@@ -341,6 +341,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -370,6 +371,7 @@
         description: Under maintenance
         schema:
           $ref: ../swagger.yaml#/definitions/error
+    x-koha-patron-disclosure: GET /biblios/{biblio_id}/bookings
     x-koha-authorization:
       permissions:
         circulate: "manage_bookings"
@@ -420,6 +422,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "403":
@@ -441,6 +444,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: GET /biblios/{biblio_id}/checkouts
     x-koha-authorization:
       permissions:
         - circulate: circulate_remaining_permissions
@@ -520,6 +524,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -552,6 +557,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: GET /biblios/{biblio_id}/items
     x-koha-authorization:
       permissions:
         catalogue: "1"
@@ -728,6 +734,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: GET /biblios/{biblio_id}/pickup_locations
     x-koha-authorization:
       permissions:
         reserveforothers: place_holds

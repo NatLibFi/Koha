@@ -445,10 +445,10 @@ subtest 'dbic_merge_sorting() tests' => sub {
         ->json_is( '/b' => 'b', 'Existing values are kept (b)' )
         ->json_is(
         '/order_by' => [
-            'city_name',
-            { -desc => 'city_zipcode' },
-            { -asc  => 'city_country' },
-            { -asc  => 'city_state' }
+            'me.city_name',
+            { -desc => 'me.city_zipcode' },
+            { -asc  => 'me.city_country' },
+            { -asc  => 'me.city_state' }
         ]
         );
 
@@ -456,7 +456,7 @@ subtest 'dbic_merge_sorting() tests' => sub {
         ->status_is(200)
         ->json_is( '/a'        => 'a', 'Existing values are kept (a)' )
         ->json_is( '/b'        => 'b', 'Existing values are kept (b)' )
-        ->json_is( '/order_by' => [ { -desc => 'reservedate' } ] );
+        ->json_is( '/order_by' => [ { -desc => 'me.reservedate' } ] );
 
     $t->get_ok('/dbic_merge_sorting_single')
         ->status_is(200)

@@ -65,7 +65,7 @@ properties:
       - "null"
     description: |
       Patron object joined on `object` (only meaningful for MEMBERS,
-      CIRCULATION, FINES and APIKEYS rows; only present if requested
+      CIRCULATION, FINES, APIKEYS and PATRON_DISCLOSURE rows; only present if requested
       via x-koha-embed)
   item:
     type:
