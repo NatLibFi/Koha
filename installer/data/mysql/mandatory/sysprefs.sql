@@ -54,6 +54,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('AllowRenewalOnHoldOverride','0'),
 ('AllowReturnToBranch','anywhere'),
 ('AllowSetAutomaticRenewal','1'),
+('AllowSIPRenewal', '1'),
 ('AllowStaffToSetCheckoutsVisibilityForGuarantor','0'),
 ('AllowStaffToSetFinesVisibilityForGuarantor','0'),
 ('AllowTooManyOverride','1'),
