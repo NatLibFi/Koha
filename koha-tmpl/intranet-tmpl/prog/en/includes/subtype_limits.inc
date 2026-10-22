@@ -101,10 +101,18 @@
         [% ELSE %]
             <option value="l-format:tb">Large print</option>
         [% END %]
-        [% IF (limits.$lformat.0 == 'tc or fb' ) %]
-            <option value="l-format:tc or fb" selected="selected">Braille</option>
+        [% IF (Koha.Preference('SearchEngine') == 'Elasticsearch') %]
+            [% IF (limits.$lformat.0 == 'tc OR fb') %]
+                <option value='l-format:tc" OR "fb' selected="selected">Braille</option>
+            [% ELSE %]
+                <option value='l-format:tc" OR "fb'>Braille</option>
+            [% END %]
         [% ELSE %]
-            <option value="l-format:tc or fb">Braille</option>
+            [% IF (limits.$lformat.0 == 'tc or fb') %]
+                <option value="l-format:tc or fb" selected="selected">Braille</option>
+            [% ELSE %]
+                <option value="l-format:tc or fb">Braille</option>
+            [% END %]
         [% END %]
         <option value="">-----------</option>
         [% IF (limits.$lformat.0 == 'sd' ) %]
