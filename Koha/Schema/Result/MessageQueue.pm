@@ -121,6 +121,11 @@ Foreign key to the letters table
   data_type: 'mediumtext'
   is_nullable: 1
 
+=head2 response_message
+
+  data_type: 'mediumtext'
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -171,6 +176,8 @@ __PACKAGE__->add_columns(
   "content_type",
   { data_type => "mediumtext", is_nullable => 1 },
   "failure_code",
+  { data_type => "mediumtext", is_nullable => 1 },
+  "response_message",
   { data_type => "mediumtext", is_nullable => 1 },
 );
 
