@@ -24,7 +24,7 @@ use POSIX     qw( strftime );
 use Try::Tiny qw(catch try);
 
 use C4::Output qw( output_html_with_http_headers );
-use C4::Auth   qw( get_template_and_user haspermission );
+use C4::Auth   qw( get_session get_template_and_user haspermission );
 use C4::Biblio qw(
     AddBiblio
     DelBiblio
@@ -38,7 +38,6 @@ use C4::Biblio qw(
     ApplyMarcOverlayRules
 );
 use C4::Search qw( FindDuplicate enabled_staff_search_views );
-use C4::Auth   qw( get_template_and_user haspermission );
 use C4::Context;
 use MARC::Record;
 use C4::ClassSource qw( GetClassSources );
@@ -517,6 +516,15 @@ $frameworkcode = &GetFrameworkCode($biblionumber)
     if ( $biblionumber and not( defined $frameworkcode ) and $op ne 'cud-addbiblio' );
 
 # cataloguing new record, frameworkcode is not defined
+if ( !defined $frameworkcode ) {
+    my $sessionID = $input->cookie("CGISESSID");
+    if ($sessionID) {
+        my $session = get_session($sessionID);
+        $frameworkcode = $session->param('default_framework')
+            if $session && defined $session->param('default_framework');
+    }
+}
+
 $frameworkcode //= '';
 
 # z39.50 search, frameworkcode=Default

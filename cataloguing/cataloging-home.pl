@@ -47,7 +47,8 @@ $template->param( fast_cataloging => 1 ) if $frameworks->find( { frameworkcode =
 
 $template->param(
     servers    => $servers,
-    frameworks => $frameworks
+    frameworks => $frameworks,
+    default_framework => C4::Context->userenv->{'default_framework'} // '',
 );
 
 output_html_with_http_headers $query, $cookie, $template->output;
