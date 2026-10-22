@@ -87,6 +87,11 @@ while ( my $h = $holds_rs->next() ) {
         $library->{selected} = 1 if $library->{branchcode} eq $h->branchcode();
     }
 
+    unless ($h->branch) {
+        warn "PROBLEM: reserve ".$h->reserve_id." has empty pickup library! Skipping this hold.\n";
+        next;
+    }
+
     my $biblio    = $h->biblio();
     my @subtitles = split( / \| /, $biblio->subtitle() // '' );
     my $hold      = {
