@@ -43,7 +43,14 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
 );
 
 if ($plugins_enabled) {
-    my $plugin = Koha::Plugins::Handler->run( { class => $class, method => $method, cgi => $cgi } );
+    my $plugin = Koha::Plugins::Handler->run(
+        {
+            class        => $class,
+            method       => $method,
+            cgi          => $cgi,
+            auth_cookies => $cookie,
+        }
+    );
 } else {
     output_html_with_http_headers( $cgi, $cookie, $template->output );
 }
