@@ -127,6 +127,10 @@ if ( $input->param('itemnumber') && !$input->param('biblionumber') ) {
 
 my $biblio = Koha::Biblios->find($biblionumber);
 
+my $summary_holdings_enabled = C4::Context->preference('SummaryHoldings');
+
+my $holding_id = $input->param('holding_id') // '';
+
 my $op             = $input->param('op') || q{};
 my $hostitemnumber = $input->param('hostitemnumber');
 my $marcflavour    = C4::Context->preference("marcflavour");
@@ -258,6 +262,9 @@ if ( $op eq "cud-additem" ) {
     my @columns = Koha::Items->columns;
     my $item    = Koha::Item->new;
     $item->biblionumber( $biblio->biblionumber );
+    if($summary_holdings_enabled && $holding_id) {
+        $item->holding_id($holding_id);
+    }
     for my $c (@columns) {
         if ( $c eq 'more_subfields_xml' ) {
             my @more_subfields_xml = $input->multi_param("items.more_subfields_xml");
@@ -695,7 +702,13 @@ if ($op) {
 # now, build existiing item list
 
 my @items;
-for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
+# Bug? biblio->items already contains host_items if EasyAnalyticalRecords enabled!
+# for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
+for my $item (
+    $holding_id
+        ? $biblio->items->search( { holding_id => $holding_id } )->as_list
+        : $biblio->items->as_list
+ ) {
     my $i = $item->columns_to_str;
     $i->{nomod} = 1 unless $patron->can_edit_items_from( $item->homebranch );
     push @items, $i;
@@ -793,6 +806,7 @@ my $subfields =
             ? ( ignore_invisible_subfields => 1 )
             : ()
         ),
+        holding_id => $holding_id,
     }
     );
 
@@ -814,6 +828,8 @@ my @sorted_ig = sort { $a->display_order <=> $b->display_order } @ig;
 # what's the next op ? it's what we are not in : an add if we're editing, otherwise, and edit.
 $template->param(
     biblio           => $biblio,
+    holding_id       => $summary_holdings_enabled && $holding_id,
+    item_holding_id  => $summary_holdings_enabled && ( $item && $item->holding_id || $holding_id),
     items            => \@items,
     item_groups      => \@sorted_ig,
     item_header_loop => \@header_value_loop,

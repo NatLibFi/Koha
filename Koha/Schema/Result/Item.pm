@@ -396,6 +396,14 @@ inventory number (MARC21 952$i)
 
 Exclude this item from local holds priority
 
+=head2 holding_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+foreign key from holdings table used to link this item to the right holdings record
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -530,6 +538,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "exclude_from_local_holds_priority",
   { data_type => "tinyint", is_nullable => 1 },
+  "holding_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -723,6 +733,26 @@ __PACKAGE__->might_have(
   "Koha::Schema::Result::HoldFillTarget",
   { "foreign.itemnumber" => "self.itemnumber" },
   { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 holding
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Holding>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "holding",
+  "Koha::Schema::Result::Holding",
+  { holding_id => "holding_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
 );
 
 =head2 holdingbranch

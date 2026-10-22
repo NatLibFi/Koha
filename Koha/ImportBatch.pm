@@ -88,7 +88,7 @@ sub new_from_file {
 
         my ( $errors, $marcrecords );
         if ( $format eq 'MARCXML' ) {
-            ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromMARCXMLFile( $filepath, $encoding );
+            ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromMARCXMLFile( $filepath, $record_type, $encoding );
         } elsif ( $format eq 'ISO2709' ) {
             ( $errors, $marcrecords ) = C4::ImportBatch::RecordsFromISO2709File(
                 $filepath, $record_type,
