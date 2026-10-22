@@ -511,6 +511,8 @@ __PACKAGE__->add_columns(
   { data_type => "mediumtext", is_nullable => 1 },
   "itype",
   { data_type => "varchar", is_nullable => 1, size => 10 },
+  "is_closed_stack",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "more_subfields_xml",
   { data_type => "longtext", is_nullable => 1 },
   "enumchron",
@@ -552,6 +554,7 @@ __PACKAGE__->add_columns(
     '+restricted'                        => { is_boolean => 0 },
     '+stack'                             => { is_boolean => 0 },
     '+withdrawn'                         => { is_boolean => 0 },
+    '+is_closed_stack'                   => { is_boolean => 1 },
 );
 
 =head2 koha_objects_class

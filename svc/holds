@@ -75,6 +75,8 @@ if ($disclosure_enabled) {
     $borrowernumber = $input->param('borrowernumber');
 }
 
+my $closed_stack_request = $input->param('closed_stack_request');
+
 binmode STDOUT, ":encoding(UTF-8)";
 
 my $holds_rs;
@@ -83,6 +85,14 @@ if ( !$disclosure_enabled || @disclosure_patron_ids ) {
         { borrowernumber => $borrowernumber },
         { order_by       => { "-$sorting_direction" => $sorting_column } }
     );
+}
+
+if ( defined $closed_stack_request ) {
+    if ($closed_stack_request) {
+        $holds_rs = $holds_rs->filter_by_closed_stack_requests();
+    } else {
+        $holds_rs = $holds_rs->filter_out_closed_stack_requests();
+    }
 }
 
 my @holds;
