@@ -71,7 +71,7 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
 my $attribute_filters;
 my $vars = $input->Vars;
 for my $k ( keys %$vars ) {
-    if ( $k =~ /^Filter_borrower_attributes\.(\d+)$/ ) {
+    if ( $k =~ /^Filter_borrower_attributes\.([A-Za-z0-9_]+)$/ ) {
         my $val = $vars->{$k};
         $val =~ s/\*/%/g if $val;
         $attribute_filters->{$1} = $val;
@@ -98,7 +98,7 @@ my %allowed_fields = (
 my $line = "branch";
 if ( $line_input && $allowed_fields{$line_input} ) {
     $line = $line_input;
-} elsif ( $line_input && $line_input =~ /^borrower_attributes\.(\d+)$/ ) {
+} elsif ( $line_input && $line_input =~ /^borrower_attributes\.([A-Za-z0-9_]+)$/ ) {
     $line = $line_input;
 }
 
@@ -106,7 +106,7 @@ if ( $line_input && $allowed_fields{$line_input} ) {
 my $column = "datetime";
 if ( $column_input && $allowed_fields{$column_input} ) {
     $column = $column_input;
-} elsif ( $column_input && $column_input =~ /^borrower_attributes\.(\d+)$/ ) {
+} elsif ( $column_input && $column_input =~ /^borrower_attributes\.([A-Za-z0-9_]+)$/ ) {
     $column = $column_input;
 }
 
