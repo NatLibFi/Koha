@@ -246,6 +246,13 @@ sub pickup_locations {
             @response = map { $_->{needs_override} = Mojo::JSON->false; $_; } @{$pickup_locations};
         }
 
+        $c->patron_disclosure->add_subject(
+            {
+                patron_id    => $patron->id,
+                data_classes => [qw( identity service_activity )],
+            }
+        );
+
         return $c->render(
             status  => 200,
             openapi => \@response

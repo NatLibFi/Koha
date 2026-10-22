@@ -387,6 +387,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -408,6 +409,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: "GET /patrons"
     x-koha-authorization:
       permissions:
         - borrowers: "list_borrowers"
@@ -542,6 +544,7 @@
         description: Under maintenance
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+    x-koha-patron-disclosure: "GET /patrons/{patron_id}"
     x-koha-authorization:
       permissions:
         - borrowers: "list_borrowers"
