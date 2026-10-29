@@ -25,6 +25,7 @@ advance_notices.pl - prepare messages to be sent to patrons for nearly due, or d
 
        advance_notices.pl
          [ -n ][ -m <number of days> ][ --itemscontent <comma separated field list> ][ -c ]
+         [ --itemtypesout <item type> ]
 
 =head1 DESCRIPTION
 
@@ -88,6 +89,18 @@ defaults to date_due,title,author,barcode
 
 Other possible values come from fields in the biblios, items and
 issues tables.
+
+=item B<--itemtypesout>
+
+Exclude an item type from DUE, PREDUE, DUEDGST and PREDUEDGST notices.
+This option can be repeated to exclude multiple item types, for example:
+
+    --itemtypesout ILL --itemtypesout EQUIPMENT
+
+Item types are determined by the item-level_itypes system preference, falling
+back to the bibliographic item type when an item has no item type.
+Excluded items are omitted from digest contents and counts. No notice is
+generated when all items in a digest are excluded.
 
 =item B<--digest-per-branch>
 
@@ -179,6 +192,7 @@ my $maxdays           = 30;    # -e: the End of the time period
 my $verbose           = 0;     # -v: verbose
 my $digest_per_branch = 0;     # -digest-per-branch: Prepare and send digests per branch
 my @branchcodes;               # Branch(es) passed as parameter
+my @excluded_itemtypes;
 my $frombranch   = 'item-issuebranch';
 my $itemscontent = join( ',', qw( date_due title author barcode ) );
 
@@ -199,6 +213,7 @@ GetOptions(
     'v'                 => \$verbose,
     'digest-per-branch' => \$digest_per_branch,
     'itemscontent=s'    => \$itemscontent,
+    'itemtypesout=s'    => \@excluded_itemtypes,
 ) or pod2usage(2);
 pod2usage(1)               if $help;
 pod2usage( -verbose => 2 ) if $man;
@@ -245,6 +260,9 @@ warn 'found ' . scalar(@$upcoming_dues) . ' issues' if $verbose;
 # for patrons wishing digests only.
 my $upcoming_digest = {};
 my $due_digest      = {};
+my %excluded_itemtypes = map { $_ => 1 } @excluded_itemtypes;
+my $item_level_itypes = C4::Context->preference('item-level_itypes');
+my %included_itemnumbers;
 
 my $dbh = C4::Context->dbh();
 my $sth = $dbh->prepare(<<'END_SQL');
@@ -263,6 +281,14 @@ my @letters;
 UPCOMINGITEM: foreach my $upcoming (@$upcoming_dues) {
     @letters = ();
     warn 'examining upcoming due itemnumber: ' . $upcoming->{'itemnumber'} if $verbose;
+
+    if (%excluded_itemtypes) {
+        my $itemtype = $item_level_itypes && $upcoming->{itemtype}
+            ? $upcoming->{itemtype}
+            : $upcoming->{biblioitemtype};
+        next UPCOMINGITEM if $excluded_itemtypes{ $itemtype // q{} };
+        $included_itemnumbers{ $upcoming->{itemnumber} } = 1;
+    }
 
     my $from_address  = $upcoming->{branchemail}   || $admin_adress;
     my $reply_address = $upcoming->{branchreplyto} || undef;
@@ -647,10 +673,16 @@ PATRON: while ( my ( $borrowernumber, $digest ) = each %{ $params->{digests} } )
         my @itemnumbers;
         my @checkouts;
         while ( my $item_info = $next_item_info->() ) {
+            next if %excluded_itemtypes && !$included_itemnumbers{ $item_info->{itemnumber} };
             push @itemnumbers, $item_info->{itemnumber};
             push( @checkouts, $item_info );
             $titles .=
                 C4::Letters::get_item_content( { item => $item_info, item_content_fields => \@item_content_fields } );
+        }
+
+        if (%excluded_itemtypes) {
+            next PATRON unless @itemnumbers;
+            $count = scalar @itemnumbers;
         }
 
         foreach my $transport ( keys %{ $borrower_preferences->{'transports'} } ) {
