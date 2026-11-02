@@ -191,21 +191,12 @@ subtest 'prep_report() total_running_reports_per_instance_limit' => sub {
 
     my $report = Koha::Report->new( { report_name => 'total_running_test', savedsql => 'SELECT 1' } )->store;
 
-    # the 2 other reports
-    my $other_1 = $builder->build_object( { class => 'Koha::Reports' } );
-    my $other_2 = $builder->build_object( { class => 'Koha::Reports' } );
-
-    # Pretend two reports belonging to other users are in flight whenever
-    # running() is called without any filter
+    # Two simultaneous executions of the same report must count as two runs.
+    my $running_query = 'SELECT 1 /* { saved_sql.id: ' . $report->id . ' } { user_id: 17 } */';
     my $reports_mock = Test::MockModule->new('Koha::Reports');
     $reports_mock->mock(
-        'running',
-        sub {
-            my ( $class, $params ) = @_;
-            return $class->search( { id => undef } )
-                if $params && ( $params->{report_id} || $params->{user_id} );
-            return $class->search( { id => [ $other_1->id, $other_2->id ] } );
-        }
+        '_processlist_rows',
+        sub { return [ { info => $running_query }, { info => $running_query } ]; }
     );
 
     # Turn the other 2 off
