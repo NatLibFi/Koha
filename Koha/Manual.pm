@@ -364,10 +364,11 @@ Return the external URL to the manual for the I<$url> passed in parameter
 sub get_url {
     my ( $url, $preferred_language ) = @_;
     my $file;
-    if (   $url =~ /koha\/(.*)\.pl/
+    if ( $url && (
+           $url =~ /koha\/(.*)\.pl/
         || $url =~ '/koha/(erm[^?]*)'
         || $url =~ '/koha/(preservation[^?]*)'
-        || $url =~ '/koha/(acquisition/vendors[^?]*)' )
+        || $url =~ '/koha/(acquisition/vendors[^?]*)' ))
     {
         $file = $1;
     } else {
@@ -380,7 +381,7 @@ sub get_url {
     }
 
     my $view;
-    if ( $url =~ /(?:\?|\&)tab=(?<value>[\w+,.-]*)/ ) {
+    if ( $url && $url =~ /(?:\?|\&)tab=(?<value>[\w+,.-]*)/ ) {
         $view = $file . '#' . $+{value};
     }
 
@@ -388,7 +389,7 @@ sub get_url {
     return $base_url
         . (
           ( defined $view && exists $mapping->{$view} ) ? $mapping->{$view}
-        : ( exists $mapping->{$file} )                  ? $mapping->{$file}
+        : ( defined $file && exists $mapping->{$file} ) ? $mapping->{$file}
         :                                                 $mapping->{mainpage}
         );
 }
