@@ -349,8 +349,8 @@ sub _get_record {
 
     if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
         my $biblio = Koha::Biblios->find($record_id);
-        $record = $biblio->metadata_record( { embed_items => 1 } )
-            if $biblio;
+        $record = $biblio->metadata_record( { embed_items => 1, embed_holdings => 'search' } )
+          if $biblio;
     } else {
         $record = C4::AuthoritiesMarc::GetAuthority($record_id);
     }
