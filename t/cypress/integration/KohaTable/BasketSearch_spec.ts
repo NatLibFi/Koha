@@ -3,7 +3,7 @@ describe("Basket search with the production KohaTable and DataTables", () => {
         "koha-tmpl/intranet-tmpl/lib/jquery/jquery-3.6.0.min.js",
         "koha-tmpl/intranet-tmpl/lib/datatables/datatables.min.js",
         "koha-tmpl/intranet-tmpl/prog/js/datatables.js",
-        "koha-tmpl/intranet-tmpl/prog/js/acquisitions-basket.js",
+        "koha-tmpl/intranet-tmpl/prog/js/acquisitions-basket-search.js",
     ];
     const assets = [];
     const stateKey = "DataTables_acqui_basket_orders";
