@@ -232,6 +232,8 @@
 [%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
 [%# empty_table_settings: boolean, default off. If true, it will ensure no table_settings are utilized %]
 [% BLOCK patron_search_js %]
+    [% USE PatronDisclosure %]
+    [% SET patron_disclosure_search = 0 %]
 
     [% IF redirect_if_one_result && !redirect_url %]
         <script nonce="[% Koha.CSPNonce | $raw %]">
@@ -342,7 +344,15 @@
             [% CASE 'ill_users' %]
                 let patron_search_url = '/api/v1/ill/users';
             [% CASE %]
+                [% SET patron_disclosure_search = 1 %]
                 let patron_search_url = '/api/v1/patrons';
+            [% END %]
+
+            [% IF patron_disclosure_search %]
+                const patron_disclosure_search_page_size_limit =
+                    [% PatronDisclosure.page_size_limit('GET /patrons') || 'undefined' %];
+            [% ELSE %]
+                const patron_disclosure_search_page_size_limit = undefined;
             [% END %]
 
             $(document).ready(function(){
@@ -796,6 +806,7 @@
                     lengthMenu: [aLengthMenu, aLengthMenuLabel],
                     pagingType: 'full_numbers',
                     pageLength: [% Koha.Preference('PatronsPerPage') | html %],
+                    pageSizeLimit: patron_disclosure_search_page_size_limit,
                     [% IF sticky_header %]
                         initComplete: function(settings, json) {
                             $("#[% sticky_header | html %]").show();
