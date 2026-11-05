@@ -1316,7 +1316,7 @@
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/acquisitions-menu.js") | $raw %]
     [% INCLUDE 'datatables.inc' %]
-    [% Asset.js("js/acquisitions-basket.js") | $raw %]
+    [% Asset.js("js/acquisitions-basket-search.js") | $raw %]
     [% Asset.js("js/acq.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
