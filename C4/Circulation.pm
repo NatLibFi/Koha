@@ -434,6 +434,21 @@ sub TooMany {
     my $switch_onsite_checkout = $params->{switch_onsite_checkout} || 0;
     my $cat_borrower           = $patron->categorycode;
 
+    my $max_checkouts_hard_limit = C4::Context->preference('MaxCheckoutsHardLimit');
+    if (   !$switch_onsite_checkout
+        && defined $max_checkouts_hard_limit
+        && $max_checkouts_hard_limit =~ /\A[0-9]+\z/ )
+    {
+        my $checkout_count = $patron->checkouts->count;
+        if ( $checkout_count >= $max_checkouts_hard_limit ) {
+            return {
+                reason      => 'TOO_MANY_CHECKOUTS_HARD_LIMIT',
+                count       => $checkout_count,
+                max_allowed => $max_checkouts_hard_limit,
+            };
+        }
+    }
+
     # Get which branchcode we need
     my $branch = _GetCircControlBranch( $item, $patron );
     my $type   = $item->effective_itemtype;
