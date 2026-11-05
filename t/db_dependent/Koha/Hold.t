@@ -134,7 +134,7 @@ subtest 'pickup_library/branch tests' => sub {
 
 subtest 'fill() tests' => sub {
 
-    plan tests => 15;
+    plan tests => 17;
 
     $schema->storage->txn_begin;
 
@@ -186,7 +186,11 @@ subtest 'fill() tests' => sub {
     my $interface = 'api';
     C4::Context->interface($interface);
     my $hold_timestamp = $hold->timestamp;
-    my $ret            = $hold->fill;
+    $hold->add_cancellation_request for 1 .. 2;
+    my $other_hold    = $builder->build_object( { class => 'Koha::Holds' } );
+    my $other_hold_id = $other_hold->id;
+    $other_hold->add_cancellation_request;
+    my $ret = $hold->fill;
 
     is( ref($ret), 'Koha::Hold', '->fill returns the object type' );
     is( $ret->id,  $hold->id,    '->fill returns the object' );
@@ -198,6 +202,16 @@ subtest 'fill() tests' => sub {
     is( $old_hold->priority, 0,         'priority set to 0' );
     isnt( $old_hold->timestamp, $hold_timestamp, 'timestamp updated' );
     is( $old_hold->found, 'F', 'found set to F' );
+    is(
+        $schema->resultset('HoldCancellationRequest')->search( { hold_id => $hold->id } )->count,
+        0,
+        'Filling a hold removes all cancellation requests'
+    );
+    is(
+        $schema->resultset('HoldCancellationRequest')->search( { hold_id => $other_hold_id } )->count,
+        1,
+        'Filling a hold does not remove another hold\'s cancellation requests'
+    );
 
     subtest 'item_id parameter' => sub {
         plan tests => 1;
@@ -328,7 +342,7 @@ subtest 'fill() tests' => sub {
 
     subtest 'anonymization behavior tests' => sub {
 
-        plan tests => 5;
+        plan tests => 6;
 
         # reduce the tests noise
         t::lib::Mocks::mock_preference( 'HoldsLog',    0 );
@@ -379,6 +393,7 @@ subtest 'fill() tests' => sub {
                 value => { borrowernumber => $patron->id, found => undef }
             }
         );
+        $hold->add_cancellation_request;
 
         throws_ok { $hold->fill(); }
         'Koha::Exception',
@@ -387,6 +402,7 @@ subtest 'fill() tests' => sub {
         $hold->discard_changes;    # refresh from DB
 
         ok( !$hold->is_found, 'Hold is not filled' );
+        is( $hold->cancellation_requests->count, 1, 'Cancellation request deletion is rolled back when fill fails' );
 
         t::lib::Mocks::mock_preference( 'AnonymousPatron', $anonymous_patron->id );
 
@@ -907,7 +923,7 @@ subtest 'suspend_hold() and resume() tests' => sub {
 
 subtest 'cancellation_requests(), add_cancellation_request() and cancellation_requested() tests' => sub {
 
-    plan tests => 6;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
@@ -935,6 +951,23 @@ subtest 'cancellation_requests(), add_cancellation_request() and cancellation_re
 
     is( $hold->cancellation_requests->count, 2 );
     ok( $hold->cancellation_requested );
+
+    my $other_hold    = $builder->build_object( { class => 'Koha::Holds' } );
+    my $other_hold_id = $other_hold->id;
+    $other_hold->add_cancellation_request;
+
+    my $hold_id = $hold->id;
+    $hold->cancel;
+    is(
+        $schema->resultset('HoldCancellationRequest')->search( { hold_id => $hold_id } )->count,
+        0,
+        'Cancelling a hold removes all cancellation requests'
+    );
+    is(
+        $schema->resultset('HoldCancellationRequest')->search( { hold_id => $other_hold_id } )->count,
+        1,
+        'Cancelling a hold does not remove another hold\'s cancellation requests'
+    );
 
     $schema->storage->txn_rollback;
 };
