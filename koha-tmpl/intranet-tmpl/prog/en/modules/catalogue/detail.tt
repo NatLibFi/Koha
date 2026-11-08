@@ -967,9 +967,7 @@
                                 <th>Date</th>
                                 <th>Status</th>
                                 <th>Comment</th>
-                                [% IF ( CAN_user_tools_moderate_comments ) %]
-                                    <th class="no-sort">Actions</th>
-                                [% END %]
+                                <th class="no-sort">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -998,8 +996,8 @@
                                             [% review.review | html %]
                                         [% END %]
                                     </td>
-                                    [% IF ( CAN_user_tools_moderate_comments ) %]
-                                        <td class="actions">
+                                    <td class="actions">
+                                        [% IF ( CAN_user_tools_moderate_comments ) %]
                                             [% IF ( review.approved ) %]
                                                 <form action="/cgi-bin/koha/reviews/reviewswaiting.pl" method="post">
                                                     [% INCLUDE 'csrf-token.inc' %]
@@ -1024,8 +1022,8 @@
                                                 <input type="hidden" name="reviewid" value="[% review.reviewid | html %]" />
                                                 <button type="submit" class="btn btn-default btn-xs delete-comment"><i class="fa fa-trash-can" aria-hidden="true"></i> Delete</button>
                                             </form>
-                                        </td>
-                                    [% END # /IF CAN_user_tools_moderate_comments %]
+                                        [% END # /IF CAN_user_tools_moderate_comments %]
+                                    </td>
                                 </tr>
                             [% END # / FOREACH reviews %]
                         </tbody>
@@ -2264,6 +2262,14 @@
     [% IF ( reviews ) %]
         <script nonce="[% Koha.CSPNonce | $raw %]">
             var comment_table_settings = [% TablesSettings.GetTableSettings('catalogue', 'detail', 'comments-table', 'json') | $raw %];
+            [% UNLESS CAN_user_tools_moderate_comments %]
+                comment_table_settings.default_save_state = 0;
+                comment_table_settings.columns.forEach( function(column) {
+                    if ( column.columnname == "actions" ) {
+                        column.is_hidden = 1;
+                    }
+                });
+            [% END %]
         </script>
         <script nonce="[% Koha.CSPNonce | $raw %]">
             $(document).ready(function () {
