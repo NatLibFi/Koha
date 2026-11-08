@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 use File::Basename qw(dirname);
-use Test::More tests => 105;
+use Test::More tests => 110;
 use Test::NoWarnings;
 
 use Test::MockModule;
@@ -168,7 +168,8 @@ is(
     t::lib::Dates::compare( $messages->[0]->{updated_on}, $messages->[0]->{time_queued} ), 0,
     'Time status changed equals time queued when created in message_queue table'
 );
-is( $messages->[0]->{failure_code}, '', 'Failure code for successful message correctly empty' );
+is( $messages->[0]->{failure_code},     '',    'Failure code for successful message correctly empty' );
+is( $messages->[0]->{response_message}, undef, 'Response message for a newly queued message is empty' );
 
 # Setting time_queued to something else than now
 my $yesterday = dt_from_string->subtract( days => 1 );
@@ -228,10 +229,26 @@ isnt(
 is( dt_from_string( $messages->[0]->{time_queued} ), $yesterday, 'Time queued remains inmutable' );
 
 # ResendMessage
+ok(
+    C4::Letters::_set_message_status(
+        {
+            message_id       => $messages->[0]->{message_id},
+            status           => 'failed',
+            failure_code     => 'MISSING_SMS',
+            response_message => 'Provider response',
+        }
+    ),
+    'A provider response can be stored with the failure status'
+);
+$message = C4::Letters::GetMessage( $messages->[0]->{message_id} );
+is( $message->{response_message}, 'Provider response', 'GetMessage returns the stored provider response' );
+
 my $resent = C4::Letters::ResendMessage( $messages->[0]->{message_id} );
 $message = C4::Letters::GetMessage( $messages->[0]->{message_id} );
-is( $resent,            1,         'The message should have been resent' );
-is( $message->{status}, 'pending', 'ResendMessage sets status to pending correctly (bug 12426)' );
+is( $resent,                      1,         'The message should have been resent' );
+is( $message->{status},           'pending', 'ResendMessage sets status to pending correctly (bug 12426)' );
+is( $message->{failure_code},     '',        'ResendMessage clears the failure code' );
+is( $message->{response_message}, '',        'ResendMessage clears the provider response' );
 $resent = C4::Letters::ResendMessage( $messages->[0]->{message_id} );
 is( $resent, 0, 'The message should not have been resent again' );
 $resent = C4::Letters::ResendMessage();
