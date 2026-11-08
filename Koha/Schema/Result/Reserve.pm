@@ -324,6 +324,8 @@ __PACKAGE__->add_columns(
     is_foreign_key => 1,
     is_nullable => 1,
   },
+  "closed_stack_request_slip_printed",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -566,10 +568,11 @@ __PACKAGE__->belongs_to(
 );
 
 __PACKAGE__->add_columns(
-    '+item_level_hold' => { is_boolean => 1 },
-    '+lowestPriority'  => { is_boolean => 1 },
-    '+suspend'         => { is_boolean => 1 },
-    '+non_priority'    => { is_boolean => 1 }
+    '+item_level_hold'                   => { is_boolean => 1 },
+    '+lowestPriority'                    => { is_boolean => 1 },
+    '+suspend'                           => { is_boolean => 1 },
+    '+non_priority'                      => { is_boolean => 1 },
+    '+closed_stack_request_slip_printed' => { is_boolean => 1 },
 );
 
 =head2 koha_object_class
