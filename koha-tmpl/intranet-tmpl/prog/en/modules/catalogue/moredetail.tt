@@ -3,6 +3,7 @@
 [% USE Koha %]
 [% USE Branches %]
 [% USE Price %]
+[% USE Holdings %]
 [% USE AuthorisedValues %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
@@ -176,6 +177,7 @@
 
                         <div class="rows">
                             <ol class="bibliodetails">
+                                <li><span class="label">Holdings record:</span> [% Holdings.GetLocation( ITEM_DAT.holding_id ) | html %]&nbsp;</li>
                                 <li class="homebranch"><span class="label">Home library:</span> [% Branches.GetName( ITEM_DAT.homebranch ) | html %]&nbsp;</li>
                                 [% IF ( item_level_itypes ) %]
                                     <li class="itype"><span class="label">Item type:</span> [% ITEM_DAT.itype | html %]&nbsp;</li>
