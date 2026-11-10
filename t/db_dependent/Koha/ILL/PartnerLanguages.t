@@ -17,9 +17,10 @@
 
 use Modern::Perl;
 use utf8;
-use Test::More tests => 34;
+use Test::More tests => 35;
 use Test::NoWarnings;
 use Test::MockObject;
+use Test::MockModule;
 
 use Koha::Database;
 use Koha::ILL::Requests;
@@ -130,5 +131,46 @@ $params{partners} = $partners[0]->id;
 is( $request->generic_confirm( \%params )->{error},    0,                'One selected partner queues successfully' );
 is( $own_messages->count,                              1,                'Unselected partners receive no messages' );
 is( $own_messages->next->get_column('borrowernumber'), $partners[0]->id, 'Only the selected recipient is queued' );
+
+subtest 'Prepare every selected letter before queueing' => sub {
+    plan tests => 7;
+
+    $params{partners} = join "\x00", $partners[0]->id, $partners[2]->id;
+    for my $case (
+        [ 'missing subject', 'subject_sv-SE' => undef ],
+        [ 'blank subject',   'subject_sv-SE' => '   ' ],
+        [ 'missing body',    'body_sv-SE'    => undef ],
+        [ 'blank body',      'body_sv-SE'    => " \t\n" ],
+        ['missing notice'],
+        ['notice error'],
+        ['missing recipient'],
+        )
+    {
+        subtest $case->[0] => sub {
+            plan tests => 4;
+            $own_messages->delete;
+            $request->status('NEW')->store;
+            my %invalid = %params;
+            $invalid{ $case->[1] } = $case->[2] if @$case > 1;
+            $invalid{partners}     = join "\x00", $partners[0]->id, 0 if $case->[0] eq 'missing recipient';
+            my $mock       = Test::MockModule->new('Koha::ILL::Request');
+            my $get_notice = Koha::ILL::Request->can('get_notice');
+            $mock->mock(
+                'get_notice',
+                sub {
+                    die "Cannot compile notice\n" if $_[1]->{lang} eq 'sv-SE' && $case->[0] eq 'notice error';
+                    return                        if $_[1]->{lang} eq 'sv-SE';
+                    return $get_notice->(@_);
+                }
+            ) if $case->[0] eq 'missing notice' || $case->[0] eq 'notice error';
+
+            my $result = eval { $request->generic_confirm( \%invalid ) };
+            is( $@,                                '',    'Returns a normal UI result' );
+            is( $result->{error},                  1,     'Reports failure to the user' );
+            is( $own_messages->count,              0,     'No selected letter was queued' );
+            is( $request->discard_changes->status, 'NEW', 'Request status is unchanged' );
+        };
+    }
+};
 
 $schema->storage->txn_rollback;
