@@ -17,7 +17,8 @@
 
 use Modern::Perl;
 use utf8;
-use Test::More;
+use Test::More tests => 34;
+use Test::NoWarnings;
 use Test::MockObject;
 
 use Koha::Database;
@@ -131,4 +132,3 @@ is( $own_messages->count,                              1,                'Unsele
 is( $own_messages->next->get_column('borrowernumber'), $partners[0]->id, 'Only the selected recipient is queued' );
 
 $schema->storage->txn_rollback;
-done_testing;
