@@ -325,7 +325,9 @@
                                         <select size="5" multiple="true" id="partners" name="partners" required="required">
                                             [% FOREACH partner IN whole.value.partners %]
                                                 [% IF partner.email && partner.email.length > 0 %]
-                                                    <option data-partner-id="[% partner.id | html %]" data-lang="[% partner.lang || 'default' | html %]" value="[% partner.borrowernumber | html %]"> [% partner.branchcode _ " - " _ partner.surname %] </option>
+                                                    <option data-partner-id="[% partner.id | html %]" data-lang="[% partner.lang || 'default' | html %]" value="[% partner.borrowernumber | html %]">
+                                                        [% partner.branchcode _ " - " _ partner.surname %]
+                                                    </option>
                                                 [% END %]
                                             [% END %]
                                         </select>
@@ -383,7 +385,7 @@
                                 </div>
                             </div>
                         [% END %]
-                    [% ELSE %]
+                    [% ELSIF !whole.error %]
                         <fieldset class="rows">
                             <legend>Interlibrary loan request details</legend>
                             <p>No partners have been defined yet. Please create appropriate patron records (by default IL category).</p>
