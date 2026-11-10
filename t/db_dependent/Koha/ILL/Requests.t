@@ -1197,10 +1197,27 @@ subtest 'Backend core methods' => sub {
 
     $config->set_always( 'partner_code', "ILLTSTLIB" );
     $backend->set_always( 'metadata', { Test => "Foobar" } );
+    t::lib::Mocks::mock_preference( 'IndependentBranches', 0 );
     my $illbrn = $builder->build(
         {
             source => 'Branch',
             value  => { branchemail => "", branchreplyto => "" }
+        }
+    );
+    $illrq->branchcode( $illbrn->{branchcode} )->store;
+    $builder->build_object(
+        {
+            class => 'Koha::Notice::Templates',
+            value => {
+                module                 => 'ill',
+                code                   => 'ILL_PARTNER_REQ',
+                branchcode             => $illbrn->{branchcode},
+                message_transport_type => 'email',
+                lang                   => 'default',
+                is_html                => 0,
+                title                  => 'Partner request',
+                content                => '[% ill_full_metadata %]',
+            }
         }
     );
     my $partner1 = $builder->build(
