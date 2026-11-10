@@ -1206,18 +1206,18 @@ subtest 'Backend core methods' => sub {
     my $partner1 = $builder->build(
         {
             source => 'Borrower',
-            value  => { categorycode => "ILLTSTLIB" },
+            value  => { categorycode => "ILLTSTLIB", email => 'partner1@example.invalid', lang => 'default' },
         }
     );
     my $partner2 = $builder->build(
         {
             source => 'Borrower',
-            value  => { categorycode => "ILLTSTLIB" },
+            value  => { categorycode => "ILLTSTLIB", email => 'partner2@example.invalid', lang => 'default' },
         }
     );
     my $gen_conf = $illrq->generic_confirm( { current_branchcode => $illbrn->{branchcode} } );
     isnt(
-        index( $gen_conf->{value}->{draft}->{body}, $backend->metadata->{Test} ), -1,
+        index( $gen_conf->{value}->{drafts}->[0]->{body}, $backend->metadata->{Test} ), -1,
         "Generic confirm: draft contains metadata."
     );
     is(
