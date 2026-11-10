@@ -3276,6 +3276,9 @@ sub _GetCircControlBranch {
 
   my $upcoming_dues = GetUpcomingDueIssues( { days_in_advance => 4 } );
 
+Each returned checkout includes C<itemtype> from the item and
+C<biblioitemtype> from the bibliographic record.
+
 =cut
 
 sub GetUpcomingDueIssues {
@@ -3285,9 +3288,10 @@ sub GetUpcomingDueIssues {
     my $dbh = C4::Context->dbh;
     my $statement;
     $statement = q{
-        SELECT issues.*, items.itype as itemtype, items.homebranch, TO_DAYS( date_due )-TO_DAYS( NOW() ) as days_until_due, branches.branchemail, branches.branchreplyto
+        SELECT issues.*, items.itype as itemtype, biblioitems.itemtype AS biblioitemtype, items.homebranch, TO_DAYS( date_due )-TO_DAYS( NOW() ) as days_until_due, branches.branchemail, branches.branchreplyto
         FROM issues
         LEFT JOIN items USING (itemnumber)
+        LEFT JOIN biblioitems ON biblioitems.biblioitemnumber = items.biblioitemnumber
         LEFT JOIN branches ON branches.branchcode =
     };
     $statement .= $params->{'owning_library'} ? " items.homebranch " : " issues.branchcode ";
