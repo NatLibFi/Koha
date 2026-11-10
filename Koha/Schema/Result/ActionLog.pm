@@ -171,7 +171,7 @@ __PACKAGE__->belongs_to(
 
 # `object` is polymorphic across modules (borrowernumber, biblionumber,
 # subscriptionid, ...). The relation is only meaningful for MEMBERS,
-# CIRCULATION, FINES and APIKEYS rows; other modules may produce a
+# CIRCULATION, FINES, APIKEYS and PATRON_DISCLOSURE rows; other modules may produce a
 # coincidentally-matching borrowernumber row that callers must ignore.
 __PACKAGE__->belongs_to(
     "patron",

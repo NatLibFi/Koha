@@ -608,8 +608,13 @@ sub to_api {
         }
     }
 
+    my $is_accessible = $self->is_accessible($params);
+    if ( ref( $params->{_to_api_accessibility_observer} ) eq 'CODE' ) {
+        $params->{_to_api_accessibility_observer}->( $self, $is_accessible );
+    }
+
     # Remove forbidden attributes if required (including their coded values)
-    if ( !$self->is_accessible($params) ) {
+    if ( !$is_accessible ) {
         for my $field ( keys %{$json_object} ) {
             unless ( any { $_ eq $field } @{ $self->unredact_list } ) {
                 $json_object->{$field} = undef;
@@ -695,6 +700,16 @@ sub to_api {
                 }
             }
         }
+    }
+
+    my $context = $params->{_patron_disclosure};
+    if ( $context && $context->{policy}->{strategies}->{patron_references} ) {
+        $context->{event}->add_api_reference_subjects(
+            {
+                object         => $self,
+                representation => $json_object,
+            }
+        );
     }
 
     return $json_object;
