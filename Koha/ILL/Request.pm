@@ -1829,26 +1829,40 @@ sub generic_confirm {
         Koha::Exceptions::Ill::NoLibraryEmail->throw("Your library has no usable email address. Please set it.")
             if ( !$from );
 
-        # Keep track of who received this notice
-        my @queued = ();
+        my $preparation_error = {
+            error   => 1,
+            status  => 'invalid_notice',
+            message =>
+                'Cannot prepare a partner email. Check the recipient, notice template, subject and message. No emails have been queued.',
+            method => 'generic_confirm',
+            stage  => 'draft',
+        };
 
-        # Iterate our array of recipient patron objects
+        # Prepare every selected letter before writing any of them to the queue.
+        my @messages;
         foreach my $patron (@to_patrons) {
+            return $preparation_error unless $patron && $patron->email && $patron->email =~ /\S/;
             my $lang = $patron->lang || 'default';
-            next unless defined $params->{"subject_$lang"} && defined $params->{"body_$lang"};
-            my $letter = $self->get_notice(
-                {
-                    notice_code => 'ILL_PARTNER_REQ',
-                    transport   => 'email',
-                    lang        => $lang,
-                }
-            );
-            next unless $letter;
+            return $preparation_error
+                unless defined $params->{"subject_$lang"}
+                && $params->{"subject_$lang"} =~ /\S/
+                && defined $params->{"body_$lang"}
+                && $params->{"body_$lang"} =~ /\S/;
+            my $letter = eval {
+                $self->get_notice(
+                    {
+                        notice_code => 'ILL_PARTNER_REQ',
+                        transport   => 'email',
+                        lang        => $lang,
+                    }
+                );
+            };
+            return $preparation_error unless $letter;
             $letter->{title}   = $params->{"subject_$lang"};
             $letter->{content} = $params->{"body_$lang"};
 
             # Create the params we pass to the notice
-            my $params = {
+            push @messages, {
                 letter                 => $letter,
                 borrowernumber         => $patron->borrowernumber,
                 message_transport_type => 'email',
@@ -1856,9 +1870,13 @@ sub generic_confirm {
                 from_address           => $from,
                 reply_address          => $replyto
             };
-            my $result = C4::Letters::EnqueueLetter($params);
+        }
+
+        my @queued;
+        foreach my $message (@messages) {
+            my $result = C4::Letters::EnqueueLetter($message);
             if ($result) {
-                push @queued, $patron->email;
+                push @queued, $message->{to_address};
             }
         }
 
