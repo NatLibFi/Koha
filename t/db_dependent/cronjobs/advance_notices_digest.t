@@ -19,13 +19,14 @@
 
 use Modern::Perl;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 use File::Spec;
 use File::Basename;
 
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Items;
 
 my $scriptDir = dirname( File::Spec->rel2abs(__FILE__) );
 
@@ -277,4 +278,162 @@ subtest '--digest-per-branch tests' => sub {
     }
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'Item type exclusions by checkout library' => sub {
+    $schema->storage->txn_begin;
+    build_test_objects();
+    $dbh->do(
+        q{DELETE FROM borrower_message_transport_preferences
+          WHERE message_transport_type = 'phone' AND borrower_message_preference_id IN
+          (SELECT borrower_message_preference_id FROM borrower_message_preferences WHERE borrowernumber = ?)},
+        undef, $borrower->{borrowernumber}
+    );
+
+    my $builder       = t::lib::TestBuilder->new;
+    my $excluded_type = $builder->build( { source => 'Itemtype' } )->{itemtype};
+    my $normal_type   = $builder->build( { source => 'Itemtype' } )->{itemtype};
+    my @loans =
+        $schema->resultset('Issue')
+        ->search( { borrowernumber => $borrower->{borrowernumber} }, { order_by => 'issue_id' } )
+        ->all;
+    my @items = map { Koha::Items->find( $_->get_column('itemnumber') ) } @loans;
+    my @types = ( $excluded_type, $excluded_type, $normal_type );
+
+    for my $extra ( [ $library2, $normal_type ], [ $library1, $excluded_type ] ) {
+        my $item = $builder->build_sample_item;
+        push @items, $item;
+        push @types, $extra->[1];
+        $builder->build(
+            {
+                source => 'Issue',
+                value  => {
+                    itemnumber     => $item->itemnumber,
+                    borrowernumber => $borrower->{borrowernumber},
+                    branchcode     => $extra->[0]->{branchcode},
+                    date_due       => dt_from_string()->add( days => 1 )->ymd,
+                    returndate     => undef,
+                }
+            }
+        );
+    }
+    for my $i ( 0 .. $#items ) {
+        $items[$i]->set( { itype => $types[$i], homebranch => $library1->{branchcode} } )->store;
+        $dbh->do(
+            'UPDATE biblioitems SET itemtype = ? WHERE biblioitemnumber = ?',
+            undef, $types[$i], $items[$i]->biblioitemnumber
+        );
+    }
+
+    # Exercise bibliographic fallback as well as explicit item types.
+    $dbh->do( 'UPDATE items SET itype = NULL WHERE itemnumber = ?', undef, $items[4]->itemnumber );
+
+    my ($due_attribute) =
+        $dbh->selectrow_array(q{SELECT message_attribute_id FROM message_attributes WHERE message_name = 'Item_Due'});
+    $due_attribute //= $builder->build( { source => 'MessageAttribute', value => { message_name => 'Item_Due' } } )
+        ->{message_attribute_id};
+    my $due_preference = $builder->build(
+        {
+            source => 'BorrowerMessagePreference',
+            value  => {
+                borrowernumber       => $borrower->{borrowernumber},
+                message_attribute_id => $due_attribute,
+                wants_digest         => 0,
+            }
+        }
+    );
+    $builder->build(
+        {
+            source => 'BorrowerMessageTransportPreference',
+            value  => {
+                borrower_message_preference_id => $due_preference->{borrower_message_preference_id},
+                message_transport_type         => 'email',
+            }
+        }
+    );
+    for my $library ( $library1, $library2, $library3 ) {
+        for my $code (qw(DUE PREDUE DUEDGST PREDUEDGST)) {
+            $builder->build(
+                {
+                    source => 'Letter',
+                    value  => {
+                        module                 => 'circulation', code => $code, branchcode  => $library->{branchcode},
+                        message_transport_type => 'email',       lang => 'default', is_html => 0,
+                        content                => $code =~ /DGST/
+                        ? 'COUNT <<count>> ITEMS <<items.content>>'
+                        : 'ITEM <<items.barcode>>',
+                    }
+                }
+            );
+        }
+    }
+
+    my @scope = map { ( '--itemtypesout-library', $_->{branchcode} ) } ( $library1, $library2 );
+    my @cases = (
+        [ 'global', [ '--itemtypesout', $excluded_type ], [ 2, 3 ] ],
+        [ 'selected libraries', [ '--itemtypesout', $excluded_type, @scope ], [ 1, 2, 3 ] ],
+        [
+            'per-library digests', [ '--itemtypesout', $excluded_type, @scope, '--digest-per-branch' ], [ 1, 2, 3 ], 1,
+            1
+        ],
+        [ 'bibliographic types', [ '--itemtypesout', $excluded_type, @scope ], [ 1, 2, 3 ], 0 ],
+        [
+            'owning-library sender', [ '--itemtypesout', $excluded_type, @scope, '--frombranch', 'item-homebranch' ],
+            [ 1, 2, 3 ]
+        ],
+        [ 'no exclusions',        [],                                                                   [ 0 .. 4 ] ],
+        [ 'library option alone', [@scope],                                                             [ 0 .. 4 ] ],
+        [ 'all types excluded',   [ '--itemtypesout', $excluded_type, '--itemtypesout', $normal_type ], [] ],
+    );
+    for my $day ( 0, 1 ) {
+        $dbh->do(
+            'UPDATE issues SET date_due = ? WHERE borrowernumber = ?',
+            undef, dt_from_string()->add( days => $day )->ymd, $borrower->{borrowernumber}
+        );
+        for my $digest ( 0, 1 ) {
+            $dbh->do(
+                'UPDATE borrower_message_preferences SET wants_digest = ? WHERE borrowernumber = ?',
+                undef, $digest, $borrower->{borrowernumber}
+            );
+            for my $case (@cases) {
+                subtest "$case->[0], day $day, digest $digest" => sub {
+                    $dbh->do(
+                        'DELETE FROM message_queue WHERE borrowernumber = ?', undef,
+                        $borrower->{borrowernumber}
+                    );
+                    t::lib::Mocks::mock_preference( 'item-level_itypes', $case->[3] // 1 );
+                    run_script( $scriptContent, '-c', '--itemscontent', 'barcode', @{ $case->[1] } );
+                    my $messages = $dbh->selectall_arrayref(
+                        'SELECT letter_code, content FROM message_queue WHERE borrowernumber = ?',
+                        { Slice => {} }, $borrower->{borrowernumber}
+                    );
+                    my %included     = map { $_ => 1 } @{ $case->[2] };
+                    my $count        = scalar @{ $case->[2] };
+                    my $notice_count = $digest ? ( $count ? ( $case->[4] ? 2 : 1 ) : 0 ) : $count;
+                    is( scalar @$messages, $notice_count, 'Expected number of notices' );
+                    my $code = $day ? ( $digest ? 'PREDUEDGST' : 'PREDUE' ) : ( $digest ? 'DUEDGST' : 'DUE' );
+                    is_deeply(
+                        [ map { $_->{letter_code} } @$messages ], [ ($code) x $notice_count ],
+                        'Expected notice code'
+                    );
+                    my $content = join "\n", map { $_->{content} } @$messages;
+                    for my $i ( 0 .. $#items ) {
+                        my $barcode = $items[$i]->barcode;
+                        is( $content =~ /\Q$barcode\E/ ? 1 : 0, $included{$i} ? 1 : 0, "Item $i inclusion" );
+                    }
+                    if ( $digest && $count ) {
+                        my @counts =
+                            sort { $a <=> $b } map { my ($count) = $_->{content} =~ /COUNT (\d+)/; $count } @$messages;
+                        is_deeply(
+                            \@counts, $case->[4] ? [ 1, 2 ] : [$count],
+                            'Digest counts exclude only matching loans'
+                        );
+                    }
+                    done_testing;
+                };
+            }
+        }
+    }
+    $schema->storage->txn_rollback;
+    done_testing;
 };

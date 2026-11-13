@@ -102,6 +102,17 @@ back to the bibliographic item type when an item has no item type.
 Excluded items are omitted from digest contents and counts. No notice is
 generated when all items in a digest are excluded.
 
+=item B<--itemtypesout-library>
+
+Apply C<--itemtypesout> only to loans checked out at the given library.
+Repeat this option for multiple libraries. Without it, item types are excluded
+at all libraries. For example:
+
+    --itemtypesout ILL --itemtypesout-library LIB1 --itemtypesout-library LIB2
+
+Other item types and loans checked out at other libraries remain eligible for
+notices. The checkout library is used regardless of C<--frombranch>.
+
 =item B<--digest-per-branch>
 
 Flag to indicate that generation of message digests should be
@@ -193,6 +204,7 @@ my $verbose           = 0;     # -v: verbose
 my $digest_per_branch = 0;     # -digest-per-branch: Prepare and send digests per branch
 my @branchcodes;               # Branch(es) passed as parameter
 my @excluded_itemtypes;
+my @itemtype_exclusion_libraries;
 my $frombranch   = 'item-issuebranch';
 my $itemscontent = join( ',', qw( date_due title author barcode ) );
 
@@ -203,17 +215,18 @@ my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
 GetOptions(
-    'help|?'            => \$help,
-    'man'               => \$man,
-    'library=s'         => \@branchcodes,
-    'frombranch=s'      => \$frombranch,
-    'c'                 => \$confirm,
-    'n'                 => \$nomail,
-    'm:i'               => \$maxdays,
-    'v'                 => \$verbose,
-    'digest-per-branch' => \$digest_per_branch,
-    'itemscontent=s'    => \$itemscontent,
-    'itemtypesout=s'    => \@excluded_itemtypes,
+    'help|?'                 => \$help,
+    'man'                    => \$man,
+    'library=s'              => \@branchcodes,
+    'frombranch=s'           => \$frombranch,
+    'c'                      => \$confirm,
+    'n'                      => \$nomail,
+    'm:i'                    => \$maxdays,
+    'v'                      => \$verbose,
+    'digest-per-branch'      => \$digest_per_branch,
+    'itemscontent=s'         => \$itemscontent,
+    'itemtypesout=s'         => \@excluded_itemtypes,
+    'itemtypesout-library=s' => \@itemtype_exclusion_libraries,
 ) or pod2usage(2);
 pod2usage(1)               if $help;
 pod2usage( -verbose => 2 ) if $man;
@@ -258,10 +271,11 @@ warn 'found ' . scalar(@$upcoming_dues) . ' issues' if $verbose;
 
 # hash of borrowernumber to number of items upcoming
 # for patrons wishing digests only.
-my $upcoming_digest = {};
-my $due_digest      = {};
-my %excluded_itemtypes = map { $_ => 1 } @excluded_itemtypes;
-my $item_level_itypes = C4::Context->preference('item-level_itypes');
+my $upcoming_digest              = {};
+my $due_digest                   = {};
+my %excluded_itemtypes           = map { $_ => 1 } @excluded_itemtypes;
+my %itemtype_exclusion_libraries = map { $_ => 1 } @itemtype_exclusion_libraries;
+my $item_level_itypes            = C4::Context->preference('item-level_itypes');
 my %included_itemnumbers;
 
 my $dbh = C4::Context->dbh();
@@ -283,10 +297,13 @@ UPCOMINGITEM: foreach my $upcoming (@$upcoming_dues) {
     warn 'examining upcoming due itemnumber: ' . $upcoming->{'itemnumber'} if $verbose;
 
     if (%excluded_itemtypes) {
-        my $itemtype = $item_level_itypes && $upcoming->{itemtype}
+        my $itemtype =
+              $item_level_itypes && $upcoming->{itemtype}
             ? $upcoming->{itemtype}
             : $upcoming->{biblioitemtype};
-        next UPCOMINGITEM if $excluded_itemtypes{ $itemtype // q{} };
+        next UPCOMINGITEM
+            if $excluded_itemtypes{ $itemtype // q{} }
+            && ( !%itemtype_exclusion_libraries || $itemtype_exclusion_libraries{ $upcoming->{branchcode} // q{} } );
         $included_itemnumbers{ $upcoming->{itemnumber} } = 1;
     }
 
