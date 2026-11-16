@@ -804,7 +804,7 @@ sub get_effective_expire_reserves_charge {
 
 }
 
-=head3 type
+=head3 _type
 
 =cut
 

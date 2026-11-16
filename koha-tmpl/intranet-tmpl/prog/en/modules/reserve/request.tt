@@ -300,8 +300,8 @@
             [% IF ( patron && reserve_charge ) %]
                 <div class="alert alert-warning" id="reserve_fee">
                     [% IF Koha.Preference('HoldFeeMode') == 'any_time_is_collected' %]
-                        <strong>Note:</strong> [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %] will be charged a hold fee of [% reserve_charge | $Price %] when they collect this
-                        item
+                        <strong>Note:</strong> [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %] will be charged a hold fee of [% reserve_charge | $Price %] when they collect
+                        this item
                     [% ELSE %]
                         <strong>Note:</strong> [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %] will be charged a hold fee of [% reserve_charge | $Price %] for placing this hold
                     [% END %]
