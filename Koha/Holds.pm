@@ -276,14 +276,22 @@ sub filter_out_closed_stack_requests {
 
 =head3 _closed_stack_request_filter
 
-Returns the search conditions identifying the next closed stack request for each
-item, or a condition matching no holds when closed stack requests are disabled.
+    my $filter = $holds->_closed_stack_request_filter();
+
+Returns a hashref of search conditions for closed stack requests, for use with
+an C<item> join. No explicit arguments are required. The public filtering
+methods handle the preference before building these conditions.
+
+The conditions select the top-priority item-level hold for each item, require
+an unsuspended, unfilled hold with nonzero priority, and exclude lost,
+withdrawn, checked-out items and items with an active transfer. Damaged items
+are excluded when C<AllowHoldsOnDamagedItems> is disabled. When
+C<C4::Context-E<gt>only_my_library()> is true, holds are restricted to the
+current staff library.
 
 =cut
 
 sub _closed_stack_request_filter {
-
-    return { 'me.reserve_id' => undef } unless C4::Context->preference('EnableClosedStackRequests');
 
     # This query returns the top priority reserve's id for each item
     my $reserve_id_subselect = q{
