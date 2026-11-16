@@ -298,7 +298,7 @@ describe("circ/pendingreserves call number sorting", () => {
                 getTable().should(table => {
                     expect(table.column("barcodes:name").visible()).to.be.false;
                     expect(table.state.loaded().order[0]).to.eql([
-                        table.column("call_numbers:name").index(),
+                        "call_numbers",
                         "asc",
                     ]);
                 });
