@@ -1318,7 +1318,7 @@
                                         >
                                     [% END %]
 
-                                    [% IF itemloo.is_closed_stack %]
+                                    [% IF Koha.Preference('EnableClosedStackRequests') && itemloo.is_closed_stack %]
                                         <br /><span>Closed stack</span>
                                     [% END %]
                                 </td>

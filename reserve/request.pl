@@ -64,9 +64,12 @@ my ( $template, $borrowernumber, $cookie, $flags ) = get_template_and_user(
     }
 );
 
-my $showallitems         = $input->param('showallitems');
-my $pickup               = $input->param('pickup');
-my $closed_stack_request = $input->param('closed_stack_request');
+my $showallitems = $input->param('showallitems');
+my $pickup       = $input->param('pickup');
+my $closed_stack_request =
+    C4::Context->preference('EnableClosedStackRequests')
+    ? $input->param('closed_stack_request')
+    : 0;
 
 my $itemtypes = {
     map {
