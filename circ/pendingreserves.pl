@@ -240,6 +240,11 @@ my $all_holds = {
     }
 };
 
+my $callnumber_sort_field =
+    ( C4::Context->preference('HoldsCallnumberSortToPull') // 'classification' ) eq 'alphabetical'
+    ? 'itemcallnumber'
+    : 'cn_sort';
+
 # make final holds_info array and fill with info
 my @holds_info;
 my $seen = {};
@@ -290,12 +295,14 @@ foreach my $bibnum (@biblionumbers) {
     }
 
     my @items_by_callnumber = sort {
-        ( $a->cn_sort // $a->itemcallnumber ) cmp( $b->cn_sort // $b->itemcallnumber )
+        ( $a->$callnumber_sort_field // $a->itemcallnumber ) cmp ( $b->$callnumber_sort_field // $b->itemcallnumber )
             || $a->itemnumber <=> $b->itemnumber
     } grep { defined $_->itemcallnumber } @$items;
     $hold_info->{callnumbers} = [ uniq map { $_->itemcallnumber } @items_by_callnumber ];
     $hold_info->{callnumber_sort} =
-        @items_by_callnumber ? ( $items_by_callnumber[0]->cn_sort // $items_by_callnumber[0]->itemcallnumber ) : q{};
+        @items_by_callnumber
+        ? ( $items_by_callnumber[0]->$callnumber_sort_field // $items_by_callnumber[0]->itemcallnumber )
+        : q{};
 
     if ( $res_info->item_group ) {
         $hold_info->{barcodes} = [

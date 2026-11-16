@@ -32,8 +32,8 @@ describe("circ/pendingreserves call number sorting", () => {
             title: `Bug 26867 ${fixtureId} multiple call numbers`,
             items: [
                 {
-                    callNumber: "JC480 .R63 2006",
-                    sortKey: "JC0480 R63  02006",
+                    callNumber: "JC330 .F74 2000",
+                    sortKey: "JC0330 F74  02000",
                 },
                 {
                     callNumber: "JC43 .G6 1890",
@@ -54,8 +54,20 @@ describe("circ/pendingreserves call number sorting", () => {
     const biblioIds = [];
     let libraryId;
     let itemType;
+    let originalPreference;
+    const preference = "HoldsCallnumberSortToPull";
 
     before(() => {
+        cy.task("query", {
+            sql: "SELECT value FROM systempreferences WHERE variable = ?",
+            values: [preference],
+        }).then(rows => {
+            expect(
+                rows,
+                "installed HoldsCallnumberSortToPull preference"
+            ).to.have.length(1);
+            originalPreference = rows[0].value;
+        });
         cy.task("query", {
             sql: "SELECT branchcode FROM branches ORDER BY branchcode LIMIT 1",
         }).then(libraries => {
@@ -66,7 +78,7 @@ describe("circ/pendingreserves call number sorting", () => {
             }).then(itemTypes => {
                 itemType = itemTypes[0].itemtype;
 
-                cy.env(["kohaUsername"]).then(({ kohaUsername }) => {
+                cy.wrap(Cypress.env("apiUsername")).then(kohaUsername => {
                     cy.task("query", {
                         sql: "SELECT borrowernumber FROM borrowers WHERE userid = ? LIMIT 1",
                         values: [kohaUsername],
@@ -124,6 +136,9 @@ describe("circ/pendingreserves call number sorting", () => {
     });
 
     after(() => {
+        if (originalPreference !== undefined) {
+            cy.set_syspref(preference, originalPreference);
+        }
         if (biblioIds.length) {
             cy.task("query", {
                 sql: `DELETE FROM biblio WHERE biblionumber IN (${biblioIds.map(() => "?").join(",")})`,
@@ -132,67 +147,165 @@ describe("circ/pendingreserves call number sorting", () => {
         }
     });
 
-    it("sorts rows and aggregated values by classification sort keys", () => {
-        const assertRowOrder = expectedRecords =>
-            cy.get("#holdst tbody tr").then(rows => {
-                const titles = [...rows].map(row =>
-                    row.querySelector("td:nth-child(5)").textContent.trim()
-                );
-                const rowOrder = expectedRecords.map(record =>
-                    titles.findIndex(title => title.includes(record.title))
-                );
+    const reportUrl =
+        "/cgi-bin/koha/circ/pendingreserves.pl?from=2000-01-01&to=2999-12-31&run_report=Submit";
+    const stateKey = "DataTables_circ_holds_holds-to-pull";
 
-                rowOrder.forEach(index => expect(index).to.be.greaterThan(-1));
-                expect(rowOrder).to.eql([...rowOrder].sort((a, b) => a - b));
-            });
+    const getTable = () =>
+        cy
+            .window()
+            .should(win => {
+                expect(win.jQuery?.fn.dataTable?.isDataTable("#holdst")).to.be
+                    .true;
+                const table = win.jQuery("#holdst").DataTable();
+                expect(table.ready(), "DataTable initialization complete").to.be
+                    .true;
+                ["call_numbers", "title", "barcodes"].forEach(name => {
+                    expect(table.columns(`${name}:name`).count(), name).to.eq(
+                        1
+                    );
+                });
+            })
+            .then(win => win.jQuery("#holdst").DataTable());
 
-        cy.login();
-        cy.visit(
-            "/cgi-bin/koha/circ/pendingreserves.pl?from=2000-01-01&to=2999-12-31&run_report=Submit"
-        );
-
-        records.forEach(record => {
-            const expectedSortKey = [...record.items].sort((a, b) =>
-                (a.sortKey ?? a.callNumber).localeCompare(
-                    b.sortKey ?? b.callNumber
-                )
-            )[0];
-            cy.contains("#holdst tbody tr", record.title)
-                .find("td")
-                .eq(7)
-                .should(
-                    "have.attr",
-                    "data-order",
-                    expectedSortKey.sortKey ?? expectedSortKey.callNumber
-                );
+    const isolateFixtures = () =>
+        getTable().then(table => {
+            table.columns().search("");
+            table.column("title:name").visible(true, false);
+            table.column("call_numbers:name").visible(true, false);
+            table.search(fixtureId).page.len(records.length).draw();
         });
 
-        cy.contains("#holdst tbody tr", records[3].title)
-            .find("td")
-            .eq(7)
-            .find("li")
-            .then(items => {
-                expect([...items].map(item => item.textContent.trim())).to.eql([
-                    records[3].items[1].callNumber,
-                    records[3].items[0].callNumber,
-                ]);
+    const assertSort = (mode, direction, afterDraw) =>
+        getTable().should(table => {
+            expect(table.settings()[0].iDraw, "new draw").to.be.greaterThan(
+                afterDraw
+            );
+            expect(table.order()[0]).to.eql([
+                table.column("call_numbers:name").index(),
+                direction,
+            ]);
+            expect(
+                table
+                    .column("call_numbers:name")
+                    .header()
+                    .getAttribute("aria-sort")
+            ).to.eq(direction === "asc" ? "ascending" : "descending");
+            expect(table.rows({ search: "applied" }).count()).to.eq(
+                records.length
+            );
+
+            const rows = [...table.table().body().querySelectorAll("tr")];
+            expect(rows).to.have.length(records.length);
+            const rowOrder = rows.map(row => {
+                const title = table.cell(row, "title:name").node().textContent;
+                const matches = records.filter(record =>
+                    title.includes(record.title)
+                );
+                expect(matches, title).to.have.length(1);
+                return records.indexOf(matches[0]);
+            });
+            expect([...rowOrder].sort()).to.eql([0, 1, 2, 3, 4]);
+            // Equal selected keys permit either tie order for the aggregate.
+            const tiedRecords = mode === "classification" ? [0, 3] : [1, 3];
+            const remainingRecords =
+                mode === "classification" ? [1, 2, 4] : [0, 2, 4];
+            if (direction === "asc") {
+                expect(rowOrder.slice(0, 2)).to.have.members(tiedRecords);
+                expect(rowOrder.slice(2)).to.eql(remainingRecords);
+            } else {
+                expect(rowOrder.slice(0, 3)).to.eql(
+                    [...remainingRecords].reverse()
+                );
+                expect(rowOrder.slice(3)).to.have.members(tiedRecords);
+            }
+
+            rows.forEach(row => {
+                const title = table.cell(row, "title:name").node().textContent;
+                const record = records.find(record =>
+                    title.includes(record.title)
+                );
+                const selectedKey = item =>
+                    mode === "alphabetical"
+                        ? item.callNumber
+                        : (item.sortKey ?? item.callNumber);
+                const items = [...record.items].sort((a, b) =>
+                    selectedKey(a).localeCompare(selectedKey(b))
+                );
+                const cell = table.cell(row, "call_numbers:name").node();
+                expect(cell.getAttribute("data-order")).to.eq(
+                    selectedKey(items[0])
+                );
+                expect(
+                    [...cell.querySelectorAll("li")].map(item =>
+                        item.textContent.trim()
+                    )
+                ).to.eql(items.map(item => item.callNumber));
+            });
+        });
+
+    const clickCallNumbers = (mode, direction) =>
+        getTable().then(table => {
+            const draw = table.settings()[0].iDraw;
+            cy.wrap(table.column("call_numbers:name").header()).click();
+            assertSort(mode, direction, draw);
+        });
+
+    ["classification", "alphabetical"].forEach(mode => {
+        describe(mode, () => {
+            beforeEach(() => {
+                cy.login();
+                cy.set_syspref(preference, mode);
+                cy.visit(reportUrl, {
+                    onBeforeLoad(win) {
+                        win.localStorage.removeItem(stateKey);
+                    },
+                });
+                isolateFixtures();
+                // Start outside call-number ordering, even with a custom default sort.
+                getTable().then(table => {
+                    const draw = table.settings()[0].iDraw;
+                    cy.wrap(table.column("title:name").header()).click();
+                    getTable().should(table => {
+                        expect(table.settings()[0].iDraw).to.be.greaterThan(
+                            draw
+                        );
+                        expect(table.order()[0][0]).to.eq(
+                            table.column("title:name").index()
+                        );
+                    });
+                });
             });
 
-        cy.get("#holdst thead tr:eq(0) th:eq(7)").click();
-        cy.get("#holdst thead tr:eq(0) th:eq(7)").should(
-            "have.attr",
-            "aria-sort",
-            "ascending"
-        );
+            it("sorts rows and aggregated values by the selected call number key", () => {
+                clickCallNumbers(mode, "asc");
+                clickCallNumbers(mode, "desc");
+            });
 
-        assertRowOrder(records.slice(0, 3));
-
-        cy.get("#holdst thead tr:eq(0) th:eq(7)").click();
-        cy.get("#holdst thead tr:eq(0) th:eq(7)").should(
-            "have.attr",
-            "aria-sort",
-            "descending"
-        );
-        assertRowOrder(records.slice(0, 3).reverse());
+            it("sorts after restoring ascending order and a hidden preceding column", () => {
+                clickCallNumbers(mode, "asc");
+                getTable().then(table => {
+                    table.column("barcodes:name").visible(false);
+                    table.state.save();
+                    // URL state uses the native restore path even when local saving is disabled.
+                    const state = table.state();
+                    const encodedState = encodeURIComponent(
+                        btoa(JSON.stringify(state))
+                    );
+                    cy.visit(`${reportUrl}&${stateKey}_state=${encodedState}`);
+                });
+                isolateFixtures();
+                getTable().should(table => {
+                    expect(table.column("barcodes:name").visible()).to.be.false;
+                    expect(table.state.loaded().order[0]).to.eql([
+                        table.column("call_numbers:name").index(),
+                        "asc",
+                    ]);
+                });
+                assertSort(mode, "asc", 0);
+                clickCallNumbers(mode, "desc");
+                clickCallNumbers(mode, "asc");
+            });
+        });
     });
 });
