@@ -54,9 +54,11 @@
                 <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblio_object_id | url %]">Holds ([% biblio.holds.filter_out_closed_stack_requests.count | html %])</a>
             </li>
         [%- END -%]
-        <li [%- IF ( holdsview && closed_stack_request ) -%]class="active"[% END %]>
-            <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblio_object_id | url %]&closed_stack_request=1">Closed stack requests ([% biblio.holds.filter_by_closed_stack_requests.count | html %])</a>
-        </li>
+        [% IF Koha.Preference('EnableClosedStackRequests') %]
+            <li [%- IF ( holdsview && closed_stack_request ) -%]class="active"[% END %]>
+                <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblio_object_id | url %]&closed_stack_request=1">Closed stack requests ([% biblio.holds.filter_by_closed_stack_requests.count | html %])</a>
+            </li>
+        [% END %]
 
         [%- IF ( EasyAnalyticalRecords ) -%]
             <li [% IF analyze %]class="active"[% END %]>

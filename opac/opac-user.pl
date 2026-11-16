@@ -415,6 +415,10 @@ my $self_renewal_success = $query->param('self_renewal_success');
 $self_renewal_alert = $patron->category->self_renewal_failure_message
     if defined $self_renewal_success && !$self_renewal_success;
 my $self_renewal_confirmation_sent = $query->param('confirmation_sent');
+my $tab                            = $query->param('tab') || q{};
+if ( !C4::Context->preference('EnableClosedStackRequests') && $tab eq 'opac-user-closed-stack-requests' ) {
+    $tab = 'opac-user-holds';
+}
 
 $template->param(
     patron_messages                 => $patron_messages,
@@ -422,7 +426,7 @@ $template->param(
     patronupdate                    => $patronupdate,
     OpacRenewalAllowed              => C4::Context->preference("OpacRenewalAllowed"),
     userview                        => 1,
-    tab                             => scalar $query->param('tab') || q{},
+    tab                             => $tab,
     SuspendHoldsOpac                => C4::Context->preference('SuspendHoldsOpac'),
     AutoResumeSuspendedHolds        => C4::Context->preference('AutoResumeSuspendedHolds'),
     OpacHoldNotes                   => C4::Context->preference('OpacHoldNotes'),
@@ -431,10 +435,12 @@ $template->param(
     self_renewal_success            => $self_renewal_success,
     self_renewal_alert              => $self_renewal_alert,
     self_renewal_confirmation_sent  => $self_renewal_confirmation_sent,
-    opac_user_holds                 => scalar $query->param('opac-user-holds')                 || 0,
-    opac_user_overdues              => scalar $query->param('opac-user-overdues')              || 0,
-    opac_user_article_requests      => scalar $query->param('opac-user-article-requests')      || 0,
-    opac_user_closed_stack_requests => scalar $query->param('opac-user-closed-stack-requests') || 0,
+    opac_user_holds                 => scalar $query->param('opac-user-holds')            || 0,
+    opac_user_overdues              => scalar $query->param('opac-user-overdues')         || 0,
+    opac_user_article_requests      => scalar $query->param('opac-user-article-requests') || 0,
+    opac_user_closed_stack_requests => C4::Context->preference('EnableClosedStackRequests')
+        && scalar $query->param('opac-user-closed-stack-requests')
+        || 0,
 );
 
 # if not an empty string this indicates to return

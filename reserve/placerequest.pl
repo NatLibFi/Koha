@@ -198,7 +198,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
         push( @failed_hold_msgs, $msg );
     }
     my %params = ( biblionumber => [@biblionumbers], failed_holds => \@failed_hold_msgs );
-    if ( $input->param('closed_stack_request') ) {
+    if ( C4::Context->preference('EnableClosedStackRequests') && $input->param('closed_stack_request') ) {
         $params{closed_stack_request} = 1;
     }
     $redirect_url->query_form(%params);

@@ -306,7 +306,7 @@
                                     <span>Holds ([% reserves_count | html %])</span>
                                 [% END %]
                             [% END %]
-                            [% IF ( closed_stack_requests.count ) %]
+                            [% IF Koha.Preference('EnableClosedStackRequests') && closed_stack_requests.count %]
                                 [% WRAPPER tab_item tabname="opac-user-closed-stack-requests" %]
                                     <span>Closed stack requests ([% closed_stack_requests.count | html %])</span>
                                 [% END %]
@@ -846,7 +846,7 @@
                                 [% END # /tab_panel#opac-user-holds %]
                             [% END # / #RESERVES.count %]
 
-                            [% IF ( closed_stack_requests.count ) %]
+                            [% IF Koha.Preference('EnableClosedStackRequests') && closed_stack_requests.count %]
                                 [% WRAPPER tab_panel tabname="opac-user-closed-stack-requests" %]
                                     [% PROCESS 'holds-table.inc' HOLDS = closed_stack_requests, SuspendHoldsOpac = 0, showpriority = showpriority, AutoResumeSuspendedHolds = AutoResumeSuspendedHolds, table_id = 'closed-stack-requests-table' %]
                                 [% END %]
@@ -1117,7 +1117,7 @@
                 $("#opac-user-views a[href='#opac-user-holds_panel']").tab("show");
             [% ELSIF ( opac_user_overdues ) %]
                 $("#opac-user-views a[href='#opac-user-overdues_panel']").tab("show");
-            [% ELSIF ( opac_user_closed_stack_requests ) %]
+            [% ELSIF Koha.Preference('EnableClosedStackRequests') && opac_user_closed_stack_requests %]
                 $("#opac-user-views a[href='#opac-user-closed-stack-requests_panel']").tab("show");
             [% ELSIF ( opac_user_article_requests ) %]
                 $("#opac-user-views a[href='#opac-user-article-requests_panel']").tab("show");

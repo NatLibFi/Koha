@@ -27,6 +27,11 @@ use Koha::I18N;
 
 my $cgi = CGI->new;
 
+unless ( C4::Context->preference('EnableClosedStackRequests') ) {
+    print $cgi->redirect('/cgi-bin/koha/circ/circulation-home.pl');
+    exit;
+}
+
 my $op = $cgi->param('op') || '';
 if ( $op eq 'cud-print_slip' ) {
     my $reserve_id = $cgi->param('reserve_id');

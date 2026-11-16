@@ -87,7 +87,7 @@ if ( !$disclosure_enabled || @disclosure_patron_ids ) {
     );
 }
 
-if ( defined $closed_stack_request ) {
+if ( C4::Context->preference('EnableClosedStackRequests') && defined $closed_stack_request ) {
     if ($closed_stack_request) {
         $holds_rs = $holds_rs->filter_by_closed_stack_requests();
     } else {

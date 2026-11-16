@@ -76,7 +76,7 @@ if ( $op eq "cud-set_non_public_note" ) {
     $item->itemlost($itemlost);
 } elsif ( $op eq "cud-set_withdrawn" && $withdrawn ne $item_data_hashref->{'withdrawn'} ) {
     $item->withdrawn($withdrawn);
-} elsif ( $op eq "cud-set_is_closed_stack" ) {
+} elsif ( $op eq "cud-set_is_closed_stack" && C4::Context->preference('EnableClosedStackRequests') ) {
     $item->is_closed_stack($is_closed_stack);
 } elsif ( $op eq "cud-set_exclude_priority"
     && $exclude_from_local_holds_priority ne $item_data_hashref->{'exclude_from_local_holds_priority'} )

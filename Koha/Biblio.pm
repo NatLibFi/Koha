@@ -2426,6 +2426,8 @@ Returns 'item' if item-level hold should be forced, or undef
 sub forced_hold_level {
     my ($self) = @_;
 
+    return unless C4::Context->preference('EnableClosedStackRequests');
+
     my $forced_hold_level;
 
     # If there is at least one closed stack item that is not checked out and
