@@ -563,7 +563,7 @@ Patrons:
              transaction_branchcode: "Library where the transaction occurred"
              transaction_type: "Transaction type"
              interface: "Interface (sip/api/opac/intranet/cron/etc)"
-             operator: "Operator ID (user id if it has extra permissions, i.e. librarian)"
+             operator: "Operator's borrowernumber (only users with module or granular permissions)"
              itemnumber: "Itemnumber"
              itemtype: "Item type"
              holdingbranch: "Holding library"

@@ -18,7 +18,8 @@ return {
         }
 
         unless ( column_exists( 'pseudonymized_transactions', 'operator' ) ) {
-            $dbh->do("ALTER TABLE pseudonymized_transactions ADD COLUMN `operator` INT(11) DEFAULT NULL AFTER `interface`");
+            $dbh->do(
+                "ALTER TABLE pseudonymized_transactions ADD COLUMN `operator` INT(11) DEFAULT NULL AFTER `interface`");
         }
 
         unless ( index_exists( 'pseudonymized_transactions', 'pseudonymized_transactions_reporting_1' ) ) {
@@ -32,5 +33,8 @@ return {
                 "ALTER TABLE pseudonymized_transactions ADD INDEX `pseudonymized_transactions_reporting_2` (`operator`)"
             );
         }
+        say $out "Pseudonymized transactions age, interface and operator columns and reporting indexes are available";
+        say $out
+            "Existing pseudonymization field selections are unchanged; enable the new fields in system preferences if required";
     },
 };
