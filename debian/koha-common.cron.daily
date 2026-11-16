@@ -32,4 +32,4 @@ koha-foreach --chdir --enabled --noemail /usr/share/koha/bin/cronjobs/cleanup_da
 koha-foreach --chdir --enabled /usr/share/koha/bin/cronjobs/holds/auto_unsuspend_holds.pl > /dev/null 2>&1
 koha-foreach --chdir --enabled /usr/share/koha/bin/cronjobs/merge_authorities.pl -b
 koha-foreach --chdir --enabled /usr/share/koha/bin/cronjobs/plugins_nightly.pl
-koha-foreach --chdir --enabled /usr/share/koha/bin/cronjobs/anonymize_last_borrowers.pl
+koha-foreach --chdir --enabled /usr/share/koha/bin/cronjobs/anonymize_last_borrowers.pl --confirm
