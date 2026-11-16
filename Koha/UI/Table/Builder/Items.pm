@@ -18,6 +18,7 @@ package Koha::UI::Table::Builder::Items;
 use Modern::Perl;
 use List::MoreUtils qw( uniq );
 use C4::Biblio      qw( GetMarcStructure GetMarcFromKohaField IsMarcStructureInternal );
+use C4::Context;
 use Koha::Items;
 
 =head1 NAME
@@ -132,12 +133,15 @@ sub _build_headers {
 
         next if IsMarcStructureInternal($subfield);
         next unless $subfield->{tab} eq 10;    # Is this really needed?
+        next
+            if ( $subfield->{kohafield} || '' ) eq 'items.is_closed_stack'
+            && !C4::Context->preference('EnableClosedStackRequests');
 
         my $attribute;
         if ( $subfield->{kohafield} ) {
             ( $attribute = $subfield->{kohafield} ) =~ s|^items\.||;
         } else {
-            $attribute = $subfield_code;       # It's in more_subfields_xml
+            $attribute = $subfield_code;    # It's in more_subfields_xml
         }
         next unless grep { $attribute eq $_ } @witness_attributes;
         $subfieldcode_attribute_mappings->{$subfield_code} = $attribute;

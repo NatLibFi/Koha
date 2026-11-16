@@ -155,9 +155,17 @@
                                 [% IF bibitemloo.forced_hold_level %]
                                     <div class="alert alert-info forced_hold_level">
                                         [% IF bibitemloo.forced_hold_level == 'item' %]
-                                            <span>Hold policy requires holds to be item level.</span>
+                                            [% IF Koha.Preference('EnableClosedStackRequests') %]
+                                                <span>Hold policy requires holds to be item level.</span>
+                                            [% ELSE %]
+                                                <span>You already have at least one item level hold on this title. All further holds must be item level.</span>
+                                            [% END %]
                                         [% ELSE %]
-                                            <span>Hold policy requires holds to be record level.</span>
+                                            [% IF Koha.Preference('EnableClosedStackRequests') %]
+                                                <span>Hold policy requires holds to be record level.</span>
+                                            [% ELSE %]
+                                                <span>You already have at least one record level hold on this title. All further holds must be record level.</span>
+                                            [% END %]
                                         [% END %]
                                     </div>
                                 [% END %]

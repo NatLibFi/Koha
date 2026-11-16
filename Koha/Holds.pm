@@ -176,7 +176,7 @@ sub get_items_that_can_fill {
             'me.itemnumber' => { -not_in => [ @branchtransfers, @waiting_holds, @pending_recalls ] },
             onloan          => undef,
             notforloan      => 0,
-            is_closed_stack => 0,
+            ( C4::Context->preference('EnableClosedStackRequests') ? ( is_closed_stack => 0 ) : () ),
         }
     )->filter_by_for_hold();
 }
@@ -251,6 +251,8 @@ Returns a C<Koha::Holds> object
 sub filter_by_closed_stack_requests {
     my ($self) = @_;
 
+    return $self->empty unless C4::Context->preference('EnableClosedStackRequests');
+
     return $self->search( $self->_closed_stack_request_filter, { join => 'item' } );
 }
 
@@ -267,10 +269,14 @@ Returns a C<Koha::Holds> object
 sub filter_out_closed_stack_requests {
     my ($self) = @_;
 
+    return $self unless C4::Context->preference('EnableClosedStackRequests');
+
     return $self->search( { -not_bool => $self->_closed_stack_request_filter }, { join => 'item' } );
 }
 
 sub _closed_stack_request_filter {
+
+    return { 'me.reserve_id' => undef } unless C4::Context->preference('EnableClosedStackRequests');
 
     # This query returns the top priority reserve's id for each item
     my $reserve_id_subselect = q{

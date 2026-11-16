@@ -830,7 +830,7 @@ sub CheckReserves {
     my @SkipHoldTrapOnNotForLoanValue = split( '\|', C4::Context->preference('SkipHoldTrapOnNotForLoanValue') );
     return if grep { $_ eq $item->notforloan } @SkipHoldTrapOnNotForLoanValue;
 
-    unless ( $item->is_closed_stack ) {
+    unless ( $item->uses_closed_stack_requests ) {
         my $dont_trap = C4::Context->preference('TrapHoldsOnOrder') ? $item->notforloan > 0 : $item->notforloan;
         if ( !$dont_trap ) {
             my $effective_item_type = $item->effective_itemtype;
@@ -1490,7 +1490,7 @@ sub IsAvailableForItemLevelRequest {
     my $notforloan_per_itemtype = Koha::ItemTypes->find($itemtype)->notforloan;
 
     # Closed stack items can be requested even if marked as "not for loan"
-    unless ( $item->is_closed_stack ) {
+    unless ( $item->uses_closed_stack_requests ) {
         return 0
             if $notforloan_per_itemtype
             || $item->notforloan > 0;    # item with negative or zero notforloan value is holdable
@@ -1514,7 +1514,7 @@ sub IsAvailableForItemLevelRequest {
             || $home_library->validate_hold_sibling( { branchcode => $pickup_branchcode } );
     }
 
-    unless ( $item->is_closed_stack ) {
+    unless ( $item->uses_closed_stack_requests ) {
         my $on_shelf_holds = Koha::CirculationRules->get_onshelfholds_policy( { item => $item, patron => $patron } );
 
         if ( $on_shelf_holds == 1 ) {

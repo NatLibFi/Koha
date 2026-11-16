@@ -2778,6 +2778,19 @@ sub analytics_count {
     return C4::Items::GetAnalyticsCount( $self->itemnumber );
 }
 
+=head3 uses_closed_stack_requests
+
+Returns 1 if closed stack requests are enabled and this item is flagged as
+closed stack, or 0 otherwise. The stored C<is_closed_stack> value is unchanged.
+
+=cut
+
+sub uses_closed_stack_requests {
+    my ($self) = @_;
+
+    return C4::Context->preference('EnableClosedStackRequests') && $self->is_closed_stack ? 1 : 0;
+}
+
 =head3 is_available_for_closed_stack_request
 
 Returns 1 if item is available for a closed stack request, 0 otherwise
@@ -2801,7 +2814,7 @@ An item is available for a closed stack request if:
 sub is_available_for_closed_stack_request {
     my ($self) = @_;
 
-    return 0 unless $self->is_closed_stack;
+    return 0 unless $self->uses_closed_stack_requests;
     return 0 if $self->holds->count > 0;
     return 0 if $self->checkout;
     return 0 if $self->get_transfers->count > 0;
