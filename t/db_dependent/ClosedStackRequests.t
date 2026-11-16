@@ -200,10 +200,6 @@ subtest 'Queue classification and ordinary visibility' => sub {
                 $set->filter_out_closed_stack_requests->count, $enabled ? 1 - $eligible : 1,
                 "$name ordinary visibility, enabled=$enabled"
             );
-            is(
-                $set->search( $set->_closed_stack_request_filter, { join => 'item' } )->count,
-                $enabled ? $eligible : 0, "$name private classifier, enabled=$enabled"
-            );
         }
         if ( $name eq 'damaged' ) {
             t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', 1 );

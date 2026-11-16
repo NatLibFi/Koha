@@ -214,7 +214,7 @@
                     </span>
                 [% END %]
 
-                [% IF Koha.Preference('EnableClosedStackRequests') && closed_stack_request_count %]
+                [% IF closed_stack_request_count %]
                     <span class="results_summary">
                         <span class="label">Closed stack requests:</span>
                         <span class="badge text-bg-info">
