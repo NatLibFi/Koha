@@ -295,7 +295,7 @@ foreach my $bibnum (@biblionumbers) {
     }
 
     my @items_by_callnumber = sort {
-        ( $a->$callnumber_sort_field // $a->itemcallnumber ) cmp ( $b->$callnumber_sort_field // $b->itemcallnumber )
+        ( $a->$callnumber_sort_field // $a->itemcallnumber ) cmp( $b->$callnumber_sort_field // $b->itemcallnumber )
             || $a->itemnumber <=> $b->itemnumber
     } grep { defined $_->itemcallnumber } @$items;
     $hold_info->{callnumbers} = [ uniq map { $_->itemcallnumber } @items_by_callnumber ];
