@@ -346,7 +346,7 @@
                         { name: "title" },
                         { name: "libraries", dataFilter: "libraries" },
                         { name: "barcodes" },
-                        { name: "call_numbers" },
+                        { name: "call_numbers", type: "string" },
                         { name: "copy_numbers" },
                         { name: "enumeration" },
                         { name: "itemtypes", dataFilter: "item_types" },
