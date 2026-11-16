@@ -122,6 +122,7 @@ if ( $op eq "cud-action" ) {
         my @subfields_to_blank = $input->multi_param('disable_input');
         my @more_subfields     = $input->multi_param("items.more_subfields_xml");
         for my $item_column ( keys %$items_info ) {
+            next if $item_column eq 'is_closed_stack' && !C4::Context->preference('EnableClosedStackRequests');
             my @attributes       = ($item_column);
             my $cgi_param_prefix = 'items.';
             if ( $item_column eq 'more_subfields_xml' ) {

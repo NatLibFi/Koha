@@ -621,7 +621,8 @@ sub is_cancelable_from_opac {
     my ($self) = @_;
 
     return 0 if $self->is_found();
-    return 0 if $self->item && $self->item->is_closed_stack;
+    return 0
+        if $self->item && $self->item->uses_closed_stack_requests;
 
     return 1;
 }

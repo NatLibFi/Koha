@@ -1391,6 +1391,9 @@ $(document).ready(function () {
     }
 
     function load_closed_stack_requests_table() {
+        if (!$("#closed-stack-requests-table").length) {
+            return;
+        }
         if (!$.fn.DataTable.isDataTable($("#closed-stack-requests-table"))) {
             var title;
             $("#closed-stack-requests-table").dataTable(

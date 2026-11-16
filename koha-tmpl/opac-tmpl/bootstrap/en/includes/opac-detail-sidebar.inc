@@ -11,7 +11,7 @@
                 >
             [% END %]
 
-            [% IF biblio.items.filter_by_closed_stack.count > 0 %]
+            [% IF Koha.Preference('EnableClosedStackRequests') && biblio.items.filter_by_closed_stack.count > 0 %]
                 <li
                     ><a class="btn btn-link btn-lg" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% biblio.biblionumber | html %]&closed_stack_request=1"
                         ><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Closed stack request</a
