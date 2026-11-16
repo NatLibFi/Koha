@@ -274,6 +274,13 @@ sub filter_out_closed_stack_requests {
     return $self->search( { -not_bool => $self->_closed_stack_request_filter }, { join => 'item' } );
 }
 
+=head3 _closed_stack_request_filter
+
+Returns the search conditions identifying the next closed stack request for each
+item, or a condition matching no holds when closed stack requests are disabled.
+
+=cut
+
 sub _closed_stack_request_filter {
 
     return { 'me.reserve_id' => undef } unless C4::Context->preference('EnableClosedStackRequests');
