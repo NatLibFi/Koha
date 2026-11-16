@@ -1,6 +1,6 @@
 describe("circ/view_holdsqueue/holdst", () => {
     const fixtureId = Date.now().toString();
-    const fixtureTitle = `KOHA-765 ${fixtureId}`;
+    const fixtureTitle = `Holds queue sort ${fixtureId}`;
     const tableStateKey = "DataTables_circ_view_holdsqueue_holds-table";
     const records = [
         {
@@ -19,12 +19,36 @@ describe("circ/view_holdsqueue/holdst", () => {
             callNumber: "658.3",
             sortKey: "6583",
         },
+        {
+            callNumber: "JC43 .G6 1890",
+            sortKey: "JC0043 G6  01890",
+            source: "lcc",
+        },
+        {
+            callNumber: "JC330 .F74 2000",
+            sortKey: "JC0330 F74  02000",
+            source: "lcc",
+        },
+        {
+            callNumber: "JC480 .R63 2006",
+            sortKey: "JC0480 R63  02006",
+            source: "lcc",
+        },
     ];
+    const preference = "HoldsCallnumberSortQueue";
+    let originalPreference;
     let biblioId;
     let libraryId;
     let itemTypeId;
 
     before(() => {
+        cy.task("query", {
+            sql: "SELECT value FROM systempreferences WHERE variable = ?",
+            values: [preference],
+        }).then(rows => {
+            expect(rows, "installed preference").to.have.length(1);
+            originalPreference = rows[0].value;
+        });
         cy.task("query", {
             sql: "SELECT s.cn_source FROM class_sources s JOIN class_sort_rules r USING (class_sort_rule) WHERE s.cn_source = 'udc' AND r.sort_routine = 'Generic'",
         }).then(sources => {
@@ -82,7 +106,7 @@ describe("circ/view_holdsqueue/holdst", () => {
                 biblioId = Number(response.body?.id ?? locationId);
                 expect(biblioId).to.be.a("number").and.greaterThan(0);
 
-                cy.env(["kohaUsername"]).then(({ kohaUsername }) => {
+                cy.wrap(Cypress.env("apiUsername")).then(kohaUsername => {
                     cy.task("query", {
                         sql: "SELECT borrowernumber, surname, firstname, phone, cardnumber FROM borrowers WHERE userid = ? LIMIT 1",
                         values: [kohaUsername],
@@ -105,7 +129,7 @@ describe("circ/view_holdsqueue/holdst", () => {
                                     damaged_status: 0,
                                     restricted_status: 0,
                                     callnumber: record.callNumber,
-                                    call_number_source: "udc",
+                                    call_number_source: record.source ?? "udc",
                                 },
                             }).then(item => {
                                 expect(item.call_number_sort).to.equal(
@@ -136,6 +160,9 @@ describe("circ/view_holdsqueue/holdst", () => {
     });
 
     after(() => {
+        if (originalPreference !== undefined) {
+            cy.set_syspref(preference, originalPreference);
+        }
         cy.task("query", {
             sql: "DELETE FROM biblio WHERE title = ?",
             values: [fixtureTitle],
@@ -166,6 +193,7 @@ describe("circ/view_holdsqueue/holdst", () => {
             });
 
         cy.login();
+        cy.set_syspref(preference, "classification");
         cy.clearLocalStorage(tableStateKey);
         cy.visit(
             "/cgi-bin/koha/circ/view_holdsqueue.pl?branchlimit=&itemtypeslimit=&run_report=1"
@@ -200,5 +228,51 @@ describe("circ/view_holdsqueue/holdst", () => {
             "aria-sort"
         );
         assertFixtureRowsPresent();
+    });
+    ["classification", "alphabetical"].forEach(mode => {
+        it(`selects ${mode} ordering without changing displayed call numbers`, () => {
+            const key = record =>
+                mode === "classification" ? record.sortKey : record.callNumber;
+            const ordered = [...records].sort((a, b) =>
+                key(a).localeCompare(key(b))
+            );
+            cy.login();
+            cy.set_syspref(preference, mode);
+            cy.clearLocalStorage(tableStateKey);
+            cy.visit(
+                "/cgi-bin/koha/circ/view_holdsqueue.pl?branchlimit=&itemtypeslimit=&run_report=1"
+            );
+            cy.window()
+                .should(win => {
+                    expect(win.jQuery.fn.dataTable.isDataTable("#holdst")).to.be
+                        .true;
+                })
+                .then(win => {
+                    const table = win.jQuery("#holdst").DataTable();
+                    const column = table.column(".hq-callnumber").index();
+                    table.search(fixtureTitle).page.len(records.length);
+                    table.order([[column, "asc"]]).draw();
+                });
+            cy.get("#holdst tbody tr").should(rows => {
+                const ownRows = [...rows].filter(row =>
+                    row
+                        .querySelector("td.hq-title")
+                        .textContent.includes(fixtureTitle)
+                );
+                expect(ownRows).to.have.length(records.length);
+                expect(
+                    ownRows.map(row =>
+                        row.querySelector("td.hq-callnumber").textContent.trim()
+                    )
+                ).to.deep.equal(ordered.map(record => record.callNumber));
+                ownRows.forEach((row, index) => {
+                    expect(
+                        row
+                            .querySelector("td.hq-callnumber")
+                            .getAttribute("data-order")
+                    ).to.equal(key(ordered[index]));
+                });
+            });
+        });
     });
 });
