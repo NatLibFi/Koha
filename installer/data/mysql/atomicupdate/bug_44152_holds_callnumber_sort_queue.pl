@@ -2,7 +2,7 @@ use Modern::Perl;
 use Koha::Installer::Output qw(say_success);
 
 return {
-    bug_number  => "00000",
+    bug_number  => "44152",
     description => "Add HoldsCallnumberSortQueue system preference",
     up          => sub {
         my ($args) = @_;
