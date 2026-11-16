@@ -1605,6 +1605,14 @@ Circulation:
                   0: Disable
             - "the curbside pickup module."
 
+    Closed stack requests:
+        -
+            - pref: EnableClosedStackRequests
+              choices:
+                  1: Enable
+                  0: Disable
+            - closed stack requests in the staff interface and OPAC.
+            - When disabled, existing item flags are ignored and all holds follow the ordinary circulation rules. Stored flags and holds are retained.
     Booking module:
         -
             - pref: EnableBooking
