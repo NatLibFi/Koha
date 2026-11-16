@@ -2426,9 +2426,8 @@ sub forced_hold_level {
 
     # If there is at least one closed stack item that is not checked out and
     # not reserved, force item-level hold
-    my $available_closed_stack_items = $self->items->search(
+    my $available_closed_stack_items = $self->items->filter_by_closed_stack->search(
         {
-            is_closed_stack       => 1,
             onloan                => undef,
             'reserves.reserve_id' => undef,
         },
