@@ -37,7 +37,7 @@
                     <span class="badge text-bg-info">[% holds_count | html %]</span>
                 [% END %]
             [% END %]
-            [% IF closed_stack_requests_count > 0 %]
+            [% IF Koha.Preference('EnableClosedStackRequests') && closed_stack_requests_count > 0 %]
                 [% WRAPPER tab_item tabname="closed-stack-requests" %]
                     <span>Closed stack requests</span> ([% closed_stack_requests_count | html %])
                 [% END %]
@@ -232,7 +232,7 @@
                 [% END %]
             [% END # /tab_panel#holds %]
 
-            [% IF closed_stack_requests_count > 0 %]
+            [% IF Koha.Preference('EnableClosedStackRequests') && closed_stack_requests_count > 0 %]
                 [% WRAPPER tab_panel tabname="closed-stack-requests" %]
                     <div id="closed-stack-requests" role="tabpanel" class="tab-pane">
                         <form action="/cgi-bin/koha/reserve/modrequest.pl" method="post">

@@ -88,7 +88,10 @@ if ( !$biblionumbers ) {
     $biblionumbers = $query->param('biblionumber');
 }
 
-my $closed_stack_request = $query->param('closed_stack_request');
+my $closed_stack_request =
+    C4::Context->preference('EnableClosedStackRequests')
+    ? $query->param('closed_stack_request')
+    : 0;
 $template->param( closed_stack_request => $closed_stack_request );
 
 if ( !$biblionumbers && $op ne 'cud-place_reserve' ) {
