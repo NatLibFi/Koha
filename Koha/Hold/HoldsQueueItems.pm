@@ -19,6 +19,7 @@ package Koha::Hold::HoldsQueueItems;
 
 use Modern::Perl;
 
+use C4::Context;
 use Koha::Database;
 
 use Koha::Hold::HoldsQueueItem;
@@ -30,6 +31,60 @@ use base qw(Koha::Objects);
 Koha::Hold::HoldsQueueItems - Koha holds queue items object set class
 
 =head1 API
+
+=head2 Class methods
+
+=head3 search
+
+Apply HoldsCallnumberSortQueue when ordering by the queue's call number.
+Missing classification keys fall back to the displayed call number. Call number
+ties are resolved by item number, after any other requested ordering fields.
+
+=cut
+
+sub search {
+    my ( $self, $params, $attributes ) = @_;
+
+    return $self->SUPER::search( $params, $attributes ) unless $attributes->{order_by};
+
+    my @requested =
+        ref( $attributes->{order_by} ) eq 'ARRAY'
+        ? @{ $attributes->{order_by} }
+        : ( $attributes->{order_by} );
+    my @order_by;
+    my $callnumber_direction;
+    my $classification = ( C4::Context->preference('HoldsCallnumberSortQueue') // '' ) eq 'classification';
+
+    for my $order (@requested) {
+        my ( $direction, $column ) = ( '-asc', $order );
+        if ( ref($order) eq 'HASH' && keys %$order == 1 ) {
+            ($direction) = keys %$order;
+            $column = $order->{$direction};
+        }
+        unless ( $direction =~ /\A-(?:asc|desc)\z/
+            && !ref($column)
+            && defined $column
+            && $column =~ /\A(?:me\.)?itemcallnumber\z/ )
+        {
+            push @order_by, $order;
+            next;
+        }
+
+        if ($classification) {
+            push @order_by, { $direction => \q{COALESCE(NULLIF(item.cn_sort, ''), me.itemcallnumber)} };
+        }
+        push @order_by, { $direction => 'me.itemcallnumber' };
+        $callnumber_direction = $direction;
+    }
+
+    if ($callnumber_direction) {
+        push @order_by, { $callnumber_direction => 'me.itemnumber' };
+        $self       = $self->SUPER::search( undef, { join => 'item' } ) if $classification;
+        $attributes = { %$attributes, order_by => \@order_by };
+    }
+
+    return $self->SUPER::search( $params, $attributes );
+}
 
 =head2 Internal methods
 

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Mojo;
 use Test::MockModule;
 
@@ -304,6 +304,144 @@ subtest 'sorting on embedded fields' => sub {
         ->status_is(200);
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'call number ordering' => sub {
+
+    $schema->storage->txn_begin;
+
+    Koha::Hold::HoldsQueueItems->delete;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**1 },
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid  = $librarian->userid;
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    # Plain text and classification orders differ. Include a shared classification
+    # key, identical call numbers, and both NULL and empty classification keys.
+    my @fixtures = (
+        [ '100', '0000000100', 'Foxtrot' ],
+        [ '20',  '0000000020', 'Echo' ],
+        [ '30',  undef,        'Delta' ],
+        [ '40',  '',           'Charlie' ],
+        [ '21',  '0000000020', 'Alpha' ],
+        [ '21',  '0000000020', 'Bravo' ],
+    );
+    my @items;
+    my %callnumbers;
+
+    for my $fixture (@fixtures) {
+        my ( $callnumber, $cn_sort, $title ) = @$fixture;
+        my $biblio = $builder->build_sample_biblio( { title => $title } );
+        my $item   = $builder->build_sample_item(
+            { biblionumber => $biblio->biblionumber, itemcallnumber => "Live $callnumber" } );
+
+        # Set the stored key directly: Item->store would recalculate it. The queue
+        # retains its own displayed call number even if the live item has changed.
+        $item->_result->update( { cn_sort => $cn_sort } );
+        push @items, $item->itemnumber;
+        $callnumbers{ $item->itemnumber } = $callnumber;
+
+        $builder->build_object(
+            {
+                class => 'Koha::Hold::HoldsQueueItems',
+                value => {
+                    biblionumber   => $biblio->biblionumber,
+                    itemnumber     => $item->itemnumber,
+                    barcode        => $item->barcode,
+                    borrowernumber => $patron->borrowernumber,
+                    surname        => $patron->surname,
+                    firstname      => $patron->firstname,
+                    cardnumber     => $patron->cardnumber,
+                    pickbranch     => $library->branchcode,
+                    holdingbranch  => $item->holdingbranch,
+                    title          => $title,
+                    itemcallnumber => $callnumber,
+                },
+            }
+        );
+    }
+
+    # Stable item-number ties are part of the new contract in both modes.
+    # The independent title-order check below is the existing-behavior control.
+    my @alphabetical   = @items[ 0, 1, 4, 5, 2, 3 ];
+    my @classification = @items[ 1, 4, 5, 0, 2, 3 ];
+    my $url            = "//$userid:$password\@/api/v1/holds/queue";
+
+    for my $mode ( 'alphabetical', 'classification', undef, '', 'unknown' ) {
+        my $label = defined $mode ? "'$mode'" : 'missing';
+        subtest "HoldsCallnumberSortQueue = $label" => sub {
+
+            # Mocking also works on unpatched main, where the preference is absent.
+            t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', $mode );
+            my @ascending = defined $mode && $mode eq 'classification' ? @classification : @alphabetical;
+
+            for my $direction ( 'asc', 'desc' ) {
+                my @expected = $direction eq 'asc' ? @ascending      : reverse @ascending;
+                my $order    = $direction eq 'asc' ? '%2Bcallnumber' : '-callnumber';
+                $t->get_ok("$url?_order_by=$order&_per_page=-1")->status_is(200);
+                my $rows = $t->tx->res->json;
+                if ( is( ref($rows), 'ARRAY', "$direction response is an array" ) ) {
+                    is_deeply( [ map { $_->{item_id} } @$rows ], \@expected, "$direction call number order" );
+                    is_deeply(
+                        [ map { $_->{callnumber} } @$rows ],
+                        [ map { $callnumbers{$_} } @expected ],
+                        'The displayed call numbers remain the queue values'
+                    );
+                }
+
+                for my $page ( 1 .. 3 ) {
+
+                    # Deliberately omit embeds: sorting must also work without
+                    # the UI's item embed and must happen before pagination.
+                    $t->get_ok("$url?_order_by=$order&_per_page=2&_page=$page")->status_is(200);
+                    my @page_items = @expected[ ( $page - 1 ) * 2 .. $page * 2 - 1 ];
+                    my $page_rows  = $t->tx->res->json;
+                    if ( is( ref($page_rows), 'ARRAY', "$direction page $page response is an array" ) ) {
+                        is_deeply(
+                            [ map { $_->{item_id} } @$page_rows ],
+                            \@page_items, "$direction page $page"
+                        );
+                    }
+                }
+            }
+
+            # A previously supported embedded-field sort must stay independent.
+            $t->get_ok( "$url?_order_by=%2Bbiblio.title&_per_page=-1" => { 'x-koha-embed' => 'biblio,item' } )
+                ->status_is(200);
+            my $title_rows = $t->tx->res->json;
+            if ( is( ref($title_rows), 'ARRAY', 'Title-order response is an array' ) ) {
+                is_deeply(
+                    [ map { $_->{item_id} } @$title_rows ],
+                    [ @items[ 4, 5, 3, 2, 1, 0 ] ], 'Title ordering is unaffected'
+                );
+            }
+            done_testing;
+        };
+    }
+
+    t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', 'classification' );
+
+    # Match the UI's me. prefix to disambiguate the queue and embedded item.
+    $t->get_ok( "$url?_order_by=%2Bme.callnumber,-biblio.title&_per_page=-1" => { 'x-koha-embed' => 'biblio,item' } )
+        ->status_is(200);
+    my $secondary_rows = $t->tx->res->json;
+    if ( is( ref($secondary_rows), 'ARRAY', 'Secondary-order response is an array' ) ) {
+        is_deeply(
+            [ map { $_->{item_id} } @$secondary_rows ],
+            [ @items[ 1, 5, 4, 0, 2, 3 ] ], 'Explicit secondary ordering precedes the item number tie breaker'
+        );
+    }
+
+    $schema->storage->txn_rollback;
+    done_testing;
 };
 
 subtest 'HidePatronName tests' => sub {
