@@ -93,7 +93,7 @@ subtest 'Koha::Anonymized::Transactions tests' => sub {
 
     t::lib::Mocks::mock_preference( 'Pseudonymization', 0 );
     my $item = $builder->build_sample_item;
-    t::lib::Mocks::mock_userenv( { branchcode => $item->homebranch } );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $item->homebranch } );
     warnings_are {
         AddIssue( $patron, $item->barcode, dt_from_string );
     }
@@ -109,7 +109,7 @@ subtest 'Koha::Anonymized::Transactions tests' => sub {
         'datetime,transaction_branchcode,transaction_type,itemnumber,itemtype,holdingbranch,homebranch,location,itemcallnumber,ccode'
     );
     $item = $builder->build_sample_item;
-    t::lib::Mocks::mock_userenv( { branchcode => $item->homebranch } );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $item->homebranch } );
     warnings_are {
         AddIssue( $patron, $item->barcode, dt_from_string );
     }
