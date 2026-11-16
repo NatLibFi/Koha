@@ -244,6 +244,11 @@ my $callnumber_sort_field =
     ( C4::Context->preference('HoldsCallnumberSortToPull') // 'classification' ) eq 'alphabetical'
     ? 'itemcallnumber'
     : 'cn_sort';
+my $callnumber_sort_key = sub {
+    my ($item) = @_;
+    my $key = $item->$callnumber_sort_field;
+    return defined($key) && length($key) ? $key : $item->itemcallnumber;
+};
 
 # make final holds_info array and fill with info
 my @holds_info;
@@ -294,14 +299,13 @@ foreach my $bibnum (@biblionumbers) {
             [ uniq map { defined $_->$field ? $_->$field : () } @$items ];
     }
 
-    my @items_by_callnumber = sort {
-        ( $a->$callnumber_sort_field // $a->itemcallnumber ) cmp( $b->$callnumber_sort_field // $b->itemcallnumber )
-            || $a->itemnumber <=> $b->itemnumber
-    } grep { defined $_->itemcallnumber } @$items;
+    my @items_by_callnumber =
+        sort { $callnumber_sort_key->($a) cmp $callnumber_sort_key->($b) || $a->itemnumber <=> $b->itemnumber }
+        grep { defined $_->itemcallnumber } @$items;
     $hold_info->{callnumbers} = [ uniq map { $_->itemcallnumber } @items_by_callnumber ];
     $hold_info->{callnumber_sort} =
-        @items_by_callnumber
-        ? ( $items_by_callnumber[0]->$callnumber_sort_field // $items_by_callnumber[0]->itemcallnumber )
+          @items_by_callnumber
+        ? $callnumber_sort_key->( $items_by_callnumber[0] )
         : q{};
 
     if ( $res_info->item_group ) {
