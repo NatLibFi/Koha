@@ -40,10 +40,16 @@ Koha::PseudonymizedTransaction - Koha Koha::PseudonymizedTransaction Object clas
 
     Creates a new object from a passed Koha::Statistic object and stores it in the database
 
+The optional C<operator> in the third argument supplies the operator's
+borrowernumber captured at enqueue time. An explicit undef prevents a lookup of
+current permissions. Operator collection must still be enabled when creating the
+transaction.
+
 =cut
 
 sub create_from_statistic {
-    my ( $class, $statistic ) = @_;
+    my ( $class, $statistic, $params ) = @_;
+    $params //= {};
 
     my $values = {
         hashed_borrowernumber => $class->get_hash( $statistic->borrowernumber ),
@@ -78,15 +84,8 @@ sub create_from_statistic {
         $values->{interface} = C4::Context->interface;
     }
 
-    my $userenv = C4::Context->userenv;
-    if ( $userenv and $userenv->{number} and any { $_ eq 'operator' } @t_fields_to_copy ) {
-        if ( defined $userenv->{flags} ) {
-            $values->{operator} = $userenv->{number};
-        } elsif ( $statistic->borrowernumber != $userenv->{number} ) {
-            warn "Pseudonymization / new record: unflagged user tries to change another user: "
-                . $statistic->borrowernumber . " != "
-                . $userenv->{number} . "\n";
-        }
+    if ( any { $_ eq 'operator' } @t_fields_to_copy ) {
+        $values->{operator} = exists $params->{operator} ? $params->{operator} : $class->get_operator;
     }
 
     # Remove fields we have already handled from the list
@@ -182,6 +181,30 @@ sub create_from_statistic {
     }
 
     return $self;
+}
+
+=head3 get_operator
+
+Return the current operator's borrowernumber if operator collection is enabled
+and the patron currently has module or granular permissions in the database.
+Otherwise return undef. Session permission flags may be stale.
+
+=cut
+
+sub get_operator {
+    my ($class) = @_;
+
+    my @fields = split ',', C4::Context->preference('PseudonymizationTransactionFields') || '';
+    return unless any { $_ eq 'operator' } @fields;
+
+    my $userenv = C4::Context->userenv;
+    return unless $userenv && $userenv->{number};
+
+    my $patron = Koha::Patrons->find( $userenv->{number} );
+    return unless $patron;
+    return $patron->borrowernumber if ( $patron->flags // 0 ) > 0 || $patron->_result->user_permissions->count;
+
+    return;
 }
 
 =head3 get_hash
