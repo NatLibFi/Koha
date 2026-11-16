@@ -5688,7 +5688,7 @@ CREATE TABLE `pseudonymized_transactions` (
   `transaction_branchcode` varchar(10) DEFAULT NULL,
   `transaction_type` varchar(16) DEFAULT NULL,
   `interface` varchar(16) DEFAULT NULL COMMENT 'Interface (sip/api/opac/intranet/cron/etc)',
-  `operator` int(11) DEFAULT NULL COMMENT 'User id (if user has extra permissions, operator, api-keys user, sip-user, librarian)',
+  `operator` int(11) DEFAULT NULL COMMENT 'Borrowernumber of the operator, if they have module or granular permissions',
   `itemnumber` int(11) DEFAULT NULL,
   `itemtype` varchar(10) DEFAULT NULL,
   `holdingbranch` varchar(10) DEFAULT NULL,
