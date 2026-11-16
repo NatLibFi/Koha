@@ -847,6 +847,14 @@ Circulation:
                   0: Disable
             - If enabled, the holds queue will present the user with filter options before running. If disabled, the holds queue will show the full queue for the current branch, and additional filters can be applied afterward.
         -
+            - Sort call numbers in the holds queue
+            - pref: HoldsCallnumberSortQueue
+              default: alphabetical
+              choices:
+                  alphabetical: "alphabetically (as plain text)"
+                  classification: "by classification sort key (cn_sort)"
+            - .
+        -
             - pref: RealTimeHoldsQueue
               choices:
                   1: Enable
