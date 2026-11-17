@@ -676,6 +676,7 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # existingreserves building
         my $total_holds       = 0;
+        my $all_record_holds  = 0;
         my $hold_branches     = [];
         my $hold_itemtypes    = [];
         my $always_show_holds = $input->cookie('always_show_holds');
@@ -698,6 +699,7 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                 { 'me.biblionumber' => $biblionumber },
                 { order_by          => 'priority' }
             );
+            $all_record_holds = $holds_rs->count;
             if ($closed_stack_request) {
                 $holds_rs = $holds_rs->filter_by_closed_stack_requests();
             } else {
@@ -746,13 +748,14 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             C4::Search::enabled_staff_search_views,
         );
 
-        $biblioloopiter{biblionumber}   = $biblionumber;
-        $biblioloopiter{title}          = $biblio->title;
-        $biblioloopiter{author}         = $biblio->author;
-        $biblioloopiter{rank}           = $fixedRank;
-        $biblioloopiter{total_holds}    = $total_holds;
-        $biblioloopiter{hold_branches}  = $hold_branches;
-        $biblioloopiter{hold_itemtypes} = $hold_itemtypes;
+        $biblioloopiter{biblionumber}     = $biblionumber;
+        $biblioloopiter{title}            = $biblio->title;
+        $biblioloopiter{author}           = $biblio->author;
+        $biblioloopiter{rank}             = $fixedRank;
+        $biblioloopiter{total_holds}      = $total_holds;
+        $biblioloopiter{all_record_holds} = $all_record_holds;
+        $biblioloopiter{hold_branches}    = $hold_branches;
+        $biblioloopiter{hold_itemtypes}   = $hold_itemtypes;
 
         # Pass through any reserve charge
         if ($patron) {
