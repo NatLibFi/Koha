@@ -113,14 +113,15 @@ sub filter_by_for_hold {
 
     my @closed_stack_joins;
     if ( C4::Context->preference('EnableClosedStackRequests') ) {
-        @closed_stack_joins = ( 'issue', 'reserves' );
+        @closed_stack_joins = ('issue');
+        my $held_items = Koha::Holds->search( undef, { columns => ['itemnumber'] } )->_resultset->as_query;
         $params->{-or} = [
             { is_closed_stack => 0 },
             {
                 is_closed_stack => 1,
                 -or             => [
-                    { 'reserves.reserve_id' => { '!=', undef } },
-                    { 'issue.issue_id'      => { '!=', undef } },
+                    { 'me.itemnumber'  => { -in => $held_items } },
+                    { 'issue.issue_id' => { '!=', undef } },
                 ],
             },
         ];
