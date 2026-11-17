@@ -1420,18 +1420,19 @@
                                     </h3>
                                 [% END %]
 
+                                [%# Priority choices span the complete record queue, including holds outside this view. %]
                                 [% IF Koha.Preference('HoldsSplitQueue') == 'branch' %]
                                     [% IF biblioloo.hold_branches.empty %]
                                         <div class="holds_by_library">
                                             <h4>Any library</h4>
-                                            [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data="any" %]
+                                            [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data="any" %]
                                         </div>
                                     [% ELSE %]
                                         [% FOREACH b IN biblioloo.hold_branches %]
                                             <div class="holds_by_library">
                                                 <h4>[% Branches.GetName( b ) | html %]</h4>
 
-                                                [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data=b %]
+                                                [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data=b %]
                                             </div>
                                         [% END %]
                                     [% END # /IF hold_branches.empty %]
@@ -1440,7 +1441,7 @@
                                     [% IF biblioloo.hold_itemtypes.empty %]
                                         <div class="holds_by_itemtype">
                                             <h4>Any item type</h4>
-                                            [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data="any" %]
+                                            [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data="any" %]
                                         </div>
                                     [% ELSE %]
                                         [% FOREACH i IN biblioloo.hold_itemtypes %]
@@ -1450,7 +1451,7 @@
                                                 [% ELSE %]
                                                     <h4>Any item type</h4>
                                                 [% END %]
-                                                [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data=i %]
+                                                [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data=i %]
                                             </div>
                                         [% END %]
                                     [% END # /IF hold_split.empty %]
@@ -1467,13 +1468,13 @@
                                                         <h4>Any item type</h4>
                                                     [% END %]
                                                     [% SET split_data = b _ "_" _ i %]
-                                                    [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data=split_data %]
+                                                    [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data=split_data %]
                                                 </div>
                                             [% END %]
                                         </div>
                                     [% END %]
                                 [% ELSE %]
-                                    [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.total_holds split_data="any" %]
+                                    [% INCLUDE holds_table.inc biblio_id=biblioloo.biblionumber total_holds=biblioloo.all_record_holds split_data="any" %]
                                 [% END # /IF HoldsSplitQueue %]
                             </div>
                             <!-- /hold_title -->
@@ -1673,29 +1674,30 @@
         $.fn.select2.defaults.set("dropdownAutoWidth", true);
 
         $(document).ready(function () {
+            const closed_stack_request = [% closed_stack_request ? 1 : 0 | html %] === 1;
             biblionumbers.forEach(function (biblionumber) {
                 let branches = hold_branches[biblionumber];
                 let itemtypes = hold_itemtypes[biblionumber];
                 switch (HoldsSplitQueue) {
                     case "branch":
                         branches.forEach(function (branch) {
-                            load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: branch });
+                            load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: branch }, closed_stack_request);
                         });
                         break;
                     case "itemtype":
                         itemtypes.forEach(function (itemtype) {
-                            load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: itemtype });
+                            load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: itemtype }, closed_stack_request);
                         });
                         break;
                     case "branch_itemtype":
                         branches.forEach(function (branch) {
                             itemtypes.forEach(function (itemtype) {
-                                load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: branch + "_" + itemtype });
+                                load_patron_holds_table(biblionumber, { name: HoldsSplitQueue, value: branch + "_" + itemtype }, closed_stack_request);
                             });
                         });
                         break;
                     default:
-                        load_patron_holds_table(biblionumber, { name: "any", value: "any" });
+                        load_patron_holds_table(biblionumber, { name: "any", value: "any" }, closed_stack_request);
                 }
             });
             $("#cancellation-reason-div").hide();
