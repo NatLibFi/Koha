@@ -23,7 +23,7 @@ use Test::NoWarnings 'had_no_warnings';
 use Test::MockModule;
 use Storable qw( dclone );
 
-use C4::Reserves qw( CheckReserves IsAvailableForItemLevelRequest );
+use C4::Reserves qw( AddReserve CheckReserves IsAvailableForItemLevelRequest ModReserveAffect SuspendAll );
 use Koha::Cache::Memory::Lite;
 use Koha::CirculationRules;
 use Koha::Database;
@@ -92,9 +92,10 @@ sub new_hold {
             value => {
                 biblionumber   => $item->biblionumber,     itemnumber => $item->itemnumber,
                 borrowernumber => $patron->borrowernumber, branchcode => $library->branchcode,
-                priority       => 1,                       suspend    => 0, found => undef, reservedate => '2000-01-01',
-                expirationdate => undef,                   waitingdate => undef, cancellationdate => undef,
-                suspend_until  => undef, itemtype => undef, item_group_id => undef, item_level_hold => 1,
+                priority       => 1,     suspend      => 0,     found            => undef, reservedate => '2000-01-01',
+                expirationdate => undef, waitingdate  => undef, cancellationdate => undef,
+                suspend_until  => undef, itemtype     => undef, item_group_id    => undef, item_level_hold         => 1,
+                hold_group_id  => undef, non_priority => 0, lowestPriority => 0, closed_stack_request_slip_printed => 0,
                 %{ $values // {} },
             },
         }
@@ -243,24 +244,55 @@ subtest 'Normal item query and filling holds' => sub {
         }
         my $hold = new_hold($item);
         new_hold( $item, { priority => 2 } );
+        new_hold($ordinary);
+        new_hold( $ordinary, { priority => 2 } );
+        my $loan     = new_item( { onloan => '2099-01-01' } );
+        my $checkout = $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => {
+                    itemnumber => $loan->id,            borrowernumber  => $patron->id,
+                    branchcode => $library->branchcode, date_due        => '2099-01-01',
+                    issuedate  => '2000-01-01',         onsite_checkout => 0, auto_renew => 0,
+                },
+            }
+        );
+        $items = Koha::Items->search( { 'me.itemnumber' => [ $item->id, $ordinary->id, $loan->id ] } );
         for my $enabled ( 0, 1 ) {
             t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', $enabled );
             is(
                 $item->holds->get_items_that_can_fill->count, $enabled ? 0 : 1,
                 'OFF permits flagged item to fill ordinary holds without duplicate join rows'
             );
-            if ( !$enabled ) {
-                is(
-                    $items->filter_by_for_hold->count, 2,
-                    'OFF query preserves prefeature multiplicity with multiple holds'
-                );
-            } else {
-                ok(
-                    $items->filter_by_for_hold->search( { 'me.itemnumber' => $item->id } )->count,
-                    'Held closed stack item remains eligible for ordinary holds ON'
-                );
-            }
+            my $filtered = $items->filter_by_for_hold;
+            is( $filtered->count, 3, "Each held or loaned item is counted once, enabled=$enabled" );
+            my @matches = $filtered->as_list;
+            is( scalar @matches, 3, "Iteration has no duplicate hold joins, enabled=$enabled" );
+            is_deeply(
+                [ sort { $a <=> $b } map { $_->id } @matches ],
+                [ sort { $a <=> $b } ( $item->id, $ordinary->id, $loan->id ) ],
+                "Exact item identities include held flagged, ordinary and loaned controls, enabled=$enabled"
+            );
+            is(
+                $filtered->search( { 'me.itemnumber' => $ordinary->id } )->count, 1,
+                "Caller item filter preserves the ordinary control, enabled=$enabled"
+            );
         }
+        my $other_library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $remote        = new_item( { is_closed_stack => 0, homebranch => $other_library->branchcode } );
+        my $branch_items  = Koha::Items->search( { 'me.itemnumber' => [ $ordinary->id, $remote->id ] } );
+        t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $library->branchcode, flags => 2 } );
+        t::lib::Mocks::mock_preference( 'IndependentBranches', 1 );
+        ok( C4::Context->only_my_library, 'Branch restriction is active for the query control' );
+        for my $enabled ( 0, 1 ) {
+            t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', $enabled );
+            is_deeply(
+                [ map { $_->id } $branch_items->filter_by_for_hold->as_list ], [ $ordinary->id ],
+                "Only-my-library and caller item scope are preserved, enabled=$enabled"
+            );
+        }
+        t::lib::Mocks::mock_preference( 'IndependentBranches', 0 );
+        t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $library->branchcode } );
         $item->itemlost(1)->store;
         t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', 0 );
         is( $item->holds->get_items_that_can_fill->count, 0, 'Normal lost policy still blocks filling OFF' );
@@ -463,6 +495,90 @@ subtest 'OFF to ON retains title-level holds and printed slips' => sub {
             $printed_hold->get_from_storage->closed_stack_request_slip_printed, 1,
             'Re-enabled request keeps its old printed-slip marker'
         );
+    }
+};
+
+subtest 'Placing a local hold does not skip closed stack retrieval' => sub {
+    t::lib::Mocks::mock_preference( 'ReservesNeedReturns',            0 );
+    t::lib::Mocks::mock_preference( 'HoldsNeedProcessingSIP',         0 );
+    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture',          0 );
+    t::lib::Mocks::mock_preference( 'HoldFeeMode',                    'any_time_is_collected' );
+    t::lib::Mocks::mock_preference( 'emailLibrarianWhenHoldIsPlaced', 0 );
+    t::lib::Mocks::mock_preference( 'EmailPatronWhenHoldIsPlaced',    0 );
+    for my $enabled ( 0, 1 ) {
+        t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', $enabled );
+        for my $flagged ( 0, 1 ) {
+            my $item = new_item( { is_closed_stack => $flagged } );
+            my $id   = AddReserve(
+                {
+                    branchcode      => $library->branchcode, borrowernumber => $patron->id,
+                    biblionumber    => $item->biblionumber,  itemnumber     => $item->id,
+                    priority        => 1,     found                         => undef, reservation_date => '2000-01-01',
+                    expiration_date => undef, patron_expiration_date        => undef, non_priority     => 0,
+                }
+            );
+            my $hold   = Koha::Holds->find($id);
+            my $queued = $enabled && $flagged;
+            is( $hold->found,    $queued ? undef : 'W', "Placement found state: enabled=$enabled flagged=$flagged" );
+            is( $hold->priority, $queued ? 1     : 0,   "Placement priority: enabled=$enabled flagged=$flagged" );
+            is(
+                Koha::Holds->search( { 'me.reserve_id' => $id } )->filter_by_closed_stack_requests->count,
+                $queued ? 1 : 0, "Placement queue membership: enabled=$enabled flagged=$flagged"
+            );
+            if ($queued) {
+                is( ModReserveAffect( $item->id, $patron->id, 0, $id ), 1, 'Retrieved item can still fill the hold' );
+                $hold = $hold->get_from_storage;
+                is( $hold->found,    'W', 'Retrieval sets the request waiting' );
+                is( $hold->priority, 0,   'Retrieval clears queue priority' );
+                is(
+                    Koha::Holds->search( { 'me.reserve_id' => $id } )->filter_by_closed_stack_requests->count,
+                    0, 'Retrieved request leaves the retrieval queue'
+                );
+            }
+        }
+    }
+};
+
+subtest 'Bulk suspension protects the current retrieval queue and resumes legacy holds' => sub {
+    for my $enabled ( 0, 1 ) {
+        t::lib::Mocks::mock_preference( 'EnableClosedStackRequests', $enabled );
+        my $borrower =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+        my $ordinary = new_hold( new_item( { is_closed_stack => 0 } ), { borrowernumber => $borrower->id } );
+        my $request  = new_hold( new_item(),                           { borrowernumber => $borrower->id } );
+        my $legacy =
+            new_hold( new_item(), { borrowernumber => $borrower->id, suspend => 1, suspend_until => '2099-01-01' } );
+        my $waiting = new_hold(
+            new_item( { is_closed_stack => 0 } ),
+            { borrowernumber => $borrower->id, found => 'W', priority => 0, waitingdate => '2000-01-01' }
+        );
+        my $outside = new_hold( new_item( { is_closed_stack => 0 } ) );
+        is(
+            Koha::Holds->search( { 'me.reserve_id' => $request->id } )->filter_by_closed_stack_requests->count,
+            $enabled, "Request is classified before suspension, enabled=$enabled"
+        );
+        SuspendAll( borrowernumber => $borrower->id, suspend => 1, suspend_until => '2099-12-31' );
+        $request = $request->get_from_storage;
+        is( $ordinary->get_from_storage->suspend, 1,                'Ordinary hold is suspended' );
+        is( $request->suspend,                    $enabled ? 0 : 1, 'Only the enabled retrieval queue is protected' );
+        is(
+            $request->suspend_until, $enabled ? undef : '2099-12-31 00:00:00',
+            'Protected request has no suspension date'
+        );
+        is( $legacy->get_from_storage->suspend,  1,   'Existing suspended flagged hold remains suspended' );
+        is( $waiting->get_from_storage->suspend, 0,   'Found control remains unchanged' );
+        is( $waiting->found,                     'W', 'Found control keeps its status' );
+        is( $outside->get_from_storage->suspend, 0,   'Another patron is unchanged' );
+
+        $request->suspend(1)->suspend_until('2099-01-01')->store;
+        SuspendAll( borrowernumber => $borrower->id, suspend => 0 );
+        for my $hold ( $ordinary, $request, $legacy ) {
+            $hold = $hold->get_from_storage;
+            is( $hold->suspend,       0,     'Bulk resume includes ordinary and legacy flagged holds' );
+            is( $hold->suspend_until, undef, 'Bulk resume clears the suspension date' );
+        }
+        is( $waiting->get_from_storage->found,   'W', 'Resume preserves found control' );
+        is( $outside->get_from_storage->suspend, 0,   'Resume preserves another patron' );
     }
 };
 
