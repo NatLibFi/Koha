@@ -1,11 +1,18 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
     <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>Browser verification</title>
         <link href="/opac-tmpl/lib/koha_fast_challenge/style.css" rel="stylesheet"/>
-        <script src="/opac-tmpl/lib/koha_fast_challenge/index.js"></script>
+        <script src="/opac-tmpl/lib/koha_fast_challenge/index.js?v=pow1"></script>
     </head>
     <body>
         <div class="loading-overlay">
-            <div class="spinner"></div>
+            <div class="spinner" aria-hidden="true"></div>
+            <p id="challenge-status" role="status">Checking your browser…</p>
+            <button id="challenge-retry" type="button" hidden>Try again</button>
+            <noscript>JavaScript is required for this browser verification.</noscript>
         </div>
     </body>
 </html>
