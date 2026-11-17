@@ -1,0 +1,186 @@
+#!/usr/bin/perl
+
+# Copyright 2026 Nugged Team
+# This file is part of Koha, distributed under the GNU GPL version 3 or later.
+
+use Modern::Perl;
+use lib '/usr/share/koha/lib';
+use Koha::Antibot;
+use Fcntl          qw(O_RDONLY O_NOFOLLOW O_NONBLOCK S_ISREG);
+use File::Basename qw(dirname);
+use File::Temp     qw(tempfile);
+use Getopt::Long   qw(GetOptions);
+use IO::Handle;
+use JSON::PP;
+use Errno qw(EINTR EEXIST);
+
+# This is a persistent RewriteMap protocol, not a CGI or a Koha worker.
+binmode STDIN,  ':raw';
+binmode STDOUT, ':raw';
+STDOUT->autoflush(1);
+
+Getopt::Long::Configure(qw(no_auto_abbrev no_ignore_case));
+my $key_file = '/etc/koha/antibot.keys';
+my $init_key;
+my $key_group = 'www-data';
+my %policy;
+GetOptions(
+    'key-file=s'      => \$key_file,
+    'init-key'        => \$init_key,
+    'key-group=s'     => \$key_group,
+    'difficulty=i'    => \$policy{difficulty},
+    'challenge-ttl=i' => \$policy{challenge_ttl},
+    'clearance-ttl=i' => \$policy{clearance_ttl},
+) or exit 2;
+exit 2 if @ARGV;
+
+sub load_keys {
+    my ($path) = @_;
+    sysopen my $fh, $path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK
+        or die "Antibot key unavailable\n";
+    my @st = stat($fh);
+    die "Unsafe antibot key file\n"
+        unless @st
+        && S_ISREG( $st[2] )
+        && !( $st[2] & oct('0137') )
+        && ( $st[4] == 0 || $st[4] == $> )
+        && $st[7] <= 130;
+    my $length = read( $fh, my $text, 131 );
+    close $fh;
+    die "Invalid antibot key file\n"
+        unless defined $length && $text =~ /\A(?:[0-9a-f]{64}\n){1,2}\z/;
+    my @keys = map { pack 'H*', $_ } split /\n/, $text;
+    return \@keys;
+}
+
+sub provision_key {
+    my ( $path, $group ) = @_;
+
+    # Preserve a previously configured ring, including its rotation order.
+    if ( -e $path || -l $path ) {
+        load_keys($path);
+        return;
+    }
+    my $gid = getgrnam($group);
+    die "Antibot key group unavailable\n" unless defined $gid;
+    my ( $fh, $temporary ) = tempfile( '.antibot-XXXXXXXX', DIR => dirname($path), UNLINK => 1 );
+    binmode $fh, ':raw';
+    print {$fh} unpack( 'H*', Bytes::Random::Secure::random_bytes(32) ), "\n"
+        or die "Cannot write antibot key\n";
+    chown -1, $gid, $fh or die "Cannot set antibot key group\n";
+    chmod 0640, $fh or die "Cannot protect antibot key\n";
+    close $fh or die "Cannot finish antibot key\n";
+
+    # Publish the complete protected file without overwriting a concurrent ring.
+    if ( !link $temporary, $path ) {
+        die "Cannot publish antibot key\n" unless $! == EEXIST;
+    }
+
+    # Remove the temporary name now: deferred File::Temp cleanup chmods it,
+    # which would also change the permissions of the published hard link.
+    unlink $temporary or die "Cannot remove antibot key temporary file\n";
+    load_keys($path);
+    return;
+}
+
+if ($init_key) {
+    my $ok = eval { provision_key( $key_file, $key_group ); 1 };
+    warn "Koha antibot key preparation failed\n" unless $ok;
+    exit( $ok ? 0 : 1 );
+}
+
+my $antibot = eval { Koha::Antibot->new( keys => load_keys($key_file), %policy ) };
+warn "Koha antibot verifier unavailable; requests will be refused\n" unless $antibot;
+
+my %counts;
+my $last_summary = time;
+my $json         = JSON::PP->new->canonical(1);
+
+sub summarize {
+    return unless %counts;
+    print STDERR $json->encode( { event => 'koha_antibot_summary', pid => $$, counts => \%counts } ), "\n";
+    %counts       = ();
+    $last_summary = time;
+}
+
+sub dispatch {
+    my ($line) = @_;
+    return [ 'NULL', 'input_invalid' ] unless length($line) && $line =~ /\A[\x21-\x7e]+\z/;
+    my ( $op, $ip, $site, @args ) = split /!/, $line, -1;
+    return [ 'NULL', 'input_invalid' ]        unless defined $site;
+    return [ 'NULL', 'verifier_unavailable' ] unless $antibot;
+
+    if ( $op eq 'issue' && !@args ) {
+        my $value = $antibot->challenge( $ip, $site );
+        return [ $value // 'NULL', $value ? 'issue_pass' : 'issue_reject' ];
+    }
+    if ( $op eq 'verify' && @args == 1 ) {
+        my $valid = $antibot->verify_clearance( $args[0], $ip, $site );
+        return [ $valid ? 'ok' : 'NULL', $valid ? 'verify_pass' : 'verify_reject' ];
+    }
+    if ( $op eq 'solve' && @args == 2 ) {
+        my $value = $antibot->solve( $args[0], $args[1], $ip, $site );
+        return [ $value // 'NULL', $value ? 'solve_pass' : 'solve_reject' ];
+    }
+    return [ 'NULL', 'input_invalid' ];
+}
+
+sub respond {
+    my ($line) = @_;
+    my $result = eval { dispatch($line) } // [ 'NULL', 'internal_error' ];
+    $counts{ $result->[1] }++;
+    print STDOUT $result->[0], "\n";
+    summarize() if time - $last_summary >= 60;
+}
+
+# Bound memory even if a caller violates the Apache-side input limits.
+# sysread avoids waiting to fill a fixed-size record on the request pipe.
+my $buffer  = '';
+my $discard = 0;
+while (1) {
+    my $length = sysread( STDIN, my $chunk, 1024 );
+    next if !defined $length && $! == EINTR;
+    last unless defined $length && $length;
+    while ( $chunk =~ s/\A([^\n]*)\n// ) {
+        my $tail = $1;
+        respond( !$discard && length($buffer) + length($tail) <= 1024 ? $buffer . $tail : '' );
+        $buffer  = '';
+        $discard = 0;
+    }
+    unless ($discard) {
+        if ( length($buffer) + length($chunk) > 1024 ) {
+            $buffer  = '';
+            $discard = 1;
+        } else {
+            $buffer .= $chunk;
+        }
+    }
+}
+summarize();
+
+=head1 NAME
+
+koha-opac-pow - Persistent Apache OPAC challenge verifier
+
+=head1 SYNOPSIS
+
+RewriteMap koha_antibot "prg:/usr/sbin/koha-opac-pow" www-data:www-data
+
+Options: --key-file PATH, --difficulty BITS, --challenge-ttl SECONDS,
+--clearance-ttl SECONDS. The key file contains one or two lowercase
+hexadecimal 32-byte keys, each followed by a newline; the first is active.
+It must be a regular file owned by root or the verifier user, with mode
+0600 or 0640. Reload Apache after changing the key ring or policy.
+
+The package invokes --init-key to provision a missing ring without replacing
+an existing ring. --key-group defaults to www-data for this installation mode.
+Neither key contents nor tokens are written to diagnostics.
+
+=head1 PROTOCOL
+
+Each ASCII request and response occupies one line. Fields are separated
+by exclamation marks. Supported requests are issue!IP!SITE,
+verify!IP!SITE!CLEARANCE and solve!IP!SITE!CHALLENGE!COUNTER.
+Failures return NULL. Logs contain bounded event counters only.
+
+=cut
