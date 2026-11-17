@@ -108,24 +108,48 @@ describe("circ/pendingreserves call number sorting", () => {
                                     cy.task("query", {
                                         sql: "INSERT INTO biblioitems (biblionumber, itemtype, cn_source) VALUES (?, ?, 'lcc')",
                                         values: [biblioId, itemType],
-                                    }).then(biblioitemResult => {
+                                    }).then(() => {
                                         record.items.forEach(item => {
                                             itemIndex += 1;
-                                            cy.task("query", {
-                                                sql: "INSERT INTO items (biblionumber, biblioitemnumber, barcode, homebranch, holdingbranch, itemcallnumber, cn_source, cn_sort, itype) VALUES (?, ?, ?, ?, ?, ?, 'lcc', ?, ?)",
-                                                values: [
-                                                    biblioId,
-                                                    biblioitemResult.insertId,
-                                                    `B26867${fixtureId}${itemIndex}`.slice(
-                                                        0,
-                                                        20
-                                                    ),
-                                                    libraryId,
-                                                    libraryId,
-                                                    item.callNumber,
-                                                    item.sortKey,
-                                                    itemType,
-                                                ],
+                                            cy.task("apiPost", {
+                                                endpoint: `/api/v1/biblios/${biblioId}/items`,
+                                                body: {
+                                                    external_id:
+                                                        `B26867${fixtureId}${itemIndex}`.slice(
+                                                            0,
+                                                            20
+                                                        ),
+                                                    home_library_id: libraryId,
+                                                    holding_library_id:
+                                                        libraryId,
+                                                    callnumber: item.callNumber,
+                                                    call_number_source: "lcc",
+                                                    item_type_id: itemType,
+                                                },
+                                            }).then(createdItem => {
+                                                if (
+                                                    item.sortKey === null ||
+                                                    item.sortKey === ""
+                                                ) {
+                                                    // These two legacy-key controls deliberately bypass store().
+                                                    cy.task("query", {
+                                                        sql: "UPDATE items SET cn_sort = ? WHERE itemnumber = ?",
+                                                        values: [
+                                                            item.sortKey,
+                                                            createdItem.item_id,
+                                                        ],
+                                                    });
+                                                } else {
+                                                    expect(
+                                                        createdItem.call_number_source
+                                                    ).to.eq("lcc");
+                                                    expect(
+                                                        createdItem.call_number_sort
+                                                    ).to.be.a("string").and.not
+                                                        .be.empty;
+                                                    item.sortKey =
+                                                        createdItem.call_number_sort;
+                                                }
                                             });
                                         });
 
@@ -149,7 +173,10 @@ describe("circ/pendingreserves call number sorting", () => {
 
     after(() => {
         if (originalPreference !== undefined) {
-            cy.set_syspref(preference, originalPreference);
+            cy.task("query", {
+                sql: "INSERT INTO systempreferences (variable, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
+                values: [preference, originalPreference],
+            });
         } else {
             cy.task("query", {
                 sql: "DELETE FROM systempreferences WHERE variable = ?",
@@ -267,11 +294,29 @@ describe("circ/pendingreserves call number sorting", () => {
             assertSort(mode, direction, draw);
         });
 
-    ["classification", "alphabetical"].forEach(mode => {
-        describe(mode, () => {
+    const preferenceValues = [
+        "classification",
+        "alphabetical",
+        undefined,
+        "",
+        "unknown",
+    ];
+    preferenceValues.forEach(preferenceValue => {
+        const mode =
+            preferenceValue === "classification"
+                ? "classification"
+                : "alphabetical";
+        describe(preferenceValue ?? "missing preference", () => {
             beforeEach(() => {
                 cy.login();
-                cy.set_syspref(preference, mode);
+                if (preferenceValue === undefined) {
+                    cy.task("query", {
+                        sql: "DELETE FROM systempreferences WHERE variable = ?",
+                        values: [preference],
+                    });
+                } else {
+                    cy.set_syspref(preference, preferenceValue);
+                }
                 cy.visit(reportUrl, {
                     onBeforeLoad(win) {
                         win.localStorage.removeItem(stateKey);

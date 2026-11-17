@@ -241,9 +241,9 @@ my $all_holds = {
 };
 
 my $callnumber_sort_field =
-    ( C4::Context->preference('HoldsCallnumberSortToPull') // 'classification' ) eq 'alphabetical'
-    ? 'itemcallnumber'
-    : 'cn_sort';
+    ( C4::Context->preference('HoldsCallnumberSortToPull') // '' ) eq 'classification'
+    ? 'cn_sort'
+    : 'itemcallnumber';
 my $callnumber_sort_key = sub {
     my ($item) = @_;
     my $key = $item->$callnumber_sort_field;
