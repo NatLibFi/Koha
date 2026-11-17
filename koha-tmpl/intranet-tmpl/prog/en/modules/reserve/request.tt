@@ -471,7 +471,7 @@
                             <th>Information</th>
                         </tr>
                         [% FOREACH biblioloo IN biblioloop %]
-                            <tr [% IF biblioloo.warn %]class="onissue"[% END %]>
+                            <tr class="[% IF biblioloo.warn %]onissue[% END %]">
                                 <td>
                                     [% UNLESS ( biblioloo.warn ) %]
                                         <input class="multi_hold_item_checkbox" type="checkbox" checked="checked" title="[% biblioloo.biblionumber | html %]" />
@@ -1068,7 +1068,7 @@
                                             [% IF itemdata_enumchron %]
                                                 <td> [% itemloo.enumchron | html %] </td>
                                             [% END %]
-                                            <td [% IF itemloo.onloan %]data-order="[% itemloo.date_due | html %]"[% END %]>
+                                            [% item_status = BLOCK %]
                                                 [% IF ( itemloo.onloan ) %]
                                                     <span class="checkedout">Due [% itemloo.date_due | $KohaDates as_due_date => 1 %]</span>
                                                 [% ELSE %]
@@ -1134,7 +1134,12 @@
                                                 [% ELSIF ( itemloo.notforloanitype ) %]
                                                     <span class="nfl">Not for loan (Itemtype not for loan)</span>
                                                 [% END %]
-                                            </td>
+                                            [% END %]
+                                            [% IF itemloo.onloan %]
+                                                <td data-order="[% itemloo.date_due | html %]">[% item_status | $raw %]</td>
+                                            [% ELSE %]
+                                                <td>[% item_status | $raw %]</td>
+                                            [% END %]
                                         </tr>
                                     [% END # / UNLESS itemloo.hide %]
                                 [% END # /FOREACH itemloo %]
@@ -1241,7 +1246,7 @@
                             <th>Information</th>
                         </tr>
                         [% FOREACH biblioloo IN biblioloop %]
-                            <tr [% IF biblioloo.warn %]class="onissue"[% END %]>
+                            <tr class="[% IF biblioloo.warn %]onissue[% END %]">
                                 <td>
                                     [% UNLESS ( biblioloo.warn ) %]
                                         <input
