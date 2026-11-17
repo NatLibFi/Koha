@@ -19,7 +19,7 @@ use Modern::Perl;
 
 use CGI '-utf8';
 
-use C4::Output  qw( output_html_with_http_headers );
+use C4::Output  qw( output_html_with_http_headers output_error );
 use C4::Auth    qw( get_template_and_user );
 use C4::Letters ();
 use Koha::Holds;
@@ -45,7 +45,11 @@ if ( $op eq 'cud-print_slip' ) {
         }
     );
 
-    my $hold = Koha::Holds->find($reserve_id);
+    my $hold = Koha::Holds->search()->filter_by_closed_stack_requests()->find($reserve_id);
+    unless ($hold) {
+        output_error( $cgi, 404 );
+        exit;
+    }
 
     my $letter = C4::Letters::GetPreparedLetter(
         module                 => 'reserves',
@@ -91,12 +95,14 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 my @messages;
 if ( $op eq 'cud-cancel_reserve' ) {
     my $reserve_id = $cgi->param('reserve_id');
-    my $hold       = Koha::Holds->find($reserve_id);
-    if ($hold) {
-        my $cancellation_reason = $cgi->param('cancellation-reason');
-        $hold->cancel( { cancellation_reason => $cancellation_reason } );
-        push @messages, { type => 'message', code => 'hold_cancelled' };
+    my $hold       = Koha::Holds->search()->filter_by_closed_stack_requests()->find($reserve_id);
+    unless ($hold) {
+        output_error( $cgi, 404 );
+        exit;
     }
+    my $cancellation_reason = $cgi->param('cancellation-reason');
+    $hold->cancel( { cancellation_reason => $cancellation_reason } );
+    push @messages, { type => 'message', code => 'hold_cancelled' };
 }
 
 my $holds = Koha::Holds->search()->filter_by_closed_stack_requests();
