@@ -1647,7 +1647,11 @@ $(document).ready(function () {
     }
 });
 
-async function load_patron_holds_table(biblio_id, split_data) {
+async function load_patron_holds_table(
+    biblio_id,
+    split_data,
+    closed_stack_request
+) {
     const { name: split_name, value: split_value } = split_data;
     let table_class = `patron_holds_table_${biblio_id}_${split_value}`;
     const table_id = `#` + table_class;
@@ -1665,7 +1669,7 @@ async function load_patron_holds_table(biblio_id, split_data) {
                 : `, "me.pickup_library_id":"${branch}", "me.itemtype":"${itemtype}"`;
     }
 
-    url += "}";
+    url += `}&closed_stack_request=${closed_stack_request}`;
     const totalHolds = $(table_id).data("total-holds");
     const totalHoldsSelect = parseInt(totalHolds) + 1;
     var holdsQueueTable = $(table_id).kohaTable(
