@@ -220,6 +220,9 @@ sub AddReserve {
             # If we can't hold damaged items, and it is damaged, it can't be waiting
             && ( $item->damaged && C4::Context->preference('AllowHoldsOnDamagedItems') || !$item->damaged )
 
+            # Closed stack items must be retrieved before they can wait for pickup
+            && !( C4::Context->preference('EnableClosedStackRequests') && $item->is_closed_stack )
+
             # Lastly, if this already has holds, we shouldn't make it waiting for the new hold
             && !$item->current_holds->count
             )
@@ -1679,7 +1682,9 @@ sub SuspendAll {
     $params->{borrowernumber} = $borrowernumber if $borrowernumber;
     $params->{biblionumber}   = $biblionumber   if $biblionumber;
 
-    my @holds = Koha::Holds->search($params)->as_list;
+    my $holds = Koha::Holds->search($params);
+    $holds = $holds->filter_out_closed_stack_requests if $suspend;
+    my @holds = $holds->as_list;
 
     if ($suspend) {
         map { $_->suspend_hold($suspend_until) } @holds;
