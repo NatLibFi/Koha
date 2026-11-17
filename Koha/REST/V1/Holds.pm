@@ -48,11 +48,28 @@ sub list {
     my $old = $c->param('old');
     $c->req->params->remove('old');
 
+    my $closed_stack_request = $c->param('closed_stack_request');
+    $c->req->params->remove('closed_stack_request');
+
+    return $c->render(
+        status  => 400,
+        openapi => { error => 'Closed stack request filtering is only available for current holds' }
+    ) if $old && defined $closed_stack_request;
+
     return try {
         my $holds_set =
             $old
             ? Koha::Old::Holds->new
             : Koha::Holds->new;
+
+        if ( defined $closed_stack_request ) {
+            my $filtered_holds =
+                  $closed_stack_request eq 'true' || $closed_stack_request eq '1'
+                ? $holds_set->filter_by_closed_stack_requests
+                : $holds_set->filter_out_closed_stack_requests;
+            my $hold_ids = $filtered_holds->search( undef, { columns => ['me.reserve_id'] } )->_resultset->as_query;
+            $holds_set = $holds_set->search( { 'me.reserve_id' => { -in => $hold_ids } } );
+        }
 
         my $holds = $c->objects->search($holds_set);
         return $c->render( status => 200, openapi => $holds );
