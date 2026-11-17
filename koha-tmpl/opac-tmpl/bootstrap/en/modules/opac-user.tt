@@ -373,7 +373,7 @@
                                             </thead>
                                             <tbody>
                                                 [% FOREACH ISSUE IN ISSUES %]
-                                                    <tr [% IF ISSUE.overdue %]class="overdue"[% END %]>
+                                                    <tr class="[% IF ISSUE.overdue %]overdue[% END %]">
                                                         [% IF ( JacketImages ) %]
                                                             <td class="jacketcell">
                                                                 [% IF ( OPACAmazonCoverImages ) %]
