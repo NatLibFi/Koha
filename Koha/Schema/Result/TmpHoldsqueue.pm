@@ -383,6 +383,19 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 callnumber_sort_key
+
+Read-only classification sort key, with the queue's call number as fallback.
+
+=cut
+
+__PACKAGE__->belongs_to(
+    "callnumber_sort_key",
+    "Koha::Schema::Result::HoldsQueueCallnumberSortKey",
+    { "foreign.itemnumber" => "self.itemnumber" },
+    { join_type => "LEFT", is_foreign_key_constraint => 0 },
+);
+
 =head2 koha_object_class
 
 Missing POD for koha_object_class.

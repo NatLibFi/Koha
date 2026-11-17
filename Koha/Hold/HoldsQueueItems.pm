@@ -71,7 +71,7 @@ sub search {
         }
 
         if ($classification) {
-            push @order_by, { $direction => \q{COALESCE(NULLIF(item.cn_sort, ''), me.itemcallnumber)} };
+            push @order_by, { $direction => 'callnumber_sort_key.sort_key' };
         }
         push @order_by, { $direction => 'me.itemcallnumber' };
         $callnumber_direction = $direction;
@@ -79,7 +79,7 @@ sub search {
 
     if ($callnumber_direction) {
         push @order_by, { $callnumber_direction => 'me.itemnumber' };
-        $self       = $self->SUPER::search( undef, { join => 'item' } ) if $classification;
+        $self       = $self->SUPER::search( undef, { join => 'callnumber_sort_key' } ) if $classification;
         $attributes = { %$attributes, order_by => \@order_by };
     }
 

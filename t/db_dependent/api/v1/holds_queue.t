@@ -21,6 +21,8 @@ use Test::NoWarnings;
 use Test::More tests => 7;
 use Test::Mojo;
 use Test::MockModule;
+use Mojo::JSON qw(encode_json);
+use Mojo::URL;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -28,6 +30,7 @@ use t::lib::Mocks;
 use Koha::Caches;
 use Koha::Hold::HoldsQueueItems;
 use Koha::Database;
+use Koha::Items;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -339,9 +342,14 @@ subtest 'call number ordering' => sub {
 
     for my $fixture (@fixtures) {
         my ( $callnumber, $cn_sort, $title ) = @$fixture;
-        my $biblio = $builder->build_sample_biblio( { title => $title } );
-        my $item   = $builder->build_sample_item(
-            { biblionumber => $biblio->biblionumber, itemcallnumber => "Live $callnumber" } );
+        my $biblio          = $builder->build_sample_biblio( { title => $title } );
+        my $live_callnumber = defined($cn_sort) && length($cn_sort) ? "Live $callnumber" : "0000000000 $callnumber";
+        my $item            = $builder->build_sample_item(
+            {
+                biblionumber   => $biblio->biblionumber, library => $library->branchcode,
+                itemcallnumber => $live_callnumber
+            }
+        );
 
         # Set the stored key directly: Item->store would recalculate it. The queue
         # retains its own displayed call number even if the live item has changed.
@@ -439,6 +447,153 @@ subtest 'call number ordering' => sub {
             [ @items[ 1, 5, 4, 0, 2, 3 ] ], 'Explicit secondary ordering precedes the item number tie breaker'
         );
     }
+
+    subtest 'report embeds and filtering preserve pagination' => sub {
+        my $embed = join ',',
+            qw(+strings biblio item item.holding_library item.home_library item.item_group patron patron.category patron.library patron.notice_email_address pickup_library);
+        for my $mode ( 'alphabetical', 'classification' ) {
+            t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', $mode );
+            my @ascending = $mode eq 'classification' ? @classification : @alphabetical;
+            for my $direction ( 'asc', 'desc' ) {
+                my @expected = $direction eq 'asc' ? @ascending : reverse @ascending;
+                for my $filtered ( 0, 1 ) {
+                    my %params = (
+                        _order_by => ( $direction eq 'asc' ? '+' : '-' ) . 'me.callnumber',
+                        _per_page => 2, _page => 1,
+                    );
+                    if ($filtered) {
+                        my @fields =
+                            qw(biblio.title biblio.author biblio.publisher item.holding_library.name item.home_library.name me.ccode_description me.location_description me.item_type_id me.callnumber me.barcode patron.category.name pickup_library.name me.notes);
+                        my @search = map { [ { $_ => { like => '%' } } ] } @fields;
+                        push @search,
+                            [ { 'patron.surname' => { like => '%' }, 'patron.firstname' => { like => '%' } } ];
+                        $params{q} = encode_json(
+                            {
+                                '-and' => [
+                                    { 'me.holding_library_id' => { '=' => $library->branchcode } },
+                                    \@search,
+                                ]
+                            }
+                        );
+                        $params{_match} = 'contains';
+                    }
+                    for my $page ( 1 .. 3 ) {
+                        $params{_page} = $page;
+                        my $request = Mojo::URL->new($url)->query( \%params );
+                        $t->get_ok( $request => { 'x-koha-embed' => $embed } )
+                            ->status_is(200)
+                            ->header_is( 'X-Total-Count' => 6 )
+                            ->json_is( '/0/item_id' => $expected[ ( $page - 1 ) * 2 ] )
+                            ->json_is( '/1/item_id' => $expected[ ( $page - 1 ) * 2 + 1 ] );
+                    }
+                }
+            }
+        }
+
+        # The biblio API serializer expects a single biblioitem. Test the
+        # relationship's possible multiplication directly at resultset level.
+        my @biblio_ids = map { Koha::Items->find($_)->biblionumber } @items;
+        $schema->resultset('Biblioitem')
+            ->search( { biblionumber  => \@biblio_ids } )
+            ->update( { publishercode => 'Publisher match' } );
+        my $duplicate_biblio    = Koha::Items->find( $items[0] )->biblio;
+        my $original_biblioitem = $duplicate_biblio->biblioitem;
+        $builder->build(
+            {
+                source => 'Biblioitem',
+                value  => {
+                    biblionumber  => $duplicate_biblio->biblionumber,
+                    itemtype      => $original_biblioitem->itemtype,
+                    publishercode => 'Publisher match',
+                }
+            }
+        );
+        for my $mode ( 'alphabetical', 'classification' ) {
+            t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', $mode );
+            my @ascending = $mode eq 'classification' ? @classification : @alphabetical;
+            for my $direction ( 'asc', 'desc' ) {
+                my @expected = $direction eq 'asc' ? @ascending : reverse @ascending;
+                for my $page ( 1 .. 3 ) {
+                    my ( $total, @actual );
+                    my $loaded = eval {
+                        my $rows = Koha::Hold::HoldsQueueItems->search(
+                            { 'biblioitem.publishercode' => 'Publisher match' },
+                            {
+                                prefetch => { biblio => 'biblioitem' }, rows => 2, page => $page,
+                                order_by => { "-$direction" => 'me.itemcallnumber' }
+                            }
+                        );
+                        $total  = $rows->pager->total_entries;
+                        @actual = map { $_->itemnumber } $rows->as_list;
+                        1;
+                    };
+                    ok( $loaded, "$mode $direction page $page can be loaded" ) or diag $@;
+                    is( $total, 6, 'Distinct queue total with multiple related rows' );
+                    is_deeply(
+                        \@actual,
+                        [ @expected[ ( $page - 1 ) * 2 .. $page * 2 - 1 ] ],
+                        "$mode $direction page $page stays distinct"
+                    );
+                }
+            }
+        }
+
+        # Restore one biblioitem before using the ordinary API serializer.
+        $schema->resultset('Biblioitem')->search(
+            {
+                biblionumber     => $duplicate_biblio->biblionumber,
+                biblioitemnumber => { '!=' => $original_biblioitem->biblioitemnumber }
+            }
+        )->delete;
+        $schema->resultset('Item')->find( $items[0] )->update( { cn_sort => '0' } );
+        t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', 'classification' );
+        $t->get_ok( "$url?_order_by=%2Bme.callnumber&_per_page=2" => { 'x-koha-embed' => $embed } )
+            ->status_is(200)
+            ->json_is( '/0/item_id' => $items[0], 'A valid zero key is preserved' );
+        done_testing;
+    };
+
+    subtest 'classification source generates the report sort keys' => sub {
+        Koha::Hold::HoldsQueueItems->delete;
+
+        my @callnumbers = ( 'JC43 .G6 1890', 'JC330 .F74 2000', 'JC480 .R63 2006' );
+        my @items;
+        for my $callnumber (@callnumbers) {
+            my $biblio = $builder->build_sample_biblio;
+            my $item   = $builder->build_sample_item(
+                { biblionumber => $biblio->biblionumber, itemcallnumber => $callnumber, cn_source => 'ddc' } );
+            push @items, $item;
+            $builder->build_object(
+                {
+                    class => 'Koha::Hold::HoldsQueueItems',
+                    value => {
+                        biblionumber   => $biblio->biblionumber,
+                        itemnumber     => $item->itemnumber,
+                        barcode        => $item->barcode,
+                        borrowernumber => $patron->borrowernumber,
+                        holdingbranch  => $item->holdingbranch,
+                        pickbranch     => $library->branchcode,
+                        itemcallnumber => $callnumber,
+                    },
+                }
+            );
+        }
+
+        for my $source ( 'ddc', 'lcc' ) {
+            $_->cn_source($source)->store for @items;
+            for my $mode ( 'alphabetical', 'classification' ) {
+                t::lib::Mocks::mock_preference( 'HoldsCallnumberSortQueue', $mode );
+                my @expected = $source eq 'lcc' && $mode eq 'classification' ? @items : @items[ 1, 0, 2 ];
+                $t->get_ok("$url?_order_by=%2Bcallnumber&_per_page=-1")->status_is(200)->json_is(
+                    '/0/item_id' => $expected[0]->itemnumber,
+                    "$source source, $mode mode: first item"
+                    )
+                    ->json_is( '/1/item_id' => $expected[1]->itemnumber )
+                    ->json_is( '/2/item_id' => $expected[2]->itemnumber );
+            }
+        }
+        done_testing;
+    };
 
     $schema->storage->txn_rollback;
     done_testing;
