@@ -571,10 +571,14 @@ $(document).ready(function () {
                     orderable: false,
                     searchable: false,
                     render: function (data, type, row) {
-                        return display_extended_attribute(
-                            row,
-                            "requested_partners"
+                        if (row.ill_backend_id !== "Standard") return "";
+
+                        const recipients = row.extended_attributes.find(
+                            attribute =>
+                                attribute.type === "requested_partners" &&
+                                attribute.backend === row.ill_backend_id
                         );
+                        return escape_str(recipients?.value);
                     },
                 },
                 {
