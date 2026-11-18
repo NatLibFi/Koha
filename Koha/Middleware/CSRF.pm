@@ -18,6 +18,7 @@ package Koha::Middleware::CSRF;
 use Modern::Perl;
 
 use parent qw(Plack::Middleware);
+use Plack::Request;
 use Plack::Response;
 
 # If you need to update the logic here, please also update Koha::App::Plugin::CSRF
