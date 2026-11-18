@@ -121,6 +121,11 @@ describe("ILL requests", () => {
                   SELECT illrequest_id, 'Standard', 'requested_partners', '${recipients}', 0
                   FROM illrequests WHERE orderid = '${matchingOrderId}'`,
         });
+        cy.task("query", {
+            sql: `INSERT INTO illrequestattributes (illrequest_id, backend, type, value, readonly)
+                  SELECT illrequest_id, 'Other', 'requested_partners', 'old@example.test', 0
+                  FROM illrequests WHERE orderid IN ('${matchingOrderId}', '${excludedOrderId}')`,
+        });
 
         cy.intercept("GET", "/api/v1/ill/requests*").as("getRequests");
         cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
