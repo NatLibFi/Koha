@@ -50,7 +50,10 @@
             [% END %]
         [% ELSE %]
             [% WRAPPER breadcrumb_item %]
-                [% INCLUDE 'biblio-title.inc' link = 1 %] <a href="/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=[% biblio.biblionumber | uri %]">[edit]</a>
+                [% INCLUDE 'biblio-title.inc' link = 1 %]
+                (<a href="/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=[% biblio.biblionumber | uri %]">
+                    [%- tp('Bibliographic record number', 'Record #') | html %] [% biblio.biblionumber | html -%]
+                </a>)
             [% END %]
         [% END %]
         [% WRAPPER breadcrumb_item bc_active= 1 %]
