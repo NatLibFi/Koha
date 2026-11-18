@@ -132,6 +132,10 @@ li.subfield_line label {
     cursor: pointer;
 }
 
+.subfieldcode input {
+    border: 0;
+}
+
 .tag_title {
     font-size: 90%;
     padding: .2em 0;
