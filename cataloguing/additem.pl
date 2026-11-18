@@ -281,6 +281,7 @@ if ( $op eq "cud-additem" ) {
         $item->holding_id($holding_id);
     }
     for my $c (@columns) {
+        next if $c eq 'is_closed_stack' && !C4::Context->preference('EnableClosedStackRequests');
         if ( $c eq 'more_subfields_xml' ) {
             my @more_subfields_xml = $input->multi_param("items.more_subfields_xml");
             my @unlinked_item_subfields;
@@ -611,6 +612,7 @@ if ( $op eq "cud-additem" ) {
     my @columns     = Koha::Items->columns;
     my $new_values  = $item->unblessed;
     for my $c (@columns) {
+        next if $c eq 'is_closed_stack' && !C4::Context->preference('EnableClosedStackRequests');
         if ( $c eq 'more_subfields_xml' ) {
             my @more_subfields_xml = $input->multi_param("items.more_subfields_xml");
             my @unlinked_item_subfields;
@@ -743,12 +745,15 @@ for my $subfield_code ( keys %{ $tagslib->{$itemtagfield} } ) {
 
     next if IsMarcStructureInternal($subfield);
     next unless $subfield->{tab} eq 10;    # Is this really needed?
+    next
+        if ( $subfield->{kohafield} || '' ) eq 'items.is_closed_stack'
+        && !C4::Context->preference('EnableClosedStackRequests');
 
     my $attribute;
     if ( $subfield->{kohafield} ) {
         ( $attribute = $subfield->{kohafield} ) =~ s|^items\.||;
     } else {
-        $attribute = $subfield_code;       # It's in more_subfields_xml
+        $attribute = $subfield_code;    # It's in more_subfields_xml
     }
     next unless grep { $attribute eq $_ } @witness_attributes;
     $subfieldcode_attribute_mappings->{$subfield_code} = $attribute;

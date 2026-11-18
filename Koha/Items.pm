@@ -111,11 +111,31 @@ sub filter_by_for_hold {
         ( C4::Context->only_my_library()                      ? ( homebranch => C4::Context::mybranch() ) : () ),
     };
 
+    my @closed_stack_joins;
+    if ( C4::Context->preference('EnableClosedStackRequests') ) {
+        @closed_stack_joins = ('issue');
+        my $held_items = Koha::Holds->search( undef, { columns => ['itemnumber'] } )->_resultset->as_query;
+        $params->{-or} = [
+            { is_closed_stack => 0 },
+            {
+                is_closed_stack => 1,
+                -or             => [
+                    { 'me.itemnumber'  => { -in => $held_items } },
+                    { 'issue.issue_id' => { '!=', undef } },
+                ],
+            },
+        ];
+    }
+
     if ( C4::Context->preference("item-level_itypes") ) {
         return $self->search(
             {
                 %$params,
                 itype => { -not_in => \@hold_not_allowed_itypes },
+            },
+            {
+                distinct => 1,
+                join     => \@closed_stack_joins,
             }
         );
     } else {
@@ -125,7 +145,8 @@ sub filter_by_for_hold {
                 'biblioitem.itemtype' => { -not_in => \@hold_not_allowed_itypes },
             },
             {
-                join => 'biblioitem',
+                distinct => 1,
+                join     => [ 'biblioitem', @closed_stack_joins ],
             }
         );
     }
@@ -372,6 +393,23 @@ sub filter_by_available {
     );
 }
 
+=head3 filter_by_closed_stack
+
+  my $filterd_items = $items->filter_by_closed_stack;
+
+Returns a new resultset, containing only those items that are flagged as
+"closed stack".
+
+=cut
+
+sub filter_by_closed_stack {
+    my ($self) = @_;
+
+    return $self->empty unless C4::Context->preference('EnableClosedStackRequests');
+
+    return $self->search( { is_closed_stack => 1 } );
+}
+
 =head3 move_to_biblio
 
  $items->move_to_biblio($to_biblio);
@@ -456,8 +494,14 @@ Callback function to call after an item has been modified
 sub batch_update {
     my ( $self, $params ) = @_;
 
-    my $regex_mod                         = $params->{regex_mod}  || {};
-    my $new_values                        = $params->{new_values} || {};
+    my $regex_mod  = { %{ $params->{regex_mod}  || {} } };
+    my $new_values = { %{ $params->{new_values} || {} } };
+
+    # Do not change stored flags through queued work while the feature is disabled.
+    unless ( C4::Context->preference('EnableClosedStackRequests') ) {
+        delete $regex_mod->{is_closed_stack};
+        delete $new_values->{is_closed_stack};
+    }
     my $exclude_from_local_holds_priority = $params->{exclude_from_local_holds_priority};
     my $mark_items_returned               = $params->{mark_items_returned};
     my $callback                          = $params->{callback};

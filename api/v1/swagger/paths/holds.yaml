@@ -93,6 +93,12 @@
         description: By default, current holds are returned, when this is true then
           old holds are returned as result.
         type: boolean
+      - name: closed_stack_request
+        in: query
+        description: >-
+          Select current closed stack requests (true) or other holds (false).
+          Omit to return all holds.
+        type: boolean
       - name: x-koha-embed
         in: header
         required: false
