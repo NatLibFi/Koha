@@ -3,7 +3,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 use_ok("MARC::Field");
 use_ok("MARC::Record");
@@ -1636,6 +1636,163 @@ subtest 'field_equals' => sub {
         );
         is_deeply( $match, [1], 'first 008 control field matches "eng"' );
     };
+};
+
+subtest 'T replacement modifier' => sub {
+    plan tests => 9;
+
+    my $record = new_record;
+    $record->append_fields(
+        MARC::Field->new(
+            '509', ' ', ' ',
+            a => 'alpha',
+            a => 'bravo',
+            b => 'beta',
+        )
+    );
+    copy_field(
+        {
+            record        => $record,
+            from_field    => '245',
+            from_subfield => 'a',
+            to_field      => '700',
+            to_subfield   => 'a',
+            regex         => {
+                search    => '\\A(.*)\\z',
+                replace   => q{{{509$a[2]}}-$1},
+                modifiers => q{},
+            },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '700', subfield => 'a' } ) ],
+        [q{{{509$a[2]}}-The art of computer programming}],
+        'MARC placeholders remain literal without T'
+    );
+
+    $record = new_record;
+    $record->append_fields(
+        MARC::Field->new(
+            '509', ' ', ' ',
+            a => 'alpha',
+            a => 'bravo',
+            b => 'beta',
+        )
+    );
+    copy_field(
+        {
+            record        => $record,
+            from_field    => '245',
+            from_subfield => 'a',
+            to_field      => '700',
+            to_subfield   => 'a',
+            regex         => {
+                search    => '\\A(.*)\\z',
+                replace   => q{{{509$a[2]}}-$1},
+                modifiers => 'T',
+            },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '245', subfield => 'a' } ) ],
+        ['The art of computer programming'],
+        'copy with T preserves the source'
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '700', subfield => 'a' } ) ],
+        ['bravo-The art of computer programming'],
+        'copy with T combines a MARC value and a capture'
+    );
+
+    $record->append_fields( MARC::Field->new( '500', ' ', ' ', a => 'aA' ) );
+    copy_field(
+        {
+            record        => $record,
+            from_field    => '500',
+            from_subfield => 'a',
+            to_field      => '501',
+            to_subfield   => 'a',
+            regex         => {
+                search    => '(a)',
+                replace   => q{<$1:{{509$b}}>},
+                modifiers => 'Tgi',
+            },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '501', subfield => 'a' } ) ],
+        ['<a:beta><A:beta>'],
+        'T composes with capture groups and existing modifiers'
+    );
+
+    $record = new_record;
+    $record->append_fields( MARC::Field->new( '509', ' ', ' ', b => 'beta' ) );
+    move_field(
+        {
+            record        => $record,
+            from_field    => '245',
+            from_subfield => 'c',
+            to_field      => '700',
+            to_subfield   => 'c',
+            regex         => { search => '\\A.*\\z', replace => q{{{509$b}}}, modifiers => 'T' },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '245', subfield => 'c' } ) ],
+        [],
+        'move with T removes the source'
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '700', subfield => 'c' } ) ],
+        ['beta'],
+        'move with T writes the expanded value'
+    );
+
+    $record = new_record;
+    $record->append_fields(
+        MARC::Field->new( '509', ' ', ' ', a => 'alpha' ),
+        MARC::Field->new( '700', ' ', ' ', a => 'stale' ),
+    );
+    copy_and_replace_field(
+        {
+            record        => $record,
+            from_field    => '245',
+            from_subfield => 'a',
+            to_field      => '700',
+            to_subfield   => 'a',
+            regex         => {
+                search    => '\\A(.*)\\z',
+                replace   => q{{{509$a}}-$1},
+                modifiers => 'T',
+            },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '245', subfield => 'a' } ) ],
+        ['The art of computer programming'],
+        'copy and replace with T preserves the source'
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '700', subfield => 'a' } ) ],
+        ['alpha-The art of computer programming'],
+        'copy and replace with T replaces the target value'
+    );
+
+    $record = new_record;
+    $record->append_fields( MARC::Field->new( '509', ' ', ' ', b => 'beta' ) );
+    copy_field(
+        {
+            record     => $record,
+            from_field => '245',
+            to_field   => '246',
+            regex      => { search => '\\A.*\\z', replace => q{{{509$b}}-{{[1]}}}, modifiers => 'T' },
+        }
+    );
+    is_deeply(
+        [ read_field( { record => $record, field => '246' } ) ],
+        [ 'beta-The art of computer programming', 'beta-Donald E. Knuth.' ],
+        'whole-field copy inherits the current tag and subfield'
+    );
 };
 
 subtest 'update_last_transaction_time' => sub {
