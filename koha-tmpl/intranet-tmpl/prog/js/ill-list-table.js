@@ -567,6 +567,17 @@ $(document).ready(function () {
                     },
                 },
                 {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        return display_extended_attribute(
+                            row,
+                            "requested_partners"
+                        );
+                    },
+                },
+                {
                     data: "ill_request_id",
                     orderable: false,
                     searchable: false,
