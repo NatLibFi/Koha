@@ -19,9 +19,10 @@
 
 use Modern::Perl;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::NoWarnings;
 use Test::Warn;
+use Test::MockModule;
 use Try::Tiny;
 
 use C4::Circulation qw( AddIssue AddReturn );
@@ -92,7 +93,7 @@ subtest 'Koha::Anonymized::Transactions tests' => sub {
 
     t::lib::Mocks::mock_preference( 'Pseudonymization', 0 );
     my $item = $builder->build_sample_item;
-    t::lib::Mocks::mock_userenv( { branchcode => $item->homebranch } );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $item->homebranch } );
     warnings_are {
         AddIssue( $patron, $item->barcode, dt_from_string );
     }
@@ -108,7 +109,7 @@ subtest 'Koha::Anonymized::Transactions tests' => sub {
         'datetime,transaction_branchcode,transaction_type,itemnumber,itemtype,holdingbranch,homebranch,location,itemcallnumber,ccode'
     );
     $item = $builder->build_sample_item;
-    t::lib::Mocks::mock_userenv( { branchcode => $item->homebranch } );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $item->homebranch } );
     warnings_are {
         AddIssue( $patron, $item->barcode, dt_from_string );
     }
@@ -308,4 +309,92 @@ subtest 'PseudonymizedMetadataValues tests' => sub {
     is( $ill_metadata_value->value, 'book' );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'Operator collection requires permissions and explicit selection' => sub {
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_config( 'bcrypt_settings', '$2a$04$9lmorEKnwQloheaCLFIfje' );
+    t::lib::Mocks::mock_preference( 'Pseudonymization',                  1 );
+    t::lib::Mocks::mock_preference( 'PseudonymizationTransactionFields', 'operator,interface' );
+    t::lib::Mocks::mock_preference( 'PseudonymizationPatronFields',      'age' );
+
+    my $target    = $builder->build_object( { class => 'Koha::Patrons', value => { dateofbirth => '2000-01-01' } } );
+    my $item      = $builder->build_sample_item;
+    my $statistic = Koha::Statistic->new(
+        {
+            type   => 'issue',           borrowernumber => $target->id,  itemnumber => $item->id,
+            branch => $item->homebranch, ccode          => $item->ccode, itemtype   => $item->effective_itemtype,
+        }
+    );
+    C4::Context->interface('opac');
+
+    for my $flags ( undef, 0, 2 ) {
+        my $actor = $builder->build_object( { class => 'Koha::Patrons', value => { flags => $flags } } );
+        t::lib::Mocks::mock_userenv( { patron => $actor } );
+        C4::Context->userenv->{flags} = $flags;
+        for my $subject ( $actor, $target ) {
+            $statistic->borrowernumber( $subject->id );
+            my $pseudo = Koha::PseudonymizedTransaction->create_from_statistic($statistic);
+            is(
+                $pseudo->operator, $flags ? $actor->id : undef,
+                'Only a nonzero bitmask identifies an operator, for self or another patron'
+            );
+            is( $pseudo->interface, 'opac', 'Interface collection is independent of operator eligibility' );
+        }
+    }
+
+    $statistic->borrowernumber( $target->id );
+    for my $case (
+        { session_flags => 2, current_flags => 0, name => 'module permissions revoked before collection' },
+        {
+            session_flags => 0, current_flags => 2, eligible => 1,
+            name          => 'module permissions granted before collection'
+        },
+        { session_flags => 2, deleted => 1, name => 'operator deleted before collection' },
+        )
+    {
+        my $actor =
+            $builder->build_object( { class => 'Koha::Patrons', value => { flags => $case->{session_flags} } } );
+        my $actor_id = $actor->id;
+        t::lib::Mocks::mock_userenv( { patron => $actor } );
+        if ( $case->{deleted} ) {
+            $actor->delete;
+        } else {
+            $actor->flags( $case->{current_flags} )->store;
+        }
+        is( C4::Context->userenv->{flags}, $case->{session_flags}, 'Session flags deliberately remain stale' );
+        is(
+            Koha::PseudonymizedTransaction->create_from_statistic($statistic)->operator,
+            $case->{eligible} ? $actor_id : undef, $case->{name}
+        );
+    }
+
+    my $granular = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $granular->_result->user_permissions->create( { module_bit => 1, code => 'circulate_remaining_permissions' } );
+    is( $granular->get_from_storage->flags,          0, 'Granular staff has no module bitmask' );
+    is( $granular->_result->user_permissions->count, 1, 'Granular staff has a real permission row' );
+    t::lib::Mocks::mock_userenv( { patron => $granular } );
+    $statistic->borrowernumber( $target->id );
+    my $pseudo = Koha::PseudonymizedTransaction->create_from_statistic($statistic);
+    is( $pseudo->operator, $granular->id,    'Granular permissions identify the operator' );
+    is( $pseudo->age,      $target->get_age, 'Age belongs to the target patron' );
+
+    for my $selection ( '', 'datetime,interface' ) {
+        t::lib::Mocks::mock_preference( 'PseudonymizationTransactionFields', $selection );
+        is(
+            Koha::PseudonymizedTransaction->create_from_statistic($statistic)->operator, undef,
+            'Disabled operator selection never records an ID'
+        );
+    }
+    t::lib::Mocks::mock_preference( 'PseudonymizationTransactionFields', 'operator' );
+    my $context = Test::MockModule->new('C4::Context');
+    $context->mock( userenv => sub { return } );
+    is(
+        Koha::PseudonymizedTransaction->create_from_statistic($statistic)->operator, undef,
+        'Direct maintenance without userenv has no operator'
+    );
+
+    $schema->storage->txn_rollback;
+    done_testing;
 };
