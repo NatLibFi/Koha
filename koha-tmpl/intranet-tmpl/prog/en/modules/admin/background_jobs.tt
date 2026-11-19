@@ -117,7 +117,7 @@
         <h1>Jobs</h1>
 
         <div>
-            <input type="checkbox" id="only_current" />
+            <input type="checkbox" id="only_current" checked="checked" name="only_current" value="1" />
             <label for="only_current">Current jobs only</label>
         </div>
 
