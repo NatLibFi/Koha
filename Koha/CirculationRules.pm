@@ -579,6 +579,8 @@ sub get_opacitemholds_policy {
 
     return unless $item or $patron;
 
+    return 'F' if $item->uses_closed_stack_requests;
+
     my $rule = Koha::CirculationRules->get_effective_rule(
         {
             categorycode => $patron->categorycode,
@@ -802,7 +804,7 @@ sub get_effective_expire_reserves_charge {
 
 }
 
-=head3 type
+=head3 _type
 
 =cut
 

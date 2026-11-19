@@ -2453,6 +2453,40 @@ sub merge_with {
     return \%results;
 }
 
+=head3 forced_hold_level
+
+Returns forced hold level for a biblio
+
+Returns 'item' if item-level hold should be forced, or undef
+
+=cut
+
+sub forced_hold_level {
+    my ($self) = @_;
+
+    return unless C4::Context->preference('EnableClosedStackRequests');
+
+    my $forced_hold_level;
+
+    # If there is at least one closed stack item that is not checked out and
+    # not reserved, force item-level hold
+    my $available_closed_stack_items = $self->items->filter_by_closed_stack->search(
+        {
+            onloan                => undef,
+            'reserves.reserve_id' => undef,
+        },
+        {
+            join => 'reserves',
+        },
+    );
+
+    if ( $available_closed_stack_items->count > 0 ) {
+        $forced_hold_level = 'item';
+    }
+
+    return $forced_hold_level;
+}
+
 =head2 Internal methods
 
 =head3 _unblessed_for_log
