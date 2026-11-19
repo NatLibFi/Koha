@@ -1857,6 +1857,7 @@
     [% Asset.js("js/browser.js") | $raw %]
 
     [% IF Koha.Preference('EnableBooking') %]
+        [% Asset.js("js/modals/booking_pagination.js") | $raw %]
         [% Asset.js("js/modals/place_booking.js") | $raw %]
     [% END %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
