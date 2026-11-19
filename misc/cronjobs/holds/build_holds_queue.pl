@@ -8,7 +8,7 @@
 
 use Modern::Perl;
 
-use Getopt::Long qw( GetOptions );
+use Getopt::Long qw( GetOptions :config no_ignore_case );
 use Pod::Usage   qw( pod2usage );
 
 use C4::Context;
@@ -51,6 +51,14 @@ prevents deletion of current queue and allows the script to only deal with holds
 This is useful when using the realtimeholdsqueue and skipping closed libraries, or allowing holds in the future
 This allows the script to catch holds that may have become active without triggering a real time update.
 
+=item B<--verbose|-v>
+
+Be verbose
+
+=item B<--dry-run|-n>
+
+Don't change data (dry-run)
+
 =back
 
 =head1 DESCRIPTION
@@ -63,14 +71,18 @@ my $help        = 0;
 my $man         = 0;
 my $force       = 0;
 my $unallocated = 0;
+my $dry_run;
+my $verbose;
 
 my $command_line_options = join( " ", @ARGV );
-cronlogaction( { info => $command_line_options } );
+# cronlogaction( { info => $command_line_options } );
 
 GetOptions(
     'h|help'        => \$help,
     'm|man'         => \$man,
     'f|force'       => \$force,
+    'v|verbose+'    => \$verbose,
+    'n|dry-run'     => \$dry_run,
     'u|unallocated' => \$unallocated
 );
 pod2usage(1)                              if $help;
@@ -84,7 +96,14 @@ if ( $rthq && !$force ) {
     exit(1);
 }
 
-my $loops = C4::Context->preference('HoldsQueueParallelLoopsCount');
-CreateQueue( { loops => $loops, unallocated => $unallocated } );
+if ( $dry_run && $verbose ) {
+    print "Dry run!\n";
+} else {
+    cronlogaction( { info => $command_line_options } );
+}
 
-cronlogaction( { action => 'End', info => "COMPLETED" } );
+my $loops = C4::Context->preference('HoldsQueueParallelLoopsCount');
+CreateQueue( { loops => $loops, unallocated => $unallocated, verbose => $verbose, dry_run => $dry_run } );
+
+cronlogaction( { action => 'End', info => "COMPLETED" } )
+    unless $dry_run;
