@@ -203,6 +203,15 @@
                         [% END %]
                     </p>
 
+                    [% UNLESS Koha.Preference('ForceLibrarySelection') %]
+                        <p id="remember-library" hidden>
+                            <label for="remember-library-checkbox">
+                                <input type="checkbox" id="remember-library-checkbox" tabindex="3" />
+                                Remember the selected library in this browser
+                            </label>
+                        </p>
+                    [% END %]
+
                     [% IF Koha.Preference('UseCirculationDesks') && Desks.all %]
                         <p>
                             <label for="set-library-desk_id">Desk:</label>
@@ -290,6 +299,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/show-password-toggle.js") | $raw %]
+    [% Asset.js("js/staff-login-library.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         $(document).ready( function() {
             if ( document.location.hash ) {
