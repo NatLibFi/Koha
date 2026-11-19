@@ -311,7 +311,7 @@
                     <!-- Start of GENERIC_EMAIL case -->
                     [% IF whole.value.partners %]
                         [% ill_url = "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" _ request.illrequest_id %]
-                        <form method="POST" action="/cgi-bin/koha/ill/ill-requests.pl">
+                        <form method="POST" action="/cgi-bin/koha/ill/ill-requests.pl" id="ill-partner-form">
                             [% INCLUDE 'csrf-token.inc' %]
                             <fieldset class="rows">
                                 <legend>Interlibrary loan request details</legend>
@@ -325,7 +325,9 @@
                                         <select size="5" multiple="true" id="partners" name="partners" required="required">
                                             [% FOREACH partner IN whole.value.partners %]
                                                 [% IF partner.email && partner.email.length > 0 %]
-                                                    <option data-partner-id="[% partner.id | html %]" value="[% partner.borrowernumber | html %]"> [% partner.branchcode _ " - " _ partner.surname %] </option>
+                                                    <option data-partner-id="[% partner.id | html %]" data-lang="[% partner.lang || 'default' | html %]" value="[% partner.borrowernumber | html %]">
+                                                        [% partner.branchcode _ " - " _ partner.surname %]
+                                                    </option>
                                                 [% END %]
                                             [% END %]
                                         </select>
@@ -336,21 +338,28 @@
                                             </div>
                                         [% END %]
                                     </li>
-                                    <li>
-                                        <label for="subject" class="required">Subject line:</label>
-                                        <input type="text" name="subject" id="subject" type="text" value="[% whole.value.draft.subject | html %]" required="required" />
-                                    </li>
-                                    <li>
-                                        <label for="body" class="required">Email text:</label>
-                                        <textarea name="body" id="body" rows="20" cols="80" required="required">[% whole.value.draft.body | html %]</textarea>
-                                    </li>
                                 </ol>
                                 <input type="hidden" value="cud-generic_confirm" name="op" />
                                 <input type="hidden" value="draft" name="stage" />
                                 <input type="hidden" value="[% request.illrequest_id | html %]" name="illrequest_id" />
                             </fieldset>
+                            [% FOREACH draft IN whole.value.drafts %]
+                                <fieldset class="rows ill-partner-notice" data-lang="[% draft.lang | html %]" hidden disabled>
+                                    <legend>Email ([% draft.lang | html %])</legend>
+                                    <ol>
+                                        <li>
+                                            <label for="subject_[% draft.lang | html %]" class="required">Subject line:</label>
+                                            <input type="text" name="subject_[% draft.lang | html %]" id="subject_[% draft.lang | html %]" value="[% draft.subject | html %]" required="required" />
+                                        </li>
+                                        <li>
+                                            <label for="body_[% draft.lang | html %]" class="required">Email text:</label>
+                                            <textarea name="body_[% draft.lang | html %]" id="body_[% draft.lang | html %]" rows="20" cols="80" required="required">[% draft.body | html %]</textarea>
+                                        </li>
+                                    </ol>
+                                </fieldset>
+                            [% END %]
                             <fieldset class="action">
-                                <input type="submit" class="btn btn-primary" value="Send email" />
+                                <input type="submit" class="btn btn-primary" value="Send email" disabled />
                                 <span><a href="[% ill_url | url %]" title="Return to request details">Cancel</a></span>
                             </fieldset>
                         </form>
@@ -376,7 +385,7 @@
                                 </div>
                             </div>
                         [% END %]
-                    [% ELSE %]
+                    [% ELSIF !whole.error %]
                         <fieldset class="rows">
                             <legend>Interlibrary loan request details</legend>
                             <p>No partners have been defined yet. Please create appropriate patron records (by default IL category).</p>
