@@ -178,7 +178,7 @@
                 </p>
 
                 [% UNLESS IndependentBranches %]
-                    <p>
+                    <p class="mb-1">
                         [% IF Koha.Preference('ForceLibrarySelection') %]
                             <label for="set-library-branch" class="required">Library:</label>
                             <select name="branch" id="set-library-branch" class="input" tabindex="3" required="required">
@@ -197,18 +197,18 @@
                                 [% END %]
                             </select>
                         [% END %]
-
-                        [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
-                            <span class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</span>
-                        [% END %]
                     </p>
 
-                    <p class="small" hidden>
+                    <p class="small mb-2" hidden>
                         <label for="remember-library-checkbox">
                             <input type="checkbox" id="remember-library-checkbox" data-remember-select="set-library-branch" data-remember-key="library" tabindex="3" />
                             Remember the selected library in this browser
                         </label>
                     </p>
+
+                    [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
+                        <p class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</p>
+                    [% END %]
 
                     [% IF Koha.Preference('UseCirculationDesks') && Desks.all %]
                         <p>
