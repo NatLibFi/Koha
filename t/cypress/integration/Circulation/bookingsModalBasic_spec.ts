@@ -153,6 +153,48 @@ describe("Booking Modal Basic Tests", () => {
         cy.get("[data-bs-dismiss='modal']").should("exist");
     });
 
+    it("loads all three complete resource sets through the production modal", () => {
+        cy.visit(
+            `/cgi-bin/koha/catalogue/detail.pl?biblionumber=${testData.biblio.biblio_id}`
+        );
+        cy.window().then(window =>
+            cy.spy(window as any, "fetchAllKohaApiPages").as("completePageFetch")
+        );
+        cy.get('[data-bs-target="#placeBookingModal"]').first().click();
+        cy.get("#booking_item_id option").should("have.length.at.least", 4);
+        cy.get("@completePageFetch").should(spy => {
+            expect(spy.getCalls().map(call => call.args[1])).to.deep.equal([
+                "item_id", "booking_id", "checkout_id",
+            ]);
+        });
+        cy.get("#booking_result").should(
+            "not.contain.text", "Unable to load complete booking availability"
+        );
+    });
+
+    it("should block submission when booking pages repeat", () => {
+        cy.intercept("GET", "/api/v1/bookings*", {
+            headers: { "X-Total-Count": "4" },
+            body: [{ booking_id: 1 }, { booking_id: 2 }],
+        });
+        cy.visit(
+            `/cgi-bin/koha/catalogue/detail.pl?biblionumber=${testData.biblio.biblio_id}`
+        );
+        cy.get('[data-bs-target="#placeBookingModal"]').first().click();
+        cy.get("#booking_result")
+            .should("be.visible")
+            .and(
+                "contain.text",
+                "Unable to load complete booking availability"
+            );
+        cy.get("#placeBookingForm button[type='submit']").should("be.disabled");
+        cy.get("#placeBookingForm").trigger("submit");
+        cy.get("#booking_result").should(
+            "contain.text",
+            "Complete booking availability has not been loaded"
+        );
+    });
+
     it("should enable fields progressively based on user selections", () => {
         // Setup API intercepts to wait for real API calls instead of arbitrary timeouts
         cy.intercept(

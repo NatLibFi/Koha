@@ -601,6 +601,7 @@
     [% IF Koha.Preference('EnableBooking') %]
         [% INCLUDE 'calendar.inc' %]
         [% INCLUDE 'select2.inc' %]
+        [% Asset.js("js/modals/booking_pagination.js") | $raw %]
         [% Asset.js("js/modals/place_booking.js") | $raw %]
     [% END %]
 
