@@ -66,6 +66,10 @@ my ( $template, $borrowernumber, $cookie, $flags ) = get_template_and_user(
 
 my $showallitems = $input->param('showallitems');
 my $pickup       = $input->param('pickup');
+my $closed_stack_request =
+    C4::Context->preference('EnableClosedStackRequests')
+    ? $input->param('closed_stack_request')
+    : 0;
 
 my $itemtypes = {
     map {
@@ -410,6 +414,8 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             # patron placed a record level hold, all the holds the patron places must
             # be record level. If the patron placed an item level hold, all holds
             # the patron places must be item level
+            # Unless the biblio itself forces a specific hold level which
+            # supersedes the above rules
             my $holds = Koha::Holds->search(
                 {
                     borrowernumber => $patron->borrowernumber,
@@ -417,7 +423,9 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     found          => undef,
                 }
             );
-            $template->param( force_hold_level => $holds->forced_hold_level() );
+
+            my $forced_hold_level = $biblio->forced_hold_level // $holds->forced_hold_level();
+            $template->param( force_hold_level => $forced_hold_level );
 
             # For a librarian to be able to place multiple record holds for a patron for a record,
             # we must find out what the maximum number of holds they can place for the patron is
@@ -459,6 +467,8 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             # (before this loop was inside that sub loop so it was O(n^2) )
 
             for my $item_object (@items) {
+                next if ( $closed_stack_request xor $item_object->is_available_for_closed_stack_request );
+
                 my $do_check;
                 my $item = $item_object->unblessed;
                 $item->{object} = $item_object;
@@ -665,6 +675,7 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # existingreserves building
         my $total_holds       = 0;
+        my $all_record_holds  = 0;
         my $hold_branches     = [];
         my $hold_itemtypes    = [];
         my $always_show_holds = $input->cookie('always_show_holds');
@@ -683,7 +694,17 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     )->unblessed
                 }
             };
-            $total_holds = Koha::Holds->search( { biblionumber => $biblionumber } )->count;
+            my $holds_rs = Koha::Holds->search(
+                { 'me.biblionumber' => $biblionumber },
+                { order_by          => 'priority' }
+            );
+            $all_record_holds = $holds_rs->count;
+            if ($closed_stack_request) {
+                $holds_rs = $holds_rs->filter_by_closed_stack_requests();
+            } else {
+                $holds_rs = $holds_rs->filter_out_closed_stack_requests();
+            }
+            $total_holds = $holds_rs->count;
             my $branches = Koha::Holds->search(
                 {
                     biblionumber => $biblionumber,
@@ -726,13 +747,14 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             C4::Search::enabled_staff_search_views,
         );
 
-        $biblioloopiter{biblionumber}   = $biblionumber;
-        $biblioloopiter{title}          = $biblio->title;
-        $biblioloopiter{author}         = $biblio->author;
-        $biblioloopiter{rank}           = $fixedRank;
-        $biblioloopiter{total_holds}    = $total_holds;
-        $biblioloopiter{hold_branches}  = $hold_branches;
-        $biblioloopiter{hold_itemtypes} = $hold_itemtypes;
+        $biblioloopiter{biblionumber}     = $biblionumber;
+        $biblioloopiter{title}            = $biblio->title;
+        $biblioloopiter{author}           = $biblio->author;
+        $biblioloopiter{rank}             = $fixedRank;
+        $biblioloopiter{total_holds}      = $total_holds;
+        $biblioloopiter{all_record_holds} = $all_record_holds;
+        $biblioloopiter{hold_branches}    = $hold_branches;
+        $biblioloopiter{hold_itemtypes}   = $hold_itemtypes;
 
         # Pass through any reserve charge
         if ($patron) {
@@ -804,6 +826,8 @@ $template->param( pickup => $pickup || C4::Context->userenv->{branch} );
 $template->param( borrowernumber => $borrowernumber_hold );
 
 $template->param( failed_holds => \@failed_holds );
+
+$template->param( closed_stack_request => $closed_stack_request );
 
 # printout the page
 output_html_with_http_headers $input, $cookie, $template->output;
