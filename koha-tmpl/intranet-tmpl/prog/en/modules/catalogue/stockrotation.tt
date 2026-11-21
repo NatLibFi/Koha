@@ -86,7 +86,7 @@
                                             <span class="[% span_class | html %]"> [% Branches.GetName(this_stage.branchcode_id) | html %] ([% this_stage.duration | html %]) </span>
                                             &raquo;
                                         [% END %]
-                                        [% IF item.stages.size > 0 %]
+                                        [% IF item.stages.size AND item.stages.size > 0 %]
                                             [% IF item.rota.cyclical %]
                                                 <span class="stage">START</span>
                                             [% ELSE %]

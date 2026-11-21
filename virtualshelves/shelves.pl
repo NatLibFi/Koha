@@ -322,7 +322,11 @@ if ( $op eq 'view' ) {
             );
 
             my @items;
-            while ( my $content = $contents->next ) {
+            # DBIx::Class::ResultSet::_construct_results(): Unable to properly collapse has_many results
+            # in iterator mode due to order criteria - performed an eager cursor slurp underneath.
+            # Consider using ->all() instead at /home/vagrant/kohaclone/Koha/Objects.pm line 335
+            # while ( my $content = $contents->next ) {
+            foreach my $content  ($contents->as_list) {
                 my $this_item;
                 my $biblionumber = $content->biblionumber;
                 my $biblio       = Koha::Biblios->find($biblionumber);
