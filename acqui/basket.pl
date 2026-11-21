@@ -612,8 +612,8 @@ sub get_order_infos {
     my $cost_tax_excluded = $line{unitprice_tax_excluded} || $line{ecost_tax_excluded};
     $line{total_tax_included} = get_rounded_price($cost_tax_included) * $line{quantity};
     $line{total_tax_excluded} = get_rounded_price($cost_tax_excluded) * $line{quantity};
-    $line{tax_value}          = $line{tax_value_on_ordering};
-    $line{tax_rate}           = $line{tax_rate_on_ordering};
+    $line{tax_value}          = $line{tax_value_on_ordering} // 0;
+    $line{tax_rate}           = $line{tax_rate_on_ordering} // 0; # comes undef for cancelled orders
 
     if ( $line{'title'} ) {
         my $volume      = $order->{'volume'};
