@@ -1063,7 +1063,6 @@ subtest 'update() tests' => sub {
         delete $newpatron->{restricted};
         delete $newpatron->{expired};
         delete $newpatron->{anonymized};
-        delete $newpatron->{self_renewal_available};
 
         $t->put_ok( "//$userid:$password@/api/v1/patrons/-1" => json => $newpatron )
             ->status_is(404)
