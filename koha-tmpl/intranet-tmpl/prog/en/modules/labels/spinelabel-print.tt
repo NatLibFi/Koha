@@ -62,7 +62,8 @@
 [% Asset.js( "lib/jquery/jquery-3.6.0.min.js" ) | $raw %]
 [% Asset.js( "lib/jquery/jquery-migrate-3.3.2.min.js" ) | $raw %]
 [% IF ( autoprint ) %]
-    [% INCLUDE 'slip-print.inc' #printThenClose %]
+    [%# Keep the window open so the label can be edited and printed again %]
+    [% INCLUDE 'slip-print.inc' keep_open = 1 %]
 [% END %]
 <script nonce="[% Koha.CSPNonce | $raw %]">
     $(document).ready(function () {
