@@ -1,32 +1,41 @@
+copyValueToClipboard = async (target, value) => {
+    if (!value) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(value);
+    } catch (err) {
+        return;
+    }
+
+    const saved_title = target.title;
+    target.title = __("Copied to clipboard");
+    const tooltip = bootstrap.Tooltip.getOrCreateInstance(target);
+    tooltip.show();
+    setTimeout(() => {
+        const t = bootstrap.Tooltip.getInstance(target);
+        if (t) {
+            t.dispose();
+            target.title = saved_title;
+        }
+    }, 3000);
+};
+
 (() => {
     const copyToClipboardButtons = document.querySelectorAll(
         "[data-copy-to-clipboard]"
     );
+
     if (copyToClipboardButtons.length) {
-        const copyToClipboard = async e => {
-            const target = e.target;
+        async function copyToClipboard(e) {
+            const target = this;
             if (!(target instanceof HTMLButtonElement)) {
                 return;
             }
             const { value } = target.dataset;
-            if (!value) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(value);
-            } catch (_) {
-                return;
-            }
-
-            target.title = __("Copied to clipboard");
-            const tooltip = bootstrap.Tooltip.getOrCreateInstance(target);
-            tooltip.show();
-            setTimeout(() => {
-                tooltip.dispose();
-                target.title = "";
-            }, 3000);
-        };
+            await copyValueToClipboard(target, value);
+        }
 
         copyToClipboardButtons.forEach(copyToClipboardButton => {
             copyToClipboardButton.addEventListener("click", copyToClipboard);
