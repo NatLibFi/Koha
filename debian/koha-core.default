@@ -16,6 +16,12 @@ KOHA_HOME="/usr/share/koha"
 #
 USE_INDEXER_DAEMON="no"
 
+## Disable Zebra at all to be started (if libraries uses ElasicSearch)
+#
+# USE_ZEBRA_SEARCH: "no" | "yes"
+#
+USE_ZEBRA_SEARCH="yes"
+
 # Set an alternate indexer daemon. The default is to use the rebuild_zebra.pl
 # in daemon mode.
 #
