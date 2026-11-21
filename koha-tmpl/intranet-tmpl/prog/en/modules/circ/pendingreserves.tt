@@ -148,7 +148,7 @@
                                                 Any available from item group <em>[% hold_info.item_group.description | html %]</em>.
                                             [% END %]
                                         </td>
-                                        <td>
+                                        <td data-order="[% hold_info.callnumber_sort | html %]">
                                             [% IF ( hold_info.callnumbers.size ) %]
                                                 <ul>
                                                     [% FOREACH callnumber IN hold_info.callnumbers %]
@@ -346,7 +346,7 @@
                         { name: "title" },
                         { name: "libraries", dataFilter: "libraries" },
                         { name: "barcodes" },
-                        { name: "call_numbers" },
+                        { name: "call_numbers", type: "string" },
                         { name: "copy_numbers" },
                         { name: "enumeration" },
                         { name: "itemtypes", dataFilter: "item_types" },
