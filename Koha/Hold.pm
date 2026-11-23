@@ -1033,8 +1033,6 @@ sub cancel {
                          "\n  charge = " . $charge .
                          "\n";
                 }
-                die "DRY_RUN: in sub cancel\n" if $params->{dry_run};
-
                 $account->add_debit(
                     {
                         amount     => $charge,

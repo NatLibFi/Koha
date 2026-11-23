@@ -64,7 +64,7 @@ Be verbose
 
 =item B<--dry-run|-n>
 
-Don't change data (dry-run)
+List expired holds that would be cancelled without changing them.
 
 =back
 
@@ -76,7 +76,6 @@ my $verbose;
 my $reason;
 
 my $command_line_options = join( " ", @ARGV );
-# cronlogaction( { info => $command_line_options } );
 
 GetOptions(
     'help|?'   => \$help,
@@ -86,11 +85,8 @@ GetOptions(
 ) or pod2usage(1);
 pod2usage(1) if $help;
 
-if ( $dry_run && $verbose ) {
-    print "Dry run!\n";
-} else {
-    cronlogaction({ info => $command_line_options });
-}
+say "Dry run!" if $dry_run && $verbose;
+cronlogaction( { info => $command_line_options } ) unless $dry_run;
 
 C4::Reserves::CancelExpiredReserves($reason, { verbose => $verbose, dry_run => $dry_run });
 
