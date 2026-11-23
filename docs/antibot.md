@@ -31,8 +31,8 @@ Clients without JavaScript receive an explanation. A computation or
 network failure exposes an explicit retry button; there is no automatic
 endless retry loop.
 
-The verifier is an Apache `RewriteMap prg` process using Perl modules
-already required by Koha. It loads neither the Koha application nor its
+The Apache `RewriteMap prg` helper runs verification in a local worker
+using Perl modules already required by Koha. It loads neither the Koha application nor its
 database configuration. Each check performs bounded parsing and one
 HMAC; solving adds one SHA-256 check, never a server-side search. Apache
 serializes access to an external map using its rewrite-map mutex, so
@@ -51,9 +51,12 @@ SetEnvIf Request_URI ^ ANTIBOT_ENABLED=1
 Check the Apache configuration and reload Apache to apply changes. There
 is no System Preference, database lookup or policy synchronization service.
 Without the flag, requests do not use the verifier. The default scope
-covers selected OPAC scripts and their search/home aliases. The optional
+covers selected OPAC scripts and their search, home and
+`/bib/`, `/isbn/`, `/issn/` aliases. The optional
 `ANTIBOT_ALL=1` also protects other browser routes. It does not enable
 protection on the staff virtual host.
+The REST API (`/api/`) and OPAC services (`/cgi-bin/koha/svc/`) are exempt
+in both modes. Koha still handles their authentication and permissions.
 
 The packaged verifier is `/usr/sbin/koha-opac-pow`. The package prepares a
 missing signing key during configuration, without printing its contents or
@@ -132,6 +135,13 @@ by the client. Clearance may be reused on the same address/site during
 its validity. A solved challenge may also be submitted again while
 valid; this stateless protocol does not claim one-time proof redemption.
 
+After a successful solve the page sends `GET check`. Apache applies the
+same duplicate, date, shape and verifier checks as a protected page and
+answers 204 with `X-Koha-Clearance: ok` only when the browser returned a
+valid cookie. Without it the page explains that cookies are required and
+does not reload, so a browser that refuses the cookie cannot loop. The
+readback stores nothing in the browser and never reaches Koha.
+
 ## Machine clients, caches and logs
 
 API, ILS-DI, unAPI, sitemap, robots and well-known interfaces remain
@@ -151,6 +161,23 @@ Counters are periodic and per helper; they are not a complete traffic
 census. Apache rewrite trace logging can expose map keys, so do not
 enable rewrite tracing in a live configuration carrying real tokens.
 
+## Verifier deadline
+
+The map helper gives its worker one second to return a complete answer.
+If the worker misses the deadline or its connection fails, the helper
+retires it and returns `NULL`. Lookups during the next five seconds fail
+immediately. The next lookup after that pause can start a replacement
+without an Apache reload. A worker that is still being reaped delays
+replacement without delaying lookups. Challenge issuance returns 503
+while verification is unavailable, and protected requests require valid
+clearance throughout.
+
+Apache itself has no timeout for a `prg` map. This deadline covers the
+verification worker, including key loading and diagnostics. It bounds
+the time the map mutex can be held waiting on that worker. Apache and its
+map helper still need to be running, and other traffic shares the Apache
+worker pool.
+
 ## Acceptance
 
 ### Threat model and limits
@@ -166,13 +193,9 @@ file without replacing a concurrent or existing ring; unsafe files are refused.
 This does not stop a bot that performs the work and then reuses its clearance.
 Exempt machine interfaces need separate capacity controls. Access to the
 Apache account or signing key compromises this gate; it is not a boundary
-against a compromised web server. There is one persistent verifier per map,
-including in a disabled virtual host, although disabled requests make no
-lookups. A terminated verifier fails closed. A stalled verifier can delay
-lookups under Apache's shared rewrite-map mutex; this is a capacity and
-availability limit requiring representative testing, not a reason to allow
-unverified traffic through. No throughput or weak-device guarantee follows
-from the functional fixture tests.
+against a compromised web server. Each map starts at most one verification
+worker. Disabled requests make no lookups. No throughput or weak-device
+guarantee follows from the functional fixture tests.
 
 ### Verification
 
