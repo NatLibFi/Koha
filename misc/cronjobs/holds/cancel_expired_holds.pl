@@ -57,17 +57,23 @@ Print a brief help message and exits.
 
 Optionally adds a reason for cancellation (which will trigger a notice to be sent to the patron)
 
+=item B<--dry-run|-n>
+
+List expired holds that would be cancelled without changing them.
+
 =back
 
 =cut
 
 my $help = 0;
 my $reason;
+my $dry_run;
 GetOptions(
-    'help|?'   => \$help,
-    'reason=s' => \$reason
+    'help|?'    => \$help,
+    'reason=s'  => \$reason,
+    'dry-run|n' => \$dry_run,
 ) or pod2usage(1);
 pod2usage(1) if $help;
 
-C4::Reserves::CancelExpiredReserves($reason);
+C4::Reserves::CancelExpiredReserves( $reason, { dry_run => $dry_run } );
 
