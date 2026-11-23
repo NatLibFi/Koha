@@ -6,13 +6,17 @@
 use Modern::Perl;
 use lib '/usr/share/koha/lib';
 use Koha::Antibot;
-use Fcntl          qw(O_RDONLY O_NOFOLLOW O_NONBLOCK S_ISREG);
+use Fcntl          qw(F_SETFL O_RDONLY O_NOFOLLOW O_NONBLOCK S_ISREG);
 use File::Basename qw(dirname);
 use File::Temp     qw(tempfile);
 use Getopt::Long   qw(GetOptions);
 use IO::Handle;
+use IO::Select;
 use JSON::PP;
-use Errno qw(EINTR EEXIST);
+use Errno       qw(EINTR EEXIST);
+use POSIX       qw(WNOHANG);
+use Socket      qw(AF_UNIX SOCK_STREAM SHUT_WR);
+use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
 
 # This is a persistent RewriteMap protocol, not a CGI or a Koha worker.
 binmode STDIN,  ':raw';
@@ -89,22 +93,15 @@ if ($init_key) {
     exit( $ok ? 0 : 1 );
 }
 
-my $antibot = eval { Koha::Antibot->new( keys => load_keys($key_file), %policy ) };
-warn "Koha antibot verifier unavailable; requests will be refused\n" unless $antibot;
-
-my %counts;
-my $last_summary = time;
-my $json         = JSON::PP->new->canonical(1);
-
 sub summarize {
-    return unless %counts;
-    print STDERR $json->encode( { event => 'koha_antibot_summary', pid => $$, counts => \%counts } ), "\n";
-    %counts       = ();
-    $last_summary = time;
+    my ( $json, $counts ) = @_;
+    return unless %$counts;
+    print STDERR $json->encode( { event => 'koha_antibot_summary', pid => $$, counts => $counts } ), "\n";
+    %$counts = ();
 }
 
 sub dispatch {
-    my ($line) = @_;
+    my ( $antibot, $line ) = @_;
     return [ 'NULL', 'input_invalid' ] unless length($line) && $line =~ /\A[\x21-\x7e]+\z/;
     my ( $op, $ip, $site, @args ) = split /!/, $line, -1;
     return [ 'NULL', 'input_invalid' ]        unless defined $site;
@@ -125,38 +122,142 @@ sub dispatch {
     return [ 'NULL', 'input_invalid' ];
 }
 
-sub respond {
-    my ($line) = @_;
-    my $result = eval { dispatch($line) } // [ 'NULL', 'internal_error' ];
-    $counts{ $result->[1] }++;
-    print STDOUT $result->[0], "\n";
-    summarize() if time - $last_summary >= 60;
+sub run_verifier {
+    my ($channel) = @_;
+    my $antibot = eval { Koha::Antibot->new( keys => load_keys($key_file), %policy ) };
+    warn "Koha antibot verifier unavailable; requests will be refused\n" unless $antibot;
+
+    my %counts;
+    my $last_summary = time;
+    my $json         = JSON::PP->new->canonical(1);
+    $channel->autoflush(1);
+    while ( my $line = <$channel> ) {
+        chomp $line;
+        my $result = eval { dispatch( $antibot, $line ) } // [ 'NULL', 'internal_error' ];
+        $counts{ $result->[1] }++;
+        print {$channel} $result->[0], "\n" or return;
+        if ( time - $last_summary >= 60 ) {
+            summarize( $json, \%counts );
+            $last_summary = time;
+        }
+    }
+    summarize( $json, \%counts );
 }
 
-# Bound memory even if a caller violates the Apache-side input limits.
-# sysread avoids waiting to fill a fixed-size record on the request pipe.
-my $buffer  = '';
-my $discard = 0;
-while (1) {
-    my $length = sysread( STDIN, my $chunk, 1024 );
-    next if !defined $length && $! == EINTR;
-    last unless defined $length && $length;
-    while ( $chunk =~ s/\A([^\n]*)\n// ) {
-        my $tail = $1;
-        respond( !$discard && length($buffer) + length($tail) <= 1024 ? $buffer . $tail : '' );
-        $buffer  = '';
-        $discard = 0;
+my $verifier_timeout = 1;
+my $retry_delay      = 5;
+my $max_frame        = 1024;
+
+sub forward_request {
+    my ( $channel, $readable, $frame ) = @_;
+    my $deadline = clock_gettime(CLOCK_MONOTONIC) + $verifier_timeout;
+    $frame .= "\n";
+    my $written = syswrite $channel, $frame;
+    return unless defined $written && $written == length $frame;
+
+    my $response = '';
+    while ( length($response) <= $max_frame ) {
+        my $remaining = $deadline - clock_gettime(CLOCK_MONOTONIC);
+        return unless $remaining > 0 && $readable->can_read($remaining);
+        my $length = sysread $channel, my $chunk, $max_frame + 1 - length($response);
+        return unless $length;
+        $response .= $chunk;
+        if ( $response =~ /\A[!-~]{1,${max_frame}}\n\z/ ) {
+            return $response if clock_gettime(CLOCK_MONOTONIC) <= $deadline;
+            return;
+        }
     }
-    unless ($discard) {
-        if ( length($buffer) + length($chunk) > 1024 ) {
+    return;
+}
+
+sub serve_map {
+    my ($lookup) = @_;
+    my $buffer  = '';
+    my $discard = 0;
+    while (1) {
+        my $length = sysread( STDIN, my $chunk, $max_frame );
+        next if !defined $length && $! == EINTR;
+        return 1 unless $length;
+        while ( $chunk =~ s/\A([^\n]*)\n// ) {
+            my $tail  = $1;
+            my $frame = !$discard && length($buffer) + length($tail) <= $max_frame ? $buffer . $tail : '';
+            return unless print STDOUT $lookup->($frame);
             $buffer  = '';
-            $discard = 1;
-        } else {
-            $buffer .= $chunk;
+            $discard = 0;
+        }
+        unless ($discard) {
+            if ( length($buffer) + length($chunk) > $max_frame ) {
+                $buffer  = '';
+                $discard = 1;
+            } else {
+                $buffer .= $chunk;
+            }
         }
     }
 }
-summarize();
+
+sub start_verifier {
+    socketpair my $relay, my $worker, AF_UNIX, SOCK_STREAM, 0 or return;
+    fcntl $relay, F_SETFL, O_NONBLOCK or return;
+    my $pid = fork();
+    return unless defined $pid;
+    if ( !$pid ) {
+        $SIG{TERM} = 'DEFAULT';
+        close $relay;
+        close STDIN;
+        close STDOUT;
+        run_verifier($worker);
+        POSIX::_exit(0);
+    }
+    close $worker;
+    return ( $pid, $relay, IO::Select->new($relay) );
+}
+
+# Only the relay owns the Apache pipes. Its worker may stall in key loading,
+# verification or logging without keeping an Apache lookup open.
+my ( $pid, $channel, $readable );
+my $retry_at = 0;
+$SIG{PIPE} = 'IGNORE';
+$SIG{TERM} = sub {
+    kill 'KILL', $pid if $pid;
+    POSIX::_exit(0);
+};
+
+serve_map(
+    sub {
+        my ($frame) = @_;
+        unless ($channel) {
+            return "NULL\n" if clock_gettime(CLOCK_MONOTONIC) < $retry_at;
+            my $retired = $pid;
+            undef $pid;
+            if ( $retired && waitpid( $retired, WNOHANG ) == 0 ) {
+                $pid = $retired;
+                return "NULL\n";
+            }
+            ( $pid, $channel, $readable ) = start_verifier();
+        }
+        if ($channel) {
+            my $response = forward_request( $channel, $readable, $frame );
+            return $response if defined $response;
+            close $channel;
+            undef $channel;
+            undef $readable;
+            kill 'KILL', $pid;
+        }
+        # Give queued lookups a fast refusal while the failed worker clears.
+        $retry_at = clock_gettime(CLOCK_MONOTONIC) + $retry_delay;
+        return "NULL\n";
+    }
+);
+
+if ($channel) {
+    shutdown $channel, SHUT_WR;
+    kill 'KILL', $pid unless $readable->can_read($verifier_timeout);
+}
+if ($pid) {
+    $SIG{TERM} = 'DEFAULT';
+    waitpid( $pid, WNOHANG );
+}
 
 =head1 NAME
 

@@ -91,11 +91,17 @@ write_file( $key_file, unpack( 'H*', $key ) . "\n" );
 # Only operation names are recorded; no token or client metadata is logged.
 my $wrapper = '#!' . $^X . "\n" . <<'WRAPPER';
 use strict; use warnings;
+use FindBin;
 use IPC::Open2;
 use IO::Handle;
 use POSIX qw(WNOHANG);
 my ($log, $perl, $root, $script, $keys, @policy) = @ARGV;
-my $child = open2(my $output, my $input, $perl, '-I', $root, $script,
+my @fixture;
+if (@policy && $policy[0] eq '--fixture-delay') {
+    shift @policy;
+    @fixture = ('-I', $FindBin::Bin, '-MPausedAntibot');
+}
+my $child = open2(my $output, my $input, $perl, '-I', $root, @fixture, $script,
     '--key-file', $keys, @policy);
 $input->autoflush(1); STDOUT->autoflush(1);
 sub cleanup {
@@ -117,6 +123,24 @@ while (my $line = <STDIN>) {
 cleanup();
 WRAPPER
 write_file( "$tmp/map", $wrapper, oct('0700') );
+my $paused_verifier = <<'MODULE';
+package PausedAntibot;
+use Koha::Antibot ();
+use File::Basename qw(dirname);
+use Time::HiRes qw(sleep);
+
+my $challenge = \&Koha::Antibot::challenge;
+{
+    no warnings 'redefine';
+    *Koha::Antibot::challenge = sub {
+        sleep 15 if -e dirname(__FILE__) . '/pause-verifier';
+        goto &$challenge;
+    };
+}
+1;
+MODULE
+write_file( "$tmp/PausedAntibot.pm", $paused_verifier );
+write_file( "$tmp/staff.html", 'staff fixture' );
 my $backend = '#!'
     . $^X . "\n"
     . 'open my $f, ">>", '
@@ -145,6 +169,9 @@ write_file( "$tmp/dead-map", '#!' . $^X . "\nexit 0;\n", oct('0700') );
 my $dead_rules = $rules;
 $dead_rules =~ s{^RewriteMap koha_antibot .*\n}{RewriteMap koha_antibot "prg:$tmp/dead-map"\n}m;
 write_file( "$tmp/dead.conf", $dead_rules );
+my $stalled_rules = $rules;
+$stalled_rules =~ s/\Q$map_command\E/$map_command --fixture-delay/;
+write_file( "$tmp/stalled.conf", $stalled_rules );
 
 open my $compiled, '-|', $httpd, '-l' or die 'Cannot inspect Apache modules';
 my $static = do { local $/; scalar <$compiled> };
@@ -213,11 +240,15 @@ AddType text/css .css
 <VirtualHost 127.0.0.1:$back>
     ScriptAliasMatch ^/backend/.* "$tmp/backend.cgi"
 </VirtualHost>
+<VirtualHost 127.0.0.1:$front>
+    ServerName staff.example
+    Alias /staff "$tmp/staff.html"
+</VirtualHost>
 CONFIG
 
 # Identical rules and routes, with only the existing enable/scope flags changed.
 my ($vhost) = $config =~ /(<VirtualHost 127\.0\.0\.1:\Q$front\E>.*?<\/VirtualHost>)/s;
-for my $variant (qw(disabled wide unavailable custom dead)) {
+for my $variant (qw(disabled wide unavailable custom dead stalled)) {
     my $extra = $vhost;
     $extra =~ s/ServerName catalogue\.example/ServerName $variant.example/;
     $extra =~ s/Define instance test_catalogue/Define instance ${variant}_catalogue/;
@@ -229,6 +260,8 @@ for my $variant (qw(disabled wide unavailable custom dead)) {
         $extra =~ s/antibot\.conf/unavailable.conf/;
     } elsif ( $variant eq 'dead' ) {
         $extra =~ s/antibot\.conf/dead.conf/;
+    } elsif ( $variant eq 'stalled' ) {
+        $extra =~ s/antibot\.conf/stalled.conf/;
     } else {
         $extra =~ s{(Include "\Q$tmp\E/antibot.conf")}
             {$1\n    RewriteMap koha_antibot "prg:$map_command --difficulty 7 --challenge-ttl 17 --clearance-ttl 73"};
@@ -305,7 +338,11 @@ subtest 'POST and aliases do not bypass the gate' => sub {
     my $calls    = count_lines("$tmp/backend-calls");
     my $response = $ua->post( "$base/cgi-bin/koha/opac-search.pl", Content => 'query=example' );
     is( $response->code, 429, 'POST is refused instead of replaced or redirected' );
-    for my $path ( '/search', '/opac-search.pl', '/search/example', '/' ) {
+    for my $path (
+        '/search', '/opac-search.pl', '/search/example', '/', '/bib/1', '/isbn/9780306406157',
+        '/issn/0378-5955'
+        )
+    {
         my $r = $ua->get("$base$path");
         ok( $r->decoded_content =~ /id="challenge-status"/, 'Alias receives challenge' );
     }
@@ -388,6 +425,26 @@ subtest 'existing enable flag and optional broad scope' => sub {
     is( count_lines("$tmp/map-calls"), $maps, 'Broad unauthenticated paths need no verifier' );
 };
 
+subtest 'OPAC services remain available without browser clearance' => sub {
+    my $maps  = count_lines("$tmp/map-calls");
+    my $calls = count_lines("$tmp/backend-calls");
+    for my $path ( '/cgi-bin/koha/svc/shelfbrowser.pl', '/cgi-bin/koha/svc/report' ) {
+        my $r = $ua->get( "$base$path", Host => 'wide.example' );
+        like( $r->decoded_content, qr/id=backend-fixture/, "GET $path reaches the backend" );
+    }
+    my $r = $ua->post( "$base/cgi-bin/koha/svc/club/enroll", Host => 'wide.example', Content => 'id=1' );
+    like( $r->decoded_content, qr/id=backend-fixture/, 'POST to a nested OPAC service reaches the backend' );
+    is( count_lines("$tmp/backend-calls"), $calls + 3, 'All service requests reached the backend' );
+
+    $calls = count_lines("$tmp/backend-calls");
+    for my $path ( '/cgi-bin/koha/opac-search.pl', '/cgi-bin/koha/svc-preview.pl' ) {
+        my $r = $ua->get( "$base$path", Host => 'wide.example' );
+        like( $r->decoded_content, qr/id="challenge-status"/, "$path remains protected" );
+    }
+    is( count_lines("$tmp/backend-calls"), $calls, 'Protected routes never reached the backend' );
+    is( count_lines("$tmp/map-calls"),     $maps,  'Requests without cookies did not invoke the verifier' );
+};
+
 subtest 'unavailable verifier fails closed before backend' => sub {
     my $calls = count_lines("$tmp/backend-calls");
     my $r     = $ua->get( "$base/opac-tmpl/lib/koha_fast_challenge/issue", Host => 'unavailable.example' );
@@ -398,6 +455,34 @@ subtest 'unavailable verifier fails closed before backend' => sub {
     $r = $ua->get( "$base/opac-tmpl/lib/koha_fast_challenge/issue", Host => 'dead.example' );
     is( $r->code,                          503,    'A terminated verifier refuses issue without waiting for Koha' );
     is( count_lines("$tmp/backend-calls"), $calls, 'Dead verifier does not route error to backend' );
+};
+
+subtest 'verifier deadline lets Apache keep serving and recover' => sub {
+    my $issue = "$base/opac-tmpl/lib/koha_fast_challenge/issue";
+    my $calls = count_lines("$tmp/backend-calls");
+    is( $ua->get( $issue, Host => 'stalled.example' )->code, 204, 'Fixture verifier starts healthy' );
+
+    write_file( "$tmp/pause-verifier", '' );
+    my $before = time;
+    is( $ua->get( $issue, Host => 'stalled.example' )->code, 503, 'Apache refuses an overdue lookup' );
+    cmp_ok( time - $before, '<', 4, 'Refusal arrives inside the client deadline' );
+    my $staff = $ua->get( "$base/staff", Host => 'staff.example' );
+    is( $staff->code, 200, 'Staff vhost responds on the same Apache during verifier failure' );
+
+    $before = time;
+    is( $ua->get( $issue, Host => 'stalled.example' )->code, 503, 'Queued lookups are refused during cooldown' );
+    cmp_ok( time - $before, '<', 0.9, 'Repeat lookup does not wait for another deadline' );
+    is( count_lines("$tmp/backend-calls"), $calls, 'Timeout and cooldown never route requests to Koha' );
+
+    unlink "$tmp/pause-verifier" or die $!;
+    my $until = time + 7;
+    my $recovered;
+    while ( time < $until ) {
+        $recovered = $ua->get( $issue, Host => 'stalled.example' );
+        last if $recovered->code == 204;
+        sleep 0.2;
+    }
+    is( $recovered && $recovered->code, 204, 'Replacement verifier works without an Apache reload' );
 };
 
 subtest 'per-instance parameters override shared defaults' => sub {
@@ -441,6 +526,24 @@ subtest 'real issued work, server cookie and repeat admission' => sub {
     ok( ( $solved->header('Cache-Control') // '' ) =~ /no-store/, 'Cookie response is not cacheable' );
     my ($value) = $cookie =~ /\AKOHA_INIT=(c1\.[^;]+)/;
     unless ($value) { fail('Clearance cookie present'); return; }
+    my $check    = "$base/opac-tmpl/lib/koha_fast_challenge/check";
+    my $tampered = substr( $value, 0, -1 ) . ( $value =~ /0\z/ ? '1' : '0' );
+
+    for my $case (
+        [ 'without a cookie',      undef,                                undef ],
+        [ 'with a tampered token', "KOHA_INIT=$tampered",                undef ],
+        [ 'with duplicate tokens', "KOHA_INIT=$value; KOHA_INIT=$value", undef ],
+        [ 'with the clearance',    "KOHA_INIT=$value",                   'ok' ],
+        )
+    {
+        my ( $name, $jar, $expected ) = @$case;
+        my $calls = count_lines("$tmp/backend-calls");
+        my $r     = $ua->get( $check, defined $jar ? ( Cookie => $jar ) : () );
+        is( $r->code,                       204,       "Readback answers $name" );
+        is( $r->header('X-Koha-Clearance'), $expected, "Readback reports clearance $name" );
+        ok( ( $r->header('Cache-Control') // '' ) =~ /no-store/, "Readback $name is not cacheable" );
+        is( count_lines("$tmp/backend-calls"), $calls, "Readback $name does not reach Koha" );
+    }
     for ( 1 .. 2 ) {
         my $calls = count_lines("$tmp/backend-calls");
         my $r     = $ua->get( "$base/cgi-bin/koha/opac-search.pl", Cookie => "KOHA_INIT=$value" );
