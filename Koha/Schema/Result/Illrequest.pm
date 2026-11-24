@@ -417,6 +417,28 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+# Exclude empty values so every blank cell sorts as NULL, regardless of
+# whether an empty or a historical attribute is present.
+__PACKAGE__->might_have(
+    'last_standard_recipients',
+    'Koha::Schema::Result::Illrequestattribute',
+    sub {
+        my ($args) = @_;
+        my ( $request, $recipient ) = @{$args}{qw(self_alias foreign_alias)};
+        return {
+            -and => [
+                { "$recipient.illrequest_id" => { -ident => "$request.illrequest_id" } },
+                \[
+                    "BINARY $request.backend = ? AND BINARY $recipient.backend = ? "
+                        . "AND BINARY $recipient.type = ? AND BINARY $recipient.value <> ''",
+                    'Standard', 'Standard', 'requested_partners',
+                ],
+            ],
+        };
+    },
+    { cascade_copy => 0, cascade_delete => 0 },
+);
+
 __PACKAGE__->belongs_to(
   "ill_batch",
   "Koha::Schema::Result::Illbatch",

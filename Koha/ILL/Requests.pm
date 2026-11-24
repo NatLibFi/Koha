@@ -110,17 +110,7 @@ sub search {
     my ( $self, $params, $attributes ) = @_;
 
     if ( ref($self) && $self->{_sort_requested_partners} && ref( $attributes->{order_by} ) eq 'ARRAY' ) {
-        my @order_by        = @{ $attributes->{order_by} };
-        my $recipient_value = <<'SQL';
-COALESCE((
-    SELECT recipient.value
-    FROM illrequestattributes recipient
-    WHERE recipient.illrequest_id = me.illrequest_id
-        AND BINARY me.backend = 'Standard'
-        AND BINARY recipient.backend = 'Standard'
-        AND BINARY recipient.type = 'requested_partners'
-), '')
-SQL
+        my @order_by = @{ $attributes->{order_by} };
         my $sorting_by_recipients;
         for my $atom (@order_by) {
             my ( $direction, $column ) =
@@ -128,13 +118,20 @@ SQL
             next unless defined $column && !ref($column) && $column =~ /\A(?:me\.)?last_request_sent_to\z/;
             next unless $direction eq '-asc' || $direction eq '-desc';
 
-            $atom                  = { $direction => \$recipient_value };
+            $atom                  = { $direction => 'last_standard_recipients.value' };
             $sorting_by_recipients = 1;
         }
 
-        # Keep ties stable across pages, after any other requested sort keys.
-        $attributes = { %{$attributes}, order_by => [ @order_by, 'me.illrequest_id' ] }
-            if $sorting_by_recipients;
+        if ($sorting_by_recipients) {
+            my $join = $attributes->{join} // [];
+            $attributes = {
+                %{$attributes},
+                join => [ ( ref($join) eq 'ARRAY' ? @{$join} : $join ), 'last_standard_recipients' ],
+
+                # Keep ties stable across pages, after any other requested sort keys.
+                order_by => [ @order_by, 'me.illrequest_id' ],
+            };
+        }
     }
 
     return $self->SUPER::search( $params, $attributes );
