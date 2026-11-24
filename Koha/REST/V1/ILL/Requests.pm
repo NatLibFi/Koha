@@ -47,7 +47,7 @@ sub list {
 
     return try {
 
-        my $reqs = $c->objects->search( Koha::ILL::Requests->new->filter_by_visible );
+        my $reqs = $c->objects->search( Koha::ILL::Requests->new->filter_by_visible->with_requested_partners_sort );
 
         return $c->render(
             status  => 200,
@@ -76,7 +76,7 @@ sub patron_list {
 
         return $c->render(
             status  => 200,
-            openapi => $c->objects->search( $patron->ill_requests ),
+            openapi => $c->objects->search( $patron->ill_requests->with_requested_partners_sort ),
         );
     } catch {
         $c->unhandled_exception($_);
