@@ -333,7 +333,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('HoldRatioDefault','3'),
 ('HoldsAutoFill','0'),
 ('HoldsAutoFillPrintSlip','0'),
-('HoldsCallnumberSortToPull','classification'),
+('HoldsCallnumberSortToPull','alphabetical'),
 ('HoldsLog','0'),
 ('HoldsNeedProcessingSIP', '0'),
 ('HoldsQueueParallelLoopsCount', '1'),

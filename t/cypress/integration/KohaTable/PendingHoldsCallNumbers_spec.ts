@@ -50,6 +50,15 @@ describe("circ/pendingreserves call number sorting", () => {
                 },
             ],
         },
+        {
+            title: `Bug 26867 ${fixtureId} empty sort key`,
+            items: [
+                {
+                    callNumber: "ZY998 .X1",
+                    sortKey: "",
+                },
+            ],
+        },
     ];
     const biblioIds = [];
     let libraryId;
@@ -62,11 +71,12 @@ describe("circ/pendingreserves call number sorting", () => {
             sql: "SELECT value FROM systempreferences WHERE variable = ?",
             values: [preference],
         }).then(rows => {
-            expect(
-                rows,
-                "installed HoldsCallnumberSortToPull preference"
-            ).to.have.length(1);
-            originalPreference = rows[0].value;
+            originalPreference = rows.length ? rows[0].value : undefined;
+            // Also run against unpatched core, where this preference is absent.
+            cy.task("query", {
+                sql: "INSERT IGNORE INTO systempreferences (variable, value) VALUES (?, ?)",
+                values: [preference, "classification"],
+            });
         });
         cy.task("query", {
             sql: "SELECT branchcode FROM branches ORDER BY branchcode LIMIT 1",
@@ -78,66 +88,100 @@ describe("circ/pendingreserves call number sorting", () => {
             }).then(itemTypes => {
                 itemType = itemTypes[0].itemtype;
 
-                cy.wrap(Cypress.env("apiUsername")).then(kohaUsername => {
-                    cy.task("query", {
-                        sql: "SELECT borrowernumber FROM borrowers WHERE userid = ? LIMIT 1",
-                        values: [kohaUsername],
-                    }).then(patrons => {
-                        const borrowernumber = patrons[0].borrowernumber;
-                        let itemIndex = 0;
+                cy.env(["apiUsername"])
+                    .its("apiUsername")
+                    .then(kohaUsername => {
+                        cy.task("query", {
+                            sql: "SELECT borrowernumber FROM borrowers WHERE userid = ? LIMIT 1",
+                            values: [kohaUsername],
+                        }).then(patrons => {
+                            const borrowernumber = patrons[0].borrowernumber;
+                            let itemIndex = 0;
 
-                        records.forEach(record => {
-                            cy.task("query", {
-                                sql: "INSERT INTO biblio (title, datecreated) VALUES (?, CURRENT_DATE())",
-                                values: [record.title],
-                            }).then(biblioResult => {
-                                const biblioId = biblioResult.insertId;
-                                biblioIds.push(biblioId);
-
+                            records.forEach(record => {
                                 cy.task("query", {
-                                    sql: "INSERT INTO biblioitems (biblionumber, itemtype, cn_source) VALUES (?, ?, 'lcc')",
-                                    values: [biblioId, itemType],
-                                }).then(biblioitemResult => {
-                                    record.items.forEach(item => {
-                                        itemIndex += 1;
-                                        cy.task("query", {
-                                            sql: "INSERT INTO items (biblionumber, biblioitemnumber, barcode, homebranch, holdingbranch, itemcallnumber, cn_source, cn_sort, itype) VALUES (?, ?, ?, ?, ?, ?, 'lcc', ?, ?)",
-                                            values: [
-                                                biblioId,
-                                                biblioitemResult.insertId,
-                                                `B26867${fixtureId}${itemIndex}`.slice(
-                                                    0,
-                                                    20
-                                                ),
-                                                libraryId,
-                                                libraryId,
-                                                item.callNumber,
-                                                item.sortKey,
-                                                itemType,
-                                            ],
-                                        });
-                                    });
+                                    sql: "INSERT INTO biblio (title, datecreated) VALUES (?, CURRENT_DATE())",
+                                    values: [record.title],
+                                }).then(biblioResult => {
+                                    const biblioId = biblioResult.insertId;
+                                    biblioIds.push(biblioId);
 
                                     cy.task("query", {
-                                        sql: "INSERT INTO reserves (borrowernumber, reservedate, biblionumber, branchcode, priority, found, suspend, item_level_hold) VALUES (?, CURRENT_DATE(), ?, ?, 1, NULL, 0, 0)",
-                                        values: [
-                                            borrowernumber,
-                                            biblioId,
-                                            libraryId,
-                                        ],
+                                        sql: "INSERT INTO biblioitems (biblionumber, itemtype, cn_source) VALUES (?, ?, 'lcc')",
+                                        values: [biblioId, itemType],
+                                    }).then(() => {
+                                        record.items.forEach(item => {
+                                            itemIndex += 1;
+                                            cy.task("apiPost", {
+                                                endpoint: `/api/v1/biblios/${biblioId}/items`,
+                                                body: {
+                                                    external_id:
+                                                        `B26867${fixtureId}${itemIndex}`.slice(
+                                                            0,
+                                                            20
+                                                        ),
+                                                    home_library_id: libraryId,
+                                                    holding_library_id:
+                                                        libraryId,
+                                                    callnumber: item.callNumber,
+                                                    call_number_source: "lcc",
+                                                    item_type_id: itemType,
+                                                },
+                                            }).then(createdItem => {
+                                                if (
+                                                    item.sortKey === null ||
+                                                    item.sortKey === ""
+                                                ) {
+                                                    // These two legacy-key controls deliberately bypass store().
+                                                    cy.task("query", {
+                                                        sql: "UPDATE items SET cn_sort = ? WHERE itemnumber = ?",
+                                                        values: [
+                                                            item.sortKey,
+                                                            createdItem.item_id,
+                                                        ],
+                                                    });
+                                                } else {
+                                                    expect(
+                                                        createdItem.call_number_source
+                                                    ).to.eq("lcc");
+                                                    expect(
+                                                        createdItem.call_number_sort
+                                                    ).to.be.a("string").and.not
+                                                        .be.empty;
+                                                    item.sortKey =
+                                                        createdItem.call_number_sort;
+                                                }
+                                            });
+                                        });
+
+                                        cy.task("query", {
+                                            sql: "INSERT INTO reserves (borrowernumber, reservedate, biblionumber, branchcode, priority, found, suspend, item_level_hold) VALUES (?, CURRENT_DATE(), ?, ?, 1, NULL, 0, 0)",
+                                            values: [
+                                                borrowernumber,
+                                                biblioId,
+                                                libraryId,
+                                            ],
+                                        });
                                     });
                                 });
                             });
                         });
                     });
-                });
             });
         });
     });
 
     after(() => {
         if (originalPreference !== undefined) {
-            cy.set_syspref(preference, originalPreference);
+            cy.task("query", {
+                sql: "INSERT INTO systempreferences (variable, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
+                values: [preference, originalPreference],
+            });
+        } else {
+            cy.task("query", {
+                sql: "DELETE FROM systempreferences WHERE variable = ?",
+                values: [preference],
+            });
         }
         if (biblioIds.length) {
             cy.task("query", {
@@ -205,19 +249,19 @@ describe("circ/pendingreserves call number sorting", () => {
                 expect(matches, title).to.have.length(1);
                 return records.indexOf(matches[0]);
             });
-            expect([...rowOrder].sort()).to.eql([0, 1, 2, 3, 4]);
+            expect([...rowOrder].sort()).to.eql([0, 1, 2, 3, 4, 5]);
             // Equal selected keys permit either tie order for the aggregate.
             const tiedRecords = mode === "classification" ? [0, 3] : [1, 3];
             const remainingRecords =
-                mode === "classification" ? [1, 2, 4] : [0, 2, 4];
+                mode === "classification" ? [1, 2, 5, 4] : [0, 2, 5, 4];
             if (direction === "asc") {
                 expect(rowOrder.slice(0, 2)).to.have.members(tiedRecords);
                 expect(rowOrder.slice(2)).to.eql(remainingRecords);
             } else {
-                expect(rowOrder.slice(0, 3)).to.eql(
+                expect(rowOrder.slice(0, 4)).to.eql(
                     [...remainingRecords].reverse()
                 );
-                expect(rowOrder.slice(3)).to.have.members(tiedRecords);
+                expect(rowOrder.slice(4)).to.have.members(tiedRecords);
             }
 
             rows.forEach(row => {
@@ -228,7 +272,9 @@ describe("circ/pendingreserves call number sorting", () => {
                 const selectedKey = item =>
                     mode === "alphabetical"
                         ? item.callNumber
-                        : (item.sortKey ?? item.callNumber);
+                        : item.sortKey === null || item.sortKey === ""
+                          ? item.callNumber
+                          : item.sortKey;
                 const items = [...record.items].sort((a, b) =>
                     selectedKey(a).localeCompare(selectedKey(b))
                 );
@@ -251,11 +297,29 @@ describe("circ/pendingreserves call number sorting", () => {
             assertSort(mode, direction, draw);
         });
 
-    ["classification", "alphabetical"].forEach(mode => {
-        describe(mode, () => {
+    const preferenceValues = [
+        "classification",
+        "alphabetical",
+        undefined,
+        "",
+        "unknown",
+    ];
+    preferenceValues.forEach(preferenceValue => {
+        const mode =
+            preferenceValue === "classification"
+                ? "classification"
+                : "alphabetical";
+        describe(preferenceValue ?? "missing preference", () => {
             beforeEach(() => {
                 cy.login();
-                cy.set_syspref(preference, mode);
+                if (preferenceValue === undefined) {
+                    cy.task("query", {
+                        sql: "DELETE FROM systempreferences WHERE variable = ?",
+                        values: [preference],
+                    });
+                } else {
+                    cy.set_syspref(preference, preferenceValue);
+                }
                 cy.visit(reportUrl, {
                     onBeforeLoad(win) {
                         win.localStorage.removeItem(stateKey);

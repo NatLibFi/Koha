@@ -829,7 +829,7 @@ Circulation:
         -
             - Sort call numbers on the holds to pull list
             - pref: HoldsCallnumberSortToPull
-              default: classification
+              default: alphabetical
               choices:
                   alphabetical: "alphabetically (as plain text)"
                   classification: "by classification sort key (cn_sort)"

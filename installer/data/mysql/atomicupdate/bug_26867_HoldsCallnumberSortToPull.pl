@@ -11,7 +11,7 @@ return {
         $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences ( `variable`, `value` )
-            VALUES ('HoldsCallnumberSortToPull', 'classification')
+            VALUES ('HoldsCallnumberSortToPull', 'alphabetical')
         }
         );
 
