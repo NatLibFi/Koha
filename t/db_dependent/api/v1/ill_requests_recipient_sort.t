@@ -61,6 +61,14 @@ for my $fixture (@fixtures) {
     );
     my $id = $request->id;
     push @ids, $id;
+    for my $type (qw(title author)) {
+        $schema->resultset('Illrequestattribute')->create(
+            {
+                illrequest_id => $id,   backend => 'Standard',
+                type          => $type, value   => 'Recipient sort metadata',
+            }
+        );
+    }
     for my $attribute_backend ( sort keys %{$values} ) {
         $schema->resultset('Illrequestattribute')->create(
             {
@@ -88,6 +96,18 @@ my $notes_query = { staff_notes => 'recipient sort fixtures' };
 my @list_cases  = (
     [
         'ILL list with patron filter', '/ill/requests', { %{$notes_query}, patron_id => $patron_id },
+        scalar Koha::ILL::Requests->count
+    ],
+    [
+        'ILL list with a request details search',
+        '/ill/requests',
+        [
+            {
+                'extended_attributes.type'  => [ 'title', 'author' ],
+                'extended_attributes.value' => { like => '%Recipient sort metadata%' },
+            },
+            { 'me.ill_backend_request_id' => { like => '%Recipient sort metadata%' } },
+        ],
         scalar Koha::ILL::Requests->count
     ],
     [ 'staff patron ILL endpoint', "/patrons/$patron_id/ill/requests", $notes_query, 1 + @ids ],
