@@ -567,8 +567,8 @@ $(document).ready(function () {
                     },
                 },
                 {
-                    data: null,
-                    orderable: false,
+                    data: "last_request_sent_to",
+                    orderable: true,
                     searchable: false,
                     render: function (data, type, row) {
                         if (row.ill_backend_id !== "Standard") return "";
