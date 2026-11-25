@@ -375,6 +375,10 @@ sub _build_order_atom {
     if ($result_set) {
         my $model_param = _from_api_param( $param, $result_set );
         $param = $model_param if defined $model_param;
+
+        my $source = _result_source($result_set);
+        $param = "me.$param"
+            if $param !~ /\./ && $source && $source->has_column($param);
     }
 
     if (   $string =~ m/^\+/
@@ -447,6 +451,14 @@ sub _merge_embed {
         # Embed
         $embed->{$root} = $structure->{$root};
     }
+}
+
+sub _result_source {
+    my ($result_set) = @_;
+
+    return $result_set->can('_resultset')
+        ? $result_set->_resultset->result_source
+        : $result_set->_result->result_source;
 }
 
 sub _parse_prefetch {
