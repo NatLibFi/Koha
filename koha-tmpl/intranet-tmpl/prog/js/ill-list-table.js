@@ -587,6 +587,21 @@ $(document).ready(function () {
                     },
                 },
                 {
+                    data: "last_request_sent_to",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (row.ill_backend_id !== "Standard") return "";
+
+                        const recipients = row.extended_attributes.find(
+                            attribute =>
+                                attribute.type === "requested_partners" &&
+                                attribute.backend === row.ill_backend_id
+                        );
+                        return escape_str(recipients?.value);
+                    },
+                },
+                {
                     data: "ill_request_id",
                     orderable: false,
                     searchable: false,
