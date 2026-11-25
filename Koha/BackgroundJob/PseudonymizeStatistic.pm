@@ -53,7 +53,19 @@ sub process {
     $self->start;
     my $statistic   = $args->{statistic};
     my $stat_object = Koha::Statistic->new($statistic);
-    Koha::PseudonymizedTransaction->create_from_statistic($stat_object);
+    my $job_data    = $self->decoded_data;
+    my $operator;
+    if ( exists $job_data->{operator} ) {
+        $operator = $job_data->{operator};
+    } elsif ( $self->context ) {
+
+        # Older jobs did not capture granular permissions. Only a stored bitmask
+        # proves eligibility; looking up current permissions could expose patrons
+        # who were granted permissions after their transaction was queued.
+        my $context = $self->json->decode( $self->context );
+        $operator = $context->{number} if ( $context->{flags} // 0 ) > 0;
+    }
+    Koha::PseudonymizedTransaction->create_from_statistic( $stat_object, { operator => $operator } );
     $self->progress(1)
         ;    #We could use step here, but we are going to save the object during finish and this saves a DB write
     $self->finish( { data => "" } );    # We want to clear the job data to avoid storing patron information
@@ -75,8 +87,8 @@ sub enqueue {
 
     $self->SUPER::enqueue(
         {
-            job_size  => 1,                             # Only handling one at time
-            job_args  => { statistic => $statistic },
+            job_size  => 1,    # Only handling one at time
+            job_args  => { statistic => $statistic, operator => scalar Koha::PseudonymizedTransaction->get_operator },
             job_queue => 'default',
         }
     );
