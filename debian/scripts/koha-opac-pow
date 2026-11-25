@@ -1,0 +1,287 @@
+#!/usr/bin/perl
+
+# Copyright 2026 Nugged Team
+# This file is part of Koha, distributed under the GNU GPL version 3 or later.
+
+use Modern::Perl;
+use lib '/usr/share/koha/lib';
+use Koha::Antibot;
+use Fcntl          qw(F_SETFL O_RDONLY O_NOFOLLOW O_NONBLOCK S_ISREG);
+use File::Basename qw(dirname);
+use File::Temp     qw(tempfile);
+use Getopt::Long   qw(GetOptions);
+use IO::Handle;
+use IO::Select;
+use JSON::PP;
+use Errno       qw(EINTR EEXIST);
+use POSIX       qw(WNOHANG);
+use Socket      qw(AF_UNIX SOCK_STREAM SHUT_WR);
+use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC);
+
+# This is a persistent RewriteMap protocol, not a CGI or a Koha worker.
+binmode STDIN,  ':raw';
+binmode STDOUT, ':raw';
+STDOUT->autoflush(1);
+
+Getopt::Long::Configure(qw(no_auto_abbrev no_ignore_case));
+my $key_file = '/etc/koha/antibot.keys';
+my $init_key;
+my $key_group = 'www-data';
+my %policy;
+GetOptions(
+    'key-file=s'      => \$key_file,
+    'init-key'        => \$init_key,
+    'key-group=s'     => \$key_group,
+    'difficulty=i'    => \$policy{difficulty},
+    'challenge-ttl=i' => \$policy{challenge_ttl},
+    'clearance-ttl=i' => \$policy{clearance_ttl},
+) or exit 2;
+exit 2 if @ARGV;
+
+sub load_keys {
+    my ($path) = @_;
+    sysopen my $fh, $path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK
+        or die "Antibot key unavailable\n";
+    my @st = stat($fh);
+    die "Unsafe antibot key file\n"
+        unless @st
+        && S_ISREG( $st[2] )
+        && !( $st[2] & oct('0137') )
+        && ( $st[4] == 0 || $st[4] == $> )
+        && $st[7] <= 130;
+    my $length = read( $fh, my $text, 131 );
+    close $fh;
+    die "Invalid antibot key file\n"
+        unless defined $length && $text =~ /\A(?:[0-9a-f]{64}\n){1,2}\z/;
+    my @keys = map { pack 'H*', $_ } split /\n/, $text;
+    return \@keys;
+}
+
+sub provision_key {
+    my ( $path, $group ) = @_;
+
+    # Preserve a previously configured ring, including its rotation order.
+    if ( -e $path || -l $path ) {
+        load_keys($path);
+        return;
+    }
+    my $gid = getgrnam($group);
+    die "Antibot key group unavailable\n" unless defined $gid;
+    my ( $fh, $temporary ) = tempfile( '.antibot-XXXXXXXX', DIR => dirname($path), UNLINK => 1 );
+    binmode $fh, ':raw';
+    print {$fh} unpack( 'H*', Bytes::Random::Secure::random_bytes(32) ), "\n"
+        or die "Cannot write antibot key\n";
+    chown -1, $gid, $fh or die "Cannot set antibot key group\n";
+    chmod 0640, $fh or die "Cannot protect antibot key\n";
+    close $fh or die "Cannot finish antibot key\n";
+
+    # Publish the complete protected file without overwriting a concurrent ring.
+    if ( !link $temporary, $path ) {
+        die "Cannot publish antibot key\n" unless $! == EEXIST;
+    }
+
+    # Remove the temporary name now: deferred File::Temp cleanup chmods it,
+    # which would also change the permissions of the published hard link.
+    unlink $temporary or die "Cannot remove antibot key temporary file\n";
+    load_keys($path);
+    return;
+}
+
+if ($init_key) {
+    my $ok = eval { provision_key( $key_file, $key_group ); 1 };
+    warn "Koha antibot key preparation failed\n" unless $ok;
+    exit( $ok ? 0 : 1 );
+}
+
+sub summarize {
+    my ( $json, $counts ) = @_;
+    return unless %$counts;
+    print STDERR $json->encode( { event => 'koha_antibot_summary', pid => $$, counts => $counts } ), "\n";
+    %$counts = ();
+}
+
+sub dispatch {
+    my ( $antibot, $line ) = @_;
+    return [ 'NULL', 'input_invalid' ] unless length($line) && $line =~ /\A[\x21-\x7e]+\z/;
+    my ( $op, $ip, $site, @args ) = split /!/, $line, -1;
+    return [ 'NULL', 'input_invalid' ]        unless defined $site;
+    return [ 'NULL', 'verifier_unavailable' ] unless $antibot;
+
+    if ( $op eq 'issue' && !@args ) {
+        my $value = $antibot->challenge( $ip, $site );
+        return [ $value // 'NULL', $value ? 'issue_pass' : 'issue_reject' ];
+    }
+    if ( $op eq 'verify' && @args == 1 ) {
+        my $valid = $antibot->verify_clearance( $args[0], $ip, $site );
+        return [ $valid ? 'ok' : 'NULL', $valid ? 'verify_pass' : 'verify_reject' ];
+    }
+    if ( $op eq 'solve' && @args == 2 ) {
+        my $value = $antibot->solve( $args[0], $args[1], $ip, $site );
+        return [ $value // 'NULL', $value ? 'solve_pass' : 'solve_reject' ];
+    }
+    return [ 'NULL', 'input_invalid' ];
+}
+
+sub run_verifier {
+    my ($channel) = @_;
+    my $antibot = eval { Koha::Antibot->new( keys => load_keys($key_file), %policy ) };
+    warn "Koha antibot verifier unavailable; requests will be refused\n" unless $antibot;
+
+    my %counts;
+    my $last_summary = time;
+    my $json         = JSON::PP->new->canonical(1);
+    $channel->autoflush(1);
+    while ( my $line = <$channel> ) {
+        chomp $line;
+        my $result = eval { dispatch( $antibot, $line ) } // [ 'NULL', 'internal_error' ];
+        $counts{ $result->[1] }++;
+        print {$channel} $result->[0], "\n" or return;
+        if ( time - $last_summary >= 60 ) {
+            summarize( $json, \%counts );
+            $last_summary = time;
+        }
+    }
+    summarize( $json, \%counts );
+}
+
+my $verifier_timeout = 1;
+my $retry_delay      = 5;
+my $max_frame        = 1024;
+
+sub forward_request {
+    my ( $channel, $readable, $frame ) = @_;
+    my $deadline = clock_gettime(CLOCK_MONOTONIC) + $verifier_timeout;
+    $frame .= "\n";
+    my $written = syswrite $channel, $frame;
+    return unless defined $written && $written == length $frame;
+
+    my $response = '';
+    while ( length($response) <= $max_frame ) {
+        my $remaining = $deadline - clock_gettime(CLOCK_MONOTONIC);
+        return unless $remaining > 0 && $readable->can_read($remaining);
+        my $length = sysread $channel, my $chunk, $max_frame + 1 - length($response);
+        return unless $length;
+        $response .= $chunk;
+        if ( $response =~ /\A[!-~]{1,${max_frame}}\n\z/ ) {
+            return $response if clock_gettime(CLOCK_MONOTONIC) <= $deadline;
+            return;
+        }
+    }
+    return;
+}
+
+sub serve_map {
+    my ($lookup) = @_;
+    my $buffer  = '';
+    my $discard = 0;
+    while (1) {
+        my $length = sysread( STDIN, my $chunk, $max_frame );
+        next if !defined $length && $! == EINTR;
+        return 1 unless $length;
+        while ( $chunk =~ s/\A([^\n]*)\n// ) {
+            my $tail  = $1;
+            my $frame = !$discard && length($buffer) + length($tail) <= $max_frame ? $buffer . $tail : '';
+            return unless print STDOUT $lookup->($frame);
+            $buffer  = '';
+            $discard = 0;
+        }
+        unless ($discard) {
+            if ( length($buffer) + length($chunk) > $max_frame ) {
+                $buffer  = '';
+                $discard = 1;
+            } else {
+                $buffer .= $chunk;
+            }
+        }
+    }
+}
+
+sub start_verifier {
+    socketpair my $relay, my $worker, AF_UNIX, SOCK_STREAM, 0 or return;
+    fcntl $relay, F_SETFL, O_NONBLOCK or return;
+    my $pid = fork();
+    return unless defined $pid;
+    if ( !$pid ) {
+        $SIG{TERM} = 'DEFAULT';
+        close $relay;
+        close STDIN;
+        close STDOUT;
+        run_verifier($worker);
+        POSIX::_exit(0);
+    }
+    close $worker;
+    return ( $pid, $relay, IO::Select->new($relay) );
+}
+
+# Only the relay owns the Apache pipes. Its worker may stall in key loading,
+# verification or logging without keeping an Apache lookup open.
+my ( $pid, $channel, $readable );
+my $retry_at = 0;
+$SIG{PIPE} = 'IGNORE';
+$SIG{TERM} = sub {
+    kill 'KILL', $pid if $pid;
+    POSIX::_exit(0);
+};
+
+serve_map(
+    sub {
+        my ($frame) = @_;
+        unless ($channel) {
+            return "NULL\n" if clock_gettime(CLOCK_MONOTONIC) < $retry_at;
+            my $retired = $pid;
+            undef $pid;
+            if ( $retired && waitpid( $retired, WNOHANG ) == 0 ) {
+                $pid = $retired;
+                return "NULL\n";
+            }
+            ( $pid, $channel, $readable ) = start_verifier();
+        }
+        if ($channel) {
+            my $response = forward_request( $channel, $readable, $frame );
+            return $response if defined $response;
+            close $channel;
+            undef $channel;
+            undef $readable;
+            kill 'KILL', $pid;
+        }
+        # Give queued lookups a fast refusal while the failed worker clears.
+        $retry_at = clock_gettime(CLOCK_MONOTONIC) + $retry_delay;
+        return "NULL\n";
+    }
+);
+
+if ($channel) {
+    shutdown $channel, SHUT_WR;
+    kill 'KILL', $pid unless $readable->can_read($verifier_timeout);
+}
+if ($pid) {
+    $SIG{TERM} = 'DEFAULT';
+    waitpid( $pid, WNOHANG );
+}
+
+=head1 NAME
+
+koha-opac-pow - Persistent Apache OPAC challenge verifier
+
+=head1 SYNOPSIS
+
+RewriteMap koha_antibot "prg:/usr/sbin/koha-opac-pow" www-data:www-data
+
+Options: --key-file PATH, --difficulty BITS, --challenge-ttl SECONDS,
+--clearance-ttl SECONDS. The key file contains one or two lowercase
+hexadecimal 32-byte keys, each followed by a newline; the first is active.
+It must be a regular file owned by root or the verifier user, with mode
+0600 or 0640. Reload Apache after changing the key ring or policy.
+
+The package invokes --init-key to provision a missing ring without replacing
+an existing ring. --key-group defaults to www-data for this installation mode.
+Neither key contents nor tokens are written to diagnostics.
+
+=head1 PROTOCOL
+
+Each ASCII request and response occupies one line. Fields are separated
+by exclamation marks. Supported requests are issue!IP!SITE,
+verify!IP!SITE!CLEARANCE and solve!IP!SITE!CHALLENGE!COUNTER.
+Failures return NULL. Logs contain bounded event counters only.
+
+=cut

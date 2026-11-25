@@ -18,6 +18,12 @@ if [ ! -e "$conf" ] && [ ! -L "$conf" ]; then
     ln -s debian.cnf "$conf"
 fi
 
+# Provision the signing key once. Enabling the challenge remains an Apache flag.
+# The helper never replaces an existing ring and never prints key material.
+if [ "$1" = "configure" ] && ! koha-opac-pow --init-key; then
+    echo "Warning: Could not prepare the OPAC PoW key ring; protected requests may be refused." >&2
+fi
+
 #DEBHELPER#
 
 koha-upgrade-schema $(koha-list)
