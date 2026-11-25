@@ -147,6 +147,9 @@ sub lastseenat {
     $sth->execute( $itm, $brc, $itm, $brc );
     my ($date2) = $sth->fetchrow_array;
 
+    return ($date1) unless $date2;
+    return ($date2) unless $date1;
+
     my $date = ( $date1 lt $date2 ) ? $date2 : $date1;
     return ($date);
 }
