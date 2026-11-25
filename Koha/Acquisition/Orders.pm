@@ -153,9 +153,10 @@ sub filter_by_lates {
 
 Returns a new resultset containing active orders only.
 
-Note: An active order (line) has status ordered or partial, or it has status new
-and the basket is marked as standing order. Additionally, we still expect items
-on this order (checking quantity and quantityreceived).
+Note: An active order (line) has no cancellation date and has status ordered or
+partial, or it has status new and the basket is marked as standing order.
+Additionally, we still expect items on this order (checking quantity and
+quantityreceived).
 
 =cut
 
@@ -164,7 +165,8 @@ sub filter_by_active {
     my $source_alias = $self->_resultset->current_source_alias;
     return $self->search(
         {
-            '-or' => [
+            'datecancellationprinted' => undef,
+            '-or'                     => [
                 {
                     'basket.is_standing' => 1,
                     'orderstatus'        => [ 'new', 'ordered', 'partial' ]
