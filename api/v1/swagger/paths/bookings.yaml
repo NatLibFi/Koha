@@ -64,6 +64,7 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `patron_disclosure_page_size_exceeded`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       403:
@@ -81,6 +82,7 @@
     summary: List bookings
     tags:
       - bookings
+    x-koha-patron-disclosure: GET /bookings
     x-koha-authorization:
       permissions:
         catalogue: 1
