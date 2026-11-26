@@ -16,7 +16,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 13;
 use C4::Context;
 
 use C4::Circulation qw( TooMany AddIssue CanBookBeIssued );
@@ -87,7 +87,8 @@ Koha::CirculationRules->set_rules(
 
 t::lib::Mocks::mock_userenv( { patron => $patron } );
 
-t::lib::Mocks::mock_preference( 'AllowTooManyOverride', 0 );
+t::lib::Mocks::mock_preference( 'AllowTooManyOverride',  0 );
+t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
 
 # Add onsite checkout
 C4::Circulation::AddIssue(
@@ -95,15 +96,17 @@ C4::Circulation::AddIssue(
     { onsite_checkout => 1 }
 );
 
-my ( $impossible, $messages );
+my ( $impossible, $confirmation, $messages );
 t::lib::Mocks::mock_preference( 'SwitchOnSiteCheckouts', 0 );
 ( $impossible, undef, undef, $messages ) = C4::Circulation::CanBookBeIssued( $patron, $item->barcode );
 is( $impossible->{NO_RENEWAL_FOR_ONSITE_CHECKOUTS}, 1, 'Do not renew on-site checkouts' );
 
 t::lib::Mocks::mock_preference( 'SwitchOnSiteCheckouts', 1 );
-( $impossible, undef, undef, $messages ) = C4::Circulation::CanBookBeIssued( $patron, $item->barcode );
+t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', 1 );
+( $impossible, $confirmation, undef, $messages ) = C4::Circulation::CanBookBeIssued( $patron, $item->barcode );
 is( $messages->{ONSITE_CHECKOUT_WILL_BE_SWITCHED}, 1,  'If SwitchOnSiteCheckouts, switch the on-site checkout' );
 is( exists $impossible->{TOO_MANY},                '', 'If SwitchOnSiteCheckouts, switch the on-site checkout' );
+ok( !exists $confirmation->{TOO_MANY}, 'A count-neutral switch needs no hard-limit override' );
 C4::Circulation::AddIssue( $patron, $item->barcode, undef, undef, undef, undef, { switch_onsite_checkout => 1 } );
 my $issue = Koha::Checkouts->find( { itemnumber => $item->itemnumber } );
 is( $issue->onsite_checkout, 0, 'The issue should have been switched to a regular checkout' );
@@ -126,9 +129,12 @@ C4::Circulation::AddIssue(
     $patron, $another_item->barcode, dt_from_string, undef, dt_from_string, undef,
     { onsite_checkout => 1 }
 );
-( $impossible, undef, undef, $messages ) = C4::Circulation::CanBookBeIssued( $patron, $another_item->barcode );
+( $impossible, $confirmation, undef, $messages ) = C4::Circulation::CanBookBeIssued( $patron, $another_item->barcode );
 is( $messages->{ONSITE_CHECKOUT_WILL_BE_SWITCHED}, 1,  'Specific case 1 - Switch is allowed' );
 is( exists $impossible->{TOO_MANY},                '', 'Specific case 1 - Switch is allowed' );
+ok( !exists $confirmation->{TOO_MANY}, 'A switch remains allowed when the patron is above the hard limit' );
+
+t::lib::Mocks::mock_preference( 'MaxCheckoutsHardLimit', '' );
 
 my $yet_another_item = $builder->build_sample_item(
     {
@@ -157,4 +163,3 @@ is( $messages->{ONSITE_CHECKOUT_WILL_BE_SWITCHED}, 1,  'Specific case 2 - Switch
 is( exists $impossible->{TOO_MANY},                '', 'Specific case 2 - Switch is allowed' );
 
 $schema->storage->txn_rollback;
-
