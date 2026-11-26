@@ -1029,6 +1029,8 @@ if ( $op eq 'run' ) {
                     $error_key = 'duplicate_running_report';
                 } elsif ( ref($e) eq 'Koha::Exceptions::Report::TotalRunning' ) {
                     $error_key = 'total_running_reports_limit_exceeded';
+                } elsif ( ref($e) eq 'Koha::Exceptions::Report::InstanceTotalRunning' ) {
+                    $error_key = 'total_running_reports_per_instance_limit_exceeded';
                 }
                 if ($error_key) {
                     $template->param(
