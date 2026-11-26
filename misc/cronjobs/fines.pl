@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use 5.010;
 
-use Koha::Script -cron;
+use Koha::Script -cron, '-defer-log';
 use C4::Context;
 use C4::Overdues qw( Getoverdues CalcFine UpdateFine );
 use Getopt::Long qw( GetOptions );
@@ -49,6 +49,8 @@ my $output_dir;
 my $log;
 my $maxdays;
 my $verify_issue;
+my $dry_run;
+my @command_line = @ARGV;
 
 GetOptions(
     'h|help'        => \$help,
@@ -57,7 +59,8 @@ GetOptions(
     'o|out:s'       => \$output_dir,
     'm|maxdays:i'   => \$maxdays,
     'i|verifyissue' => \$verify_issue,
-);
+    'n|dry-run'     => \$dry_run,
+) or die "Invalid options. Run $0 --help.\n";
 my $usage = <<'ENDUSAGE';
 
 This script calculates and charges overdue fines
@@ -73,6 +76,7 @@ This script has the following parameters :
     -m --maxdays: how many days back of overdues to process
     -i --verifyissue: verify the issue before updating the fine in case the
                item is returned while the fines job is running
+    -n --dry-run: report fines that would be updated without charging them
 
 ENDUSAGE
 
@@ -81,17 +85,19 @@ if ($help) {
     exit;
 }
 
-my $script_handler = Koha::Script->new( { script => $0 } );
-
-try {
-    $script_handler->lock_exec;
-} catch {
-    my $message = "Skipping execution of $0 ($_)";
-    print STDERR "$message\n"
-        if $verbose;
-    cronlogaction( { info => $message } );
-    exit;
-};
+my $script_handler;
+unless ($dry_run) {
+    Koha::Script->start_logging(@command_line);
+    $script_handler = Koha::Script->new( { script => $0 } );
+    try {
+        $script_handler->lock_exec;
+    } catch {
+        my $message = "Skipping execution of $0 ($_)";
+        print STDERR "$message\n" if $verbose;
+        cronlogaction( { info => $message } );
+        exit;
+    };
+}
 
 my @borrower_fields = qw(cardnumber categorycode surname firstname email phone address citystate);
 my @item_fields     = qw(itemnumber barcode date_due);
@@ -167,15 +173,19 @@ for my $overdue ( @{$overdues} ) {
                 next;
             }
         }
-        UpdateFine(
-            {
-                issue_id       => $overdue->{issue_id},
-                itemnumber     => $overdue->{itemnumber},
-                borrowernumber => $overdue->{borrowernumber},
-                amount         => $amount,
-                due            => $datedue,
-            }
-        );
+        if ($dry_run) {
+            say "Would update fine for checkout $overdue->{issue_id} to $amount" if $verbose;
+        } else {
+            UpdateFine(
+                {
+                    issue_id       => $overdue->{issue_id},
+                    itemnumber     => $overdue->{itemnumber},
+                    borrowernumber => $overdue->{borrowernumber},
+                    amount         => $amount,
+                    due            => $datedue,
+                }
+            );
+        }
         $updated++;
     }
     my $borrower = $patron->unblessed;
@@ -192,8 +202,9 @@ if ($filename) {
     close $fh;
 }
 
-if ($verbose) {
+if ( $verbose || $dry_run ) {
     my $overdue_items = @{$overdues};
+    my $update_label = $dry_run ? 'would update' : 'updated';
     print <<"EOM";
 Fines assessment -- $today
 EOM
@@ -204,7 +215,7 @@ EOM
 Number of Overdue Items:
      counted $overdue_items
     reported $counted
-     updated $updated
+     $update_label $updated
 
 EOM
 }

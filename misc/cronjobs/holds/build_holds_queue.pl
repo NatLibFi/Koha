@@ -13,7 +13,7 @@ use Pod::Usage   qw( pod2usage );
 
 use C4::Context;
 use C4::HoldsQueue qw(CreateQueue);
-use Koha::Script -cron;
+use Koha::Script -cron, '-defer-log';
 
 =head1 NAME
 
@@ -56,20 +56,32 @@ This allows the script to catch holds that may have become active without trigge
 
 This script builds or rebuilds the entire holds queue.
 
+A dry run (C<--dry-run> or C<-n>) is unavailable. It exits without changing
+the queue.
+
 =cut
 
 my $help        = 0;
 my $man         = 0;
 my $force       = 0;
 my $unallocated = 0;
+my $dry_run     = 0;
+my @command_line = @ARGV;
 GetOptions(
     'h|help'        => \$help,
     'm|man'         => \$man,
     'f|force'       => \$force,
-    'u|unallocated' => \$unallocated
-);
+    'u|unallocated' => \$unallocated,
+    'n|dry-run'     => \$dry_run,
+) or pod2usage(2);
 pod2usage(1)                              if $help;
 pod2usage( -exitval => 0, -verbose => 2 ) if $man;
+
+if ($dry_run) {
+    warn "Hold queue dry run is unavailable. No queue changes were made.\n";
+    exit 2;
+}
+Koha::Script->start_logging(@command_line);
 
 my $rthq = C4::Context->preference('RealTimeHoldsQueue');
 

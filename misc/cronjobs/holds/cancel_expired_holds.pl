@@ -42,7 +42,7 @@ use Modern::Perl;
 use Getopt::Long qw( GetOptions );
 use Pod::Usage   qw( pod2usage );
 
-use Koha::Script -cron;
+use Koha::Script -cron, '-defer-log';
 use C4::Reserves;
 
 =head1 OPTIONS
@@ -68,6 +68,7 @@ List expired holds that would be cancelled without changing them.
 my $help = 0;
 my $reason;
 my $dry_run;
+my @command_line = @ARGV;
 GetOptions(
     'help|?'    => \$help,
     'reason=s'  => \$reason,
@@ -75,5 +76,6 @@ GetOptions(
 ) or pod2usage(1);
 pod2usage(1) if $help;
 
+Koha::Script->start_logging(@command_line) unless $dry_run;
 C4::Reserves::CancelExpiredReserves( $reason, { dry_run => $dry_run } );
 
