@@ -72,7 +72,7 @@ my $display_columns = {
         { description => { label => 'Description', link_field => 0 } },
         { _item_count => { label => 'Item Count',  link_field => 0 } },
         { select      => { label => 'Actions',     value      => 'batch_id' } },
-        { select1     => { label => ' ',           link_field => 'batch_id' } },
+        { select1     => { label => ' ',           link_field => 0}},
     ],
 };
 
