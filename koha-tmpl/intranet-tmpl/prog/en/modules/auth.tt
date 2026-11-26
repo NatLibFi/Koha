@@ -178,7 +178,7 @@
                 </p>
 
                 [% UNLESS IndependentBranches %]
-                    <p>
+                    <p class="mb-1">
                         [% IF Koha.Preference('ForceLibrarySelection') %]
                             <label for="set-library-branch" class="required">Library:</label>
                             <select name="branch" id="set-library-branch" class="input" tabindex="3" required="required">
@@ -197,11 +197,18 @@
                                 [% END %]
                             </select>
                         [% END %]
-
-                        [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
-                            <span class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</span>
-                        [% END %]
                     </p>
+
+                    <p class="small mb-2" hidden>
+                        <label for="remember-library-checkbox">
+                            <input type="checkbox" id="remember-library-checkbox" data-remember-select="set-library-branch" data-remember-key="library" tabindex="3" />
+                            Remember library in this browser
+                        </label>
+                    </p>
+
+                    [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
+                        <p class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</p>
+                    [% END %]
 
                     [% IF Koha.Preference('UseCirculationDesks') && Desks.all %]
                         <p>
@@ -213,6 +220,12 @@
                                 [% END %]
                             </select>
                         </p>
+                        <p class="small" hidden>
+                            <label for="remember-desk-checkbox">
+                                <input type="checkbox" id="remember-desk-checkbox" data-remember-select="set-library-desk_id" data-remember-key="desk" tabindex="3" />
+                                Remember desk in this browser
+                            </label>
+                        </p>
                     [% END %]
 
                     [% IF Koha.Preference('UseCashRegisters') && Registers.all().size %]
@@ -222,6 +235,12 @@
                                 <option id="noregister" value="" selected="selected">Library default</option>
                                 [% PROCESS options_for_registers registers => Registers.all() %]
                             </select>
+                        </p>
+                        <p class="small" hidden>
+                            <label for="remember-register-checkbox">
+                                <input type="checkbox" id="remember-register-checkbox" data-remember-select="set-library-register_id" data-remember-key="register" tabindex="4" />
+                                Remember cash register in this browser
+                            </label>
                         </p>
                     [% END %]
                 [% END %]
@@ -290,6 +309,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/show-password-toggle.js") | $raw %]
+    [% Asset.js("js/staff-login-selections.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         $(document).ready( function() {
             if ( document.location.hash ) {
