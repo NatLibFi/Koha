@@ -78,6 +78,26 @@ $(document).ready(function () {
     // Filter partner list
     // Record the list of all options
     var ill_partner_options = $("#partners > option");
+    $("#partners").on("change", function () {
+        const languages = new Set(
+            $(this).find("option:selected").map(function () {
+                return $(this).data("lang");
+            }).get()
+        );
+        const drafts = $("#ill-partner-form .ill-partner-notice");
+        const available = new Set();
+        drafts.each(function () {
+            const lang = $(this).data("lang");
+            available.add(lang);
+            const selected = languages.has(lang);
+            $(this).prop("hidden", !selected).prop("disabled", !selected);
+        });
+        $("#ill-partner-form :submit").prop(
+            "disabled",
+            !languages.size || [...languages].some(lang => !available.has(lang))
+        );
+    }).trigger("change");
+
     $("#partner_filter").keyup(function () {
         var needle = $("#partner_filter").val();
         var regex = new RegExp(needle, "i");

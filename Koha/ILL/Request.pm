@@ -1779,15 +1779,23 @@ sub generic_confirm {
         || die "Invalid current branchcode. Are you logged in as the database user?";
     if ( !$params->{stage} || $params->{stage} eq 'init' ) {
 
-        # Get the message body from the notice definition
-        my $letter = $self->get_notice(
-            {
-                notice_code => 'ILL_PARTNER_REQ',
-                transport   => 'email'
-            }
-        );
-
         my $partners = Koha::Patrons->search( { categorycode => $self->_config->partner_code } );
+        my @drafts;
+        my %languages;
+        foreach my $partner ( $partners->as_list ) {
+            next unless $partner->email;
+            my $lang = $partner->lang || 'default';
+            next if $languages{$lang}++;
+            my $letter = $self->get_notice(
+                {
+                    notice_code => 'ILL_PARTNER_REQ',
+                    transport   => 'email',
+                    lang        => $lang,
+                }
+            );
+            next unless $letter;
+            push @drafts, { lang => $lang, subject => $letter->{title}, body => $letter->{content} };
+        }
         return {
             error   => 0,
             status  => '',
@@ -1795,10 +1803,7 @@ sub generic_confirm {
             method  => 'generic_confirm',
             stage   => 'draft',
             value   => {
-                draft => {
-                    subject => $letter->{title},
-                    body    => $letter->{content}
-                },
+                drafts   => \@drafts,
                 partners => $partners,
             }
         };
@@ -1824,62 +1829,78 @@ sub generic_confirm {
         Koha::Exceptions::Ill::NoLibraryEmail->throw("Your library has no usable email address. Please set it.")
             if ( !$from );
 
-        # So we get a notice hashref, then substitute the possibly
-        # modified title and body from the draft stage
-        my $letter = $self->get_notice(
-            {
-                notice_code => 'ILL_PARTNER_REQ',
-                transport   => 'email'
-            }
-        );
-        $letter->{title}   = $params->{subject};
-        $letter->{content} = $params->{body};
+        my $preparation_error = {
+            error   => 1,
+            status  => 'invalid_notice',
+            message =>
+                'Cannot prepare a partner email. Check the recipient, notice template, subject and message. No emails have been queued.',
+            method => 'generic_confirm',
+            stage  => 'draft',
+        };
 
-        if ($letter) {
-
-            # Keep track of who received this notice
-            my @queued = ();
-
-            # Iterate our array of recipient patron objects
-            foreach my $patron (@to_patrons) {
-
-                # Create the params we pass to the notice
-                my $params = {
-                    letter                 => $letter,
-                    borrowernumber         => $patron->borrowernumber,
-                    message_transport_type => 'email',
-                    to_address             => $patron->email,
-                    from_address           => $from,
-                    reply_address          => $replyto
-                };
-                my $result = C4::Letters::EnqueueLetter($params);
-                if ($result) {
-                    push @queued, $patron->email;
-                }
-            }
-
-            # If all notices were queued successfully,
-            # store that
-            if ( scalar @queued == scalar @to_patrons ) {
-                $self->status("GENREQ")->store;
-                $self->_backend_capability(
-                    'set_requested_partners',
+        # Prepare every selected letter before writing any of them to the queue.
+        my @messages;
+        foreach my $patron (@to_patrons) {
+            return $preparation_error unless $patron && $patron->email && $patron->email =~ /\S/;
+            my $lang = $patron->lang || 'default';
+            return $preparation_error
+                unless defined $params->{"subject_$lang"}
+                && $params->{"subject_$lang"} =~ /\S/
+                && defined $params->{"body_$lang"}
+                && $params->{"body_$lang"} =~ /\S/;
+            my $letter = eval {
+                $self->get_notice(
                     {
-                        request => $self,
-                        to      => join( "; ", @queued )
+                        notice_code => 'ILL_PARTNER_REQ',
+                        transport   => 'email',
+                        lang        => $lang,
                     }
                 );
-                return {
-                    error   => 0,
-                    status  => '',
-                    message => '',
-                    method  => 'generic_confirm',
-                    stage   => 'commit',
-                    next    => 'illview',
-                };
-            }
+            };
+            return $preparation_error unless $letter;
+            $letter->{title}   = $params->{"subject_$lang"};
+            $letter->{content} = $params->{"body_$lang"};
 
+            # Create the params we pass to the notice
+            push @messages, {
+                letter                 => $letter,
+                borrowernumber         => $patron->borrowernumber,
+                message_transport_type => 'email',
+                to_address             => $patron->email,
+                from_address           => $from,
+                reply_address          => $replyto
+            };
         }
+
+        my @queued;
+        foreach my $message (@messages) {
+            my $result = C4::Letters::EnqueueLetter($message);
+            if ($result) {
+                push @queued, $message->{to_address};
+            }
+        }
+
+        # If all notices were queued successfully,
+        # store that
+        if ( scalar @queued == scalar @to_patrons ) {
+            $self->status("GENREQ")->store;
+            $self->_backend_capability(
+                'set_requested_partners',
+                {
+                    request => $self,
+                    to      => join( "; ", @queued )
+                }
+            );
+            return {
+                error   => 0,
+                status  => '',
+                message => '',
+                method  => 'generic_confirm',
+                stage   => 'commit',
+                next    => 'illview',
+            };
+        }
+
         return {
             error   => 1,
             status  => 'email_failed',
@@ -2050,6 +2071,7 @@ and transport type
 
 sub get_notice {
     my ( $self, $params ) = @_;
+    my $lang = exists $params->{lang} ? $params->{lang} : $self->patron ? $self->patron->lang : undef;
 
     my $title     = $self->extended_attributes->find( { type => 'title' } );
     my $author    = $self->extended_attributes->find( { type => 'author' } );
@@ -2068,7 +2090,7 @@ sub get_notice {
         letter_code            => $params->{notice_code},
         branchcode             => $self->branchcode,
         message_transport_type => $params->{transport},
-        lang                   => $self->patron ? $self->patron->lang : undef,
+        lang                   => $lang,
         tables                 => {
             illrequests => $self->illrequest_id,
             borrowers   => $self->borrowernumber,
