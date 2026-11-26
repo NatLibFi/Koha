@@ -958,8 +958,10 @@ sub CheckReserves {
 
     CancelExpiredReserves();
     CancelExpiredReserves($cancellation_reason);
+    CancelExpiredReserves( $cancellation_reason, { dry_run => 1 } );
 
-Cancels all reserves with an expiration date from before today.
+Cancels all reserves with an expiration date from before today. With C<dry_run>,
+prints the IDs of eligible holds without cancelling them.
 
 When the ExpireReservesOnHolidays system preference is disabled (0), implements
 sophisticated holiday logic to handle various edge cases:
@@ -1023,23 +1025,25 @@ This logic ensures that:
 =cut
 
 sub CancelExpiredReserves {
-    my $cancellation_reason = shift;
+    my ( $cancellation_reason, $params ) = @_;
+    $params //= {};
+
     my $today               = dt_from_string();
     my $cancel_on_holidays  = C4::Context->preference('ExpireReservesOnHolidays');
     my $expireWaiting       = C4::Context->preference('ExpireReservesMaxPickUpDelay');
 
     my $dtf    = Koha::Database->new->schema->storage->datetime_parser;
-    my $params = {
+    my $search_params = {
         -or => [
             { expirationdate         => { '<', $dtf->format_date($today) } },
             { patron_expiration_date => { '<' => $dtf->format_date($today) } }
         ]
     };
 
-    $params->{found} = [ { '!=', 'W' }, undef ] unless $expireWaiting;
+    $search_params->{found} = [ { '!=', 'W' }, undef ] unless $expireWaiting;
 
     # FIXME To move to Koha::Holds->search_expired (?)
-    my $holds = Koha::Holds->search($params);
+    my $holds = Koha::Holds->search($search_params);
 
     my $cache = Koha::Cache::Memory::Lite->get_instance();
 
@@ -1097,12 +1101,27 @@ sub CancelExpiredReserves {
             }
         }
 
+        if ( $params->{dry_run} ) {
+            say "Would cancel expired hold " . $hold->id;
+            next;
+        }
+
         my $cancel_params = {};
         $cancel_params->{cancellation_reason} = $cancellation_reason if defined($cancellation_reason);
         if ( defined( $hold->found ) && $hold->found eq 'W' ) {
             $cancel_params->{charge_cancel_fee} = 1;
         }
         $cancel_params->{autofill} = C4::Context->preference('ExpireReservesAutoFill');
+
+        if ($params->{verbose}) {
+            warn "Hold " . $hold->id . " found, in status: " . $hold->found
+                . ($cancel_params->{charge_cancel_fee} ? ' +charge_cancel_fee' : '' )
+                . ($cancel_params->{cancellation_reason} ? ' +'.$cancel_params->{cancellation_reason} : '' )
+                . "\n" if $hold->found;
+        }
+
+        $cancel_params->{verbose} = 1 if $params->{verbose};
+
         $hold->cancel($cancel_params);
     }
 }
