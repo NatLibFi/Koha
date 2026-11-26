@@ -369,6 +369,19 @@
       </xsl:if>
     </xsl:template>
 
+    <xsl:template name="series-search-href">
+        <xsl:param name="searchurl"/>
+        <xsl:param name="title"/>
+        <xsl:variable name="series_term">
+            <xsl:call-template name="quote_search_term">
+                <xsl:with-param name="term" select="str:replace($title, '\', '\\')"/>
+            </xsl:call-template>
+        </xsl:variable>
+        <xsl:attribute name="href">
+            <xsl:value-of select="concat($searchurl, '?q=se,phr:', str:encode-uri($series_term, true()))"/>
+        </xsl:attribute>
+    </xsl:template>
+
     <xsl:template name="show-series">
         <xsl:param name="searchurl"/>
         <xsl:param name="UseControlNumber"/>
@@ -378,7 +391,11 @@
         <span class="results_summary series"><span class="label">Series: </span>
         <!-- 440 -->
         <xsl:for-each select="marc:datafield[@tag=440 and @ind1!='z']">
-            <a><xsl:attribute name="href"><xsl:value-of select="$searchurl"/>?q=se,phr:"<xsl:value-of select="str:encode-uri(marc:subfield[@code='a'], true())"/>"</xsl:attribute>
+            <a>
+                <xsl:call-template name="series-search-href">
+                    <xsl:with-param name="searchurl" select="$searchurl"/>
+                    <xsl:with-param name="title" select="marc:subfield[@code='a']"/>
+                </xsl:call-template>
                 <xsl:call-template name="chopPunctuation">
                     <xsl:with-param name="chopString">
                         <xsl:call-template name="subfieldSelect">
@@ -403,7 +420,11 @@
 
         <!-- 490 Series not traced, Ind1 = 0 -->
         <xsl:for-each select="marc:datafield[@tag=490][@ind1!=1]">
-            <a><xsl:attribute name="href"><xsl:value-of select="$searchurl"/>?q=se,phr:"<xsl:value-of select="str:encode-uri(marc:subfield[@code='a'], true())"/>"</xsl:attribute>
+            <a>
+                <xsl:call-template name="series-search-href">
+                    <xsl:with-param name="searchurl" select="$searchurl"/>
+                    <xsl:with-param name="title" select="marc:subfield[@code='a']"/>
+                </xsl:call-template>
                         <xsl:call-template name="chopPunctuation">
                             <xsl:with-param name="chopString">
                                 <xsl:call-template name="subfieldSelect">
@@ -502,7 +523,11 @@
                     </a>
                 </xsl:when>
                 <xsl:otherwise>
-                    <a><xsl:attribute name="href"><xsl:value-of select="$searchurl"/>?q=se,phr:"<xsl:value-of select="str:encode-uri(marc:subfield[@code='a'], true())"/>"</xsl:attribute>
+                    <a>
+                        <xsl:call-template name="series-search-href">
+                            <xsl:with-param name="searchurl" select="$searchurl"/>
+                            <xsl:with-param name="title" select="marc:subfield[@code='a']"/>
+                        </xsl:call-template>
                         <xsl:call-template name="chopPunctuation">
                             <xsl:with-param name="chopString">
                                 <xsl:call-template name="subfieldSelect">
