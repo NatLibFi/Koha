@@ -59,8 +59,7 @@ my $AnonymizeLastBorrower = C4::Context->preference("AnonymizeLastBorrower");
 my $AnonymousPatron       = C4::Context->preference("AnonymousPatron");
 
 unless ($AnonymizeLastBorrower) {
-    print STDERR "Preference 'AnonymizeLastBorrower' must be enabled to anonymize item's last borrower\n\n";
-    exit(1);
+    exit(0);
 }
 
 unless ($AnonymousPatron) {
@@ -75,6 +74,10 @@ unless ($confirm) {
 }
 
 my $rows = Koha::Patrons->anonymize_last_borrowers();
+unless ( defined $rows ) {
+    print STDERR "Preference 'AnonymousPatron' must refer to an existing patron\n\n";
+    exit(1);
+}
 $verbose and print int($rows) . " item's last borrowers anonymized.\n";
 
 exit(0);
