@@ -58,7 +58,9 @@ do_start()
 {
     # We insure all required directories exist, including disabled ones.
     koha-create-dirs $(koha-list)
-    koha-zebra --start $(koha-list --enabled)
+    if [ "$USE_ZEBRA_SEARCH" = "yes" ]; then
+        koha-zebra --start $(koha-list --enabled)
+    fi
     koha-sip   --start $(koha-list --enabled --sip)
     koha-plack --start $(koha-list --enabled --plack)
     koha-z3950-responder --start --quiet $(koha-list --enabled --z3950)
@@ -81,6 +83,7 @@ do_stop()
 {
     # We stop everything, including disabled ones.
     koha-zebra --stop $(koha-list) || true
+
     koha-sip   --stop $(koha-list --sip)
     koha-plack --stop --quiet $(koha-list --enabled --plack)
     koha-z3950-responder --stop --quiet $(koha-list --enabled --z3950)
@@ -89,9 +92,8 @@ do_stop()
     # long_tasks queue
     koha-worker --stop --queue long_tasks --quiet $(koha-list --enabled)
 
-    if [ "$USE_INDEXER_DAEMON" = "yes" ]; then
-        koha-indexer --stop --quiet $(koha-list --enabled)
-    fi
+    # We stop everything, including disabled ones.
+    koha-indexer --stop --quiet $(koha-list --enabled) || true
 
     koha-es-indexer --stop --quiet $(koha-list --enabled --elasticsearch)
 }
@@ -100,7 +102,9 @@ do_stop()
 # Function that sends a SIGHUP to the daemon/service
 #
 do_reload() {
-    koha-zebra --restart $(koha-list --enabled)
+    if [ "$USE_ZEBRA_SEARCH" = "yes" ]; then
+        koha-zebra --restart $(koha-list --enabled)
+    fi
     koha-sip   --restart $(koha-list --enabled --sip)
     koha-plack --restart --quiet $(koha-list --enabled --plack)
     koha-z3950-responder --restart --quiet $(koha-list --enabled --z3950)
