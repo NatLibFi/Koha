@@ -30,6 +30,10 @@ use C4::Reports qw( GetDelimiterChoices );
 use Koha::AuthorisedValues;
 use Koha::ItemTypes;
 use Koha::Patron::Attribute::Types;
+use Koha::Patron::Categories;
+use Koha::Reports::PseudonymizedCirculation;
+use Koha::I18N qw(__);
+use Text::CSV_XS;
 
 =head1 NAME
 
@@ -68,10 +72,27 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     }
 );
 
+my $source = $input->param('data_source') // 'statistics';
+my $pseudo = $source eq 'pseudonymized';
+if ( $source ne 'statistics' && !$pseudo ) {
+    $template->param( report_error => 'invalid_source' );
+    $do_it = 0;
+}
+my $source_label = $pseudo ? __('Retained pseudonymized transactions') : __('Statistics');
+$template->param(
+    data_source => $source, pseudonymized => $pseudo, source_label => $source_label,
+);
+
 my $library_id = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
 my @attribute_types =
     Koha::Patron::Attribute::Types->search_with_library_limits( {}, {}, $library_id )->as_list;
 my %allowed_attribute_codes = map { $_->code => 1 } @attribute_types;
+my %retained_codes;
+if ( $pseudo || !$do_it ) {
+    my $report = Koha::Reports::PseudonymizedCirculation->new(
+        { dbh => C4::Context->dbh, attribute_codes => [ keys %allowed_attribute_codes ] } );
+    %retained_codes = map { $_ => 1 } @{ $report->retained_attribute_codes };
+}
 
 my $attribute_filters = {};
 my $vars              = $input->Vars;
@@ -79,7 +100,7 @@ for my $key ( keys %$vars ) {
     next unless index( $key, 'Filter_borrower_attributes.' ) == 0;
 
     my $code = substr( $key, length('Filter_borrower_attributes.') );
-    next unless exists $allowed_attribute_codes{$code};
+    next unless $pseudo || exists $allowed_attribute_codes{$code};
 
     my $value = $vars->{$key};
     $value =~ s/\*/%/g if $value;
@@ -181,6 +202,97 @@ my ( $hassort1, $hassort2 );
 $hassort1 = 1 if $Bsort1;
 $hassort2 = 1 if $Bsort2;
 
+my $pseudo_params = {
+    line    => $line_input // 'branch', column     => $column_input // 'datetime',
+    metric  => $calc_input // 1,        display_by => $podsp_input  // '',
+    type    => $type_input // '',       day        => $daysel_input // '', month => $monthsel_input // '',
+    filters => \@filters, attribute_filters => $attribute_filters,
+};
+if ( $do_it && $pseudo ) {
+    my $report = Koha::Reports::PseudonymizedCirculation->new(
+        { dbh => C4::Context->dbh, attribute_codes => [ grep { $retained_codes{$_} } keys %allowed_attribute_codes ] }
+    );
+    my $result = $report->generate($pseudo_params);
+    if ( $result->{error} ) {
+        $template->param( report_error => $result->{error} );
+        $do_it = 0;
+    } else {
+        my %labels = (
+            itemtype                 => { map { $_->{itemtype} => $_->{translated_description} } @$itemtypes },
+            'items.location'         => $locations, 'items.ccode' => $ccodes,
+            'borrowers.categorycode' => { map { $_->categorycode       => $_->description } @patron_categories },
+            'borrowers.sort1'        => { map { $_->{authorised_value} => $_->{lib} } @$Bsort1 },
+            'borrowers.sort2'        => { map { $_->{authorised_value} => $_->{lib} } @$Bsort2 },
+        );
+        for my $axis ( [ 'line', 'looprow', 'rowtitle' ], [ 'column', 'loopcol', 'coltitle' ] ) {
+            my ( $field, $loop, $key ) = @$axis;
+            for my $entry ( @{ $result->{$loop} } ) {
+                my $value = $entry->{$key};
+                $entry->{"${key}_display"} =
+                    !defined $value ? __('Not recorded')
+                    : $labels{ $pseudo_params->{$field} } && defined $labels{ $pseudo_params->{$field} }->{$value}
+                    ? $labels{ $pseudo_params->{$field} }->{$value}
+                    : $value;
+            }
+        }
+        my @loopfilter;
+        for my $index ( 0 .. $#filters ) {
+            push @loopfilter, { crit => $index, filter => $filters[$index] } if length( $filters[$index] // '' );
+        }
+        for my $code ( sort keys %$attribute_filters ) {
+            push @loopfilter, { crit => 'PA_CLASS', label => $code, filter => $attribute_filters->{$code} };
+        }
+        for my $filter (
+            [ 'Event', 'type' ], [ 'Display by', 'display_by' ], [ 'Select Day', 'day' ],
+            [ 'Select Month', 'month' ]
+            )
+        {
+            push @loopfilter, { crit => $filter->[0], filter => $pseudo_params->{ $filter->[1] } }
+                if length( $pseudo_params->{ $filter->[1] } );
+        }
+        $result->{loopfilter} = \@loopfilter;
+        if ( ( $input->param('output') // 'screen' ) eq 'file' ) {
+            my $basename = $input->param('basename') // 'Export';
+            $basename =~ s/[^A-Za-z0-9-]+/_/g;
+            $basename ||= 'Export';
+            print $input->header( -type => 'text/csv', -charset => 'UTF-8', -attachment => "$basename.csv" );
+            binmode STDOUT, ':encoding(UTF-8)';
+            my $csv = Text::CSV_XS->new(
+                { binary => 1, eol => "\n", sep_char => C4::Context->csv_delimiter( scalar $input->param('sep') ) } );
+            $csv->print( \*STDOUT, [ __('Data source'), $source_label ] );
+            $csv->print(
+                \*STDOUT,
+                [
+                    $result->{line} . '/' . $result->{column},
+                    map( $_->{coltitle_display}, @{ $result->{loopcol} } ), __('Total')
+                ]
+            );
+            for my $row ( @{ $result->{looprow} } ) {
+                $csv->print(
+                    \*STDOUT,
+                    [
+                        $row->{rowtitle_display},
+                        map( defined $_->{value} ? $_->{value} : __('Not recorded'), @{ $row->{loopcell} } ),
+                        defined $row->{totalrow} ? $row->{totalrow} : __('Not recorded')
+                    ]
+                );
+            }
+            $csv->print(
+                \*STDOUT,
+                [
+                    __('Total'),
+                    map( defined $_->{totalcol} ? $_->{totalcol} : __('Not recorded'), @{ $result->{loopfooter} } ),
+                    defined $result->{total} ? $result->{total} : __('Not recorded')
+                ]
+            );
+            exit;
+        }
+        $template->param( do_it => 1, mainloop => [$result] );
+        output_html_with_http_headers $input, $cookie, $template->output;
+        exit;
+    }
+}
+
 $template->param(
     do_it => $do_it,
 );
@@ -258,6 +370,7 @@ for my $attribute_type (@attribute_types) {
             push @{ $attribute_type->{authorised_values} }, $authorised_value;
         }
     }
+    $attribute_type->{has_retained_data} = $retained_codes{ $attribute_type->{code} } ? 1 : 0;
     push @{ $attribute_types_by_class{ $attribute_type->{class} } }, $attribute_type;
 }
 
