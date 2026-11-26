@@ -260,6 +260,9 @@
                 $("#job_details").show();
             }
 
+            const filters = new URLSearchParams(window.location.search);
+            $("#only_current").prop("checked", filters.get("only_current") === "1");
+
             let only_current_filter = function () {
                 if ($("#only_current").is(":checked")) {
                     return "only_current=1";
