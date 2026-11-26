@@ -1212,7 +1212,7 @@ sub GetMarcStructure {
         = $sth->fetchrow )
     {
         $res->{$tag}->{lib}               = ( $forlibrarian or !$libopac ) ? $liblibrarian : $libopac;
-        $res->{$tag}->{tab}               = "";
+        $res->{$tag}->{tab}               = " ";
         $res->{$tag}->{mandatory}         = $mandatory;
         $res->{$tag}->{important}         = $important;
         $res->{$tag}->{repeatable}        = $repeatable;
