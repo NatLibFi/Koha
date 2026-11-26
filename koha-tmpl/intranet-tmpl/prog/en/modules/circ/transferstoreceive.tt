@@ -34,7 +34,7 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 [% WRAPPER 'main-container.inc' aside='circ-nav' %]
-    <h1>Transfers made to your library as of [% show_date | $KohaDates %]</h1>
+    <h1>Transfers made to your library as of [% show_date | $KohaDates with_hours => 1 %]</h1>
     <p>Your library is the destination for the following transfer(s)</p>
     [% IF ( TransfersMaxDaysWarning ) %]<p>Transfers are <span class="error">considered late</span> after [% TransfersMaxDaysWarning | html %] days.</p>[% END %]
     <div id="resultlist">
