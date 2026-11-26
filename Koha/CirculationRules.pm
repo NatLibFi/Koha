@@ -596,6 +596,8 @@ sub get_opacitemholds_policy {
 
     return unless $item or $patron;
 
+    return 'F' if $item->uses_closed_stack_requests;
+
     my $rule = Koha::CirculationRules->get_effective_rule(
         {
             categorycode => $patron->categorycode,

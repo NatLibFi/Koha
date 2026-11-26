@@ -315,6 +315,12 @@
         <a id="audit_record" class="btn btn-default" href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | html %]&audit=1" role="button"> <i class="fa-solid fa-stethoscope"></i> Audit</a>
     </div>
 
+    [% IF items.filter_by_closed_stack.count %]
+        <div class="btn-group"
+            ><a class="btn btn-default" href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | html %]&closed_stack_request=1"><i class="fa-solid fa-bookmark"></i> Closed stack request</a></div
+        >
+    [% END %]
+
     [% IF ( Koha.Preference('EnableBooking') && CAN_user_circulate_manage_bookings ) %]
         [% IF biblio.items.filter_by_bookable.count %]
             [% INCLUDE 'modals/booking/button-place.inc' %]

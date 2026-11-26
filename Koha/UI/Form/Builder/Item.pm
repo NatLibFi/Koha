@@ -573,6 +573,9 @@ sub edit_form {
             next if IsMarcStructureInternal($subfield);
             next if $subfield->{tab} ne "10";
             next
+                if ( $subfield->{kohafield} // q{} ) eq 'items.is_closed_stack'
+                && !C4::Context->preference('EnableClosedStackRequests');
+            next
                 if grep { $subfield->{kohafield} && $subfield->{kohafield} eq $_ } @$kohafields_to_ignore;
 
             next

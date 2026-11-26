@@ -59,7 +59,15 @@
         <li>
             <a href="/cgi-bin/koha/circ/pendingreserves.pl" title="Holds to pull"><i class="fa-solid fa-hand-back-fist fa-fw" aria-hidden="true"></i><span class="menu-label">Holds to pull</span></a>
         </li>
+        [% IF Koha.Preference('EnableClosedStackRequests') %]
+            <li>
+                <a href="/cgi-bin/koha/circ/closed-stack-requests.pl">Closed stack requests</a>
+            </li>
+        [% END %]
         <li>
+            <a href="/cgi-bin/koha/circ/waitingreserves.pl">Holds awaiting pickup</a>
+         </li>
+         <li>
             <a href="/cgi-bin/koha/circ/waitingreserves.pl" title="Holds awaiting pickup"><i class="fa-solid fa-calendar-days fa-fw" aria-hidden="true"></i><span class="menu-label">Holds awaiting pickup</span></a>
         </li>
         [% IF ( Koha.Preference('CurbsidePickup') && CAN_user_circulate_manage_curbside_pickups ) %]
