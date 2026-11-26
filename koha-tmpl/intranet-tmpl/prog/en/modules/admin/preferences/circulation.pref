@@ -827,6 +827,14 @@ Circulation:
                   virtual: "'virtual' priorities, where each group is numbered separately"
             - .
         -
+            - Sort call numbers on the holds to pull list
+            - pref: HoldsCallnumberSortToPull
+              default: alphabetical
+              choices:
+                  alphabetical: "alphabetically (as plain text)"
+                  classification: "by classification sort key (cn_sort)"
+            - .
+        -
             - pref: UseHoldsQueueFilterOptions
               choices:
                   1: Enable
