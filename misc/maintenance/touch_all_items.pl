@@ -23,7 +23,7 @@ use warnings;
 # possible modules to use
 use Getopt::Long qw( GetOptions );
 
-use Koha::Script;
+use Koha::Script '-defer-log';
 use C4::Context;
 use Koha::Items;
 use Pod::Usage qw( pod2usage );
@@ -32,9 +32,6 @@ sub usage {
     pod2usage( -verbose => 2 );
     exit;
 }
-
-# Database handle
-my $dbh = C4::Context->dbh;
 
 # Benchmarking variables
 my $startime   = time();
@@ -47,15 +44,20 @@ my $verbose;
 my $whereclause = '';
 my $help;
 my $outfile;
+my $dry_run;
+my @command_line = @ARGV;
 
 GetOptions(
     'o|output:s' => \$outfile,
     'v'          => \$verbose,
     'where:s'    => \$whereclause,
     'help|h'     => \$help,
-);
+    'n|dry-run'  => \$dry_run,
+) or pod2usage(2);
 
 usage() if $help;
+Koha::Script->start_logging(@command_line) unless $dry_run;
+my $dbh = C4::Context->dbh;
 
 if ($whereclause) {
     $whereclause = "WHERE $whereclause";
@@ -75,6 +77,11 @@ $sth_fetch->execute();
 
 # fetch info from the search
 while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchrow_array ) {
+    if ($dry_run) {
+        $totalcount++;
+        print $fh "Would touch item $itemnumber\n" if $verbose;
+        next;
+    }
 
     my $item = Koha::Items->find($itemnumber);
     next unless $item;
@@ -99,6 +106,11 @@ while ( my ( $biblionumber, $itemnumber, $itemcallnumber ) = $sth_fetch->fetchro
 }
 close($fh);
 
+if ($dry_run) {
+    print "Dry run: would touch $totalcount items.\n";
+    exit;
+}
+
 # Benchmarking
 my $endtime     = time();
 my $time        = $endtime - $startime;
@@ -117,6 +129,7 @@ touch_all_items.pl
   touch_all_items.pl
   touch_all_items.pl -v
   touch_all_items.pl --where=STRING
+  touch_all_items.pl --dry-run
 
 =head1 DESCRIPTION
 

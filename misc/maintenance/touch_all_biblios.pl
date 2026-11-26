@@ -23,7 +23,7 @@ use warnings;
 # possible modules to use
 use Getopt::Long qw( GetOptions );
 
-use Koha::Script;
+use Koha::Script '-defer-log';
 use C4::Context;
 use C4::Biblio qw( ModBiblio );
 use Koha::Biblios;
@@ -33,9 +33,6 @@ sub usage {
     pod2usage( -verbose => 2 );
     exit;
 }
-
-# Database handle
-my $dbh = C4::Context->dbh;
 
 # Benchmarking variables
 my $startime   = time();
@@ -48,15 +45,20 @@ my $verbose;
 my $whereclause = '';
 my $help;
 my $outfile;
+my $dry_run;
+my @command_line = @ARGV;
 
 GetOptions(
     'o|output:s' => \$outfile,
     'v'          => \$verbose,
     'where:s'    => \$whereclause,
     'help|h'     => \$help,
-);
+    'n|dry-run'  => \$dry_run,
+) or pod2usage(2);
 
 usage() if $help;
+Koha::Script->start_logging(@command_line) unless $dry_run;
+my $dbh = C4::Context->dbh;
 
 if ($whereclause) {
     $whereclause = "WHERE $whereclause";
@@ -75,6 +77,12 @@ $sth1->execute();
 
 # fetch info from the search
 while ( my ( $biblionumber, $frameworkcode ) = $sth1->fetchrow_array ) {
+    if ($dry_run) {
+        # Reading the MARC record can persist a repair on Koha 26.11.
+        $totalcount++;
+        print $fh "Would touch biblio $biblionumber\n" if $verbose;
+        next;
+    }
     my $biblio = Koha::Biblios->find($biblionumber);
     my $record = eval { $biblio->metadata->record };
     if ($@) {
@@ -105,6 +113,11 @@ while ( my ( $biblionumber, $frameworkcode ) = $sth1->fetchrow_array ) {
 }
 close($fh);
 
+if ($dry_run) {
+    print "Dry run: would touch $totalcount bibliographic records.\n";
+    exit;
+}
+
 # Benchmarking
 my $endtime     = time();
 my $time        = $endtime - $startime;
@@ -124,6 +137,7 @@ touch_all_biblios.pl
   touch_all_biblios.pl
   touch_all_biblios.pl -v
   touch_all_biblios.pl --where=STRING
+  touch_all_biblios.pl --dry-run
 
 =head1 DESCRIPTION
 
