@@ -1327,6 +1327,7 @@
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/acquisitions-menu.js") | $raw %]
     [% INCLUDE 'datatables.inc' %]
+    [% Asset.js("js/acquisitions-basket-search.js") | $raw %]
     [% Asset.js("js/acq.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
@@ -1486,11 +1487,15 @@
                 {
                     bKohaColumnsUseNames: true,
                     autoWidth: false,
+                    initComplete: initBasketSearch,
                 },
                 orders_table_settings
             );
 
-            $("#cancelledorderst").kohaTable({});
+            $("#cancelledorderst").kohaTable({
+                initComplete: initBasketSearch,
+            });
+
             $("#reopenform").on("submit", function (e) {
                 var is_confirmed = skip_confirm_reopen || confirm(_("Are you sure you want to reopen this basket?"));
                 if (is_confirmed) {
