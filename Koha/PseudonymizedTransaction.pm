@@ -19,6 +19,8 @@ use Modern::Perl;
 use Crypt::Eksblowfish::Bcrypt qw( bcrypt );
 use List::MoreUtils            qw(any);
 
+use C4::Context;
+
 use Koha::Database;
 use Koha::Exceptions::Config;
 use Koha::Patrons;
@@ -38,10 +40,16 @@ Koha::PseudonymizedTransaction - Koha Koha::PseudonymizedTransaction Object clas
 
     Creates a new object from a passed Koha::Statistic object and stores it in the database
 
+The optional C<operator> in the third argument supplies the operator's
+borrowernumber captured at enqueue time. An explicit undef prevents a lookup of
+current permissions. Operator collection must still be enabled when creating the
+transaction.
+
 =cut
 
 sub create_from_statistic {
-    my ( $class, $statistic ) = @_;
+    my ( $class, $statistic, $params ) = @_;
+    $params //= {};
 
     my $values = {
         hashed_borrowernumber => $class->get_hash( $statistic->borrowernumber ),
@@ -72,6 +80,14 @@ sub create_from_statistic {
         }
     }
 
+    if ( any { $_ eq 'interface' } @t_fields_to_copy ) {
+        $values->{interface} = C4::Context->interface;
+    }
+
+    if ( any { $_ eq 'operator' } @t_fields_to_copy ) {
+        $values->{operator} = exists $params->{operator} ? $params->{operator} : $class->get_operator;
+    }
+
     # Remove fields we have already handled from the list
     @t_fields_to_copy = grep {
                $_ ne 'transaction_branchcode'
@@ -79,6 +95,8 @@ sub create_from_statistic {
             && $_ ne 'homebranch'
             && $_ ne 'transaction_type'
             && $_ ne 'itemcallnumber'
+            && $_ ne 'interface'
+            && $_ ne 'operator'
     } @t_fields_to_copy;
 
     # Populate the remaining columns
@@ -87,6 +105,13 @@ sub create_from_statistic {
     my $patron = Koha::Patrons->find( $statistic->borrowernumber );
     if ($patron) {
         my @p_fields_to_copy = split ',', C4::Context->preference('PseudonymizationPatronFields') || '';
+
+        if ( grep { $_ eq 'age' } @p_fields_to_copy ) {
+            $values->{age} = $patron->get_age;
+        }
+
+        @p_fields_to_copy = grep { $_ ne 'age' } @p_fields_to_copy;
+
         $values = { %$values, map { $_ => $patron->$_ } @p_fields_to_copy };
 
         $values->{branchcode}   = $patron->branchcode;  # FIXME Must be removed from the pref options, or FK removed (?)
@@ -156,6 +181,30 @@ sub create_from_statistic {
     }
 
     return $self;
+}
+
+=head3 get_operator
+
+Return the current operator's borrowernumber if operator collection is enabled
+and the patron currently has module or granular permissions in the database.
+Otherwise return undef. Session permission flags may be stale.
+
+=cut
+
+sub get_operator {
+    my ($class) = @_;
+
+    my @fields = split ',', C4::Context->preference('PseudonymizationTransactionFields') || '';
+    return unless any { $_ eq 'operator' } @fields;
+
+    my $userenv = C4::Context->userenv;
+    return unless $userenv && $userenv->{number};
+
+    my $patron = Koha::Patrons->find( $userenv->{number} );
+    return unless $patron;
+    return $patron->borrowernumber if ( $patron->flags // 0 ) > 0 || $patron->_result->user_permissions->count;
+
+    return;
 }
 
 =head3 get_hash
