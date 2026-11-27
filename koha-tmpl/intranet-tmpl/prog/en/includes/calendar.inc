@@ -225,13 +225,15 @@
                 let original_date = $(input).val();
                 if (original_date) {
                     original_date = flatpickr.parseDate(original_date, "Y-m-d").getTime();
-                    let tomorrow = new Date().fp_incr(1).getTime();
+                    const border_date = $(input).data("flatpickr-futureinclusive") === true
+                        ? new Date().setHours(0, 0, 0, 0)
+                        : new Date().fp_incr(1).getTime();
 
                     options["enable"] = [
                         function (date) {
                             date = date.getTime();
                             if (date == original_date) return true;
-                            if (date >= tomorrow) return true;
+                            if (date >= border_date) return true;
                         },
                     ];
                 } else {
