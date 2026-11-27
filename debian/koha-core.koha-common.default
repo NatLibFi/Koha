@@ -16,6 +16,9 @@ KOHA_HOME="/usr/share/koha"
 #
 USE_INDEXER_DAEMON="yes"
 
+# Start Zebra unless disabled on an Elasticsearch-only host.
+USE_ZEBRA_SEARCH="yes"
+
 # Set an alternate indexer daemon. The default is to use the rebuild_zebra.pl
 # in daemon mode.
 #

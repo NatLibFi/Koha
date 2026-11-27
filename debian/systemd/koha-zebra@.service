@@ -21,6 +21,7 @@ WorkingDirectory=/var/lib/koha/%i
 Environment=KOHA_CONF=/etc/koha/sites/%i/koha-conf.xml
 Environment=KOHA_HOME=/usr/share/koha
 PIDFile=/run/koha/%i/zebra.pid
+ExecCondition=/usr/sbin/koha-systemd-ctl zebra-enabled
 ExecStartPre=+/usr/sbin/koha-generate-env zebra %i
 # Clean up leftover Zebra socket files so Zebra can rebind on startup.
 ExecStartPre=+/bin/sh -c 'rm -f /run/koha/%i/*socket'
