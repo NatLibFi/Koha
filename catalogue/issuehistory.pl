@@ -60,6 +60,8 @@ my $biblio = Koha::Biblios->find($biblionumber);
 $template->param(
     checkouts        => [ @checkouts, @old_checkouts ],
     biblio           => $biblio,
+    # below one needed for main-container.inc -> biblio-view-menu.inc number render:
+    biblionumber     => $biblionumber,
     issuehistoryview => 1,
     C4::Search::enabled_staff_search_views,
     subscriptionsnumber => CountSubscriptionFromBiblionumber($biblionumber),
