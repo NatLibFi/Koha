@@ -18,10 +18,11 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use Koha::BackgroundJob::BatchDeletePatron;
 use Koha::BackgroundJobs;
+use Koha::Checkouts;
 use Koha::Database;
 use Koha::Patrons;
 
@@ -220,4 +221,43 @@ subtest 'process() with cancelled job' => sub {
     );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'process() reports a checkout added after enqueue' => sub {
+    plan tests => 12;
+
+    for my $move_to_deleted ( 0, 1 ) {
+        $schema->storage->txn_begin;
+
+        my $patron         = $builder->build_object( { class => 'Koha::Patrons', value => { protected => 0 } } );
+        my $borrowernumber = $patron->borrowernumber;
+        my $job_id         = Koha::BackgroundJob::BatchDeletePatron->new->enqueue(
+            { record_ids => [$borrowernumber], move_to_deleted => $move_to_deleted } );
+
+        my $item     = $builder->build_sample_item;
+        my $checkout = $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => { borrowernumber => $borrowernumber, itemnumber => $item->itemnumber }
+            }
+        );
+        my $job = Koha::BackgroundJobs->find($job_id)->_derived_class;
+        $job->process( $job->decoded_data );
+        $job = Koha::BackgroundJobs->find($job_id)->_derived_class;
+
+        is( $job->status, 'finished', 'The job finishes normally' );
+        is_deeply(
+            $job->report->{not_deleted_borrowernumbers}, [$borrowernumber],
+            'The patron is reported as skipped'
+        );
+        is( $job->messages->[0]->{reason}, 'patron_has_checkouts', 'The report explains the checkout' );
+        ok( Koha::Patrons->find($borrowernumber),         'The patron is preserved' );
+        ok( Koha::Checkouts->find( $checkout->issue_id ), 'The checkout is preserved' );
+        is(
+            $schema->resultset('Deletedborrower')->search( { borrowernumber => $borrowernumber } )->count,
+            0, 'No archived patron is left by the failed deletion'
+        );
+
+        $schema->storage->txn_rollback;
+    }
 };
