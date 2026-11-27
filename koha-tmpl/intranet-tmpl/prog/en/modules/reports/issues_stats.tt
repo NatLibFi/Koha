@@ -1,4 +1,5 @@
 [% USE raw %]
+[% USE Asset %]
 [% USE Koha %]
 [% USE Branches %]
 [% USE Categories %]
@@ -54,8 +55,35 @@
 
 [% WRAPPER 'main-container.inc' aside='reports-menu' %]
     <h1>Circulation statistics</h1>
+    [% IF report_error %]
+        <div class="alert alert-danger" id="report-error">
+            [% SWITCH report_error %]
+            [% CASE 'unsupported_metric' %]
+                This measure is not available for the selected data source.
+            [% CASE 'unsupported_type' %]
+                This transaction type is not available for the selected data source.
+            [% CASE 'unsupported_attribute' %]
+                A selected patron attribute is not available for this data source and library.
+            [% CASE 'unsupported_dimension' %]
+                A selected row or column is not available for this data source.
+            [% CASE 'invalid_period' %]
+                The end date must not precede the start date.
+            [% CASE 'invalid_date' %]
+                Enter a valid date in YYYY-MM-DD format.
+            [% CASE %]
+                The report parameters are not valid. Check the data source and selections.
+            [% END %]
+        </div>
+    [% END %]
     [% IF ( do_it ) %]
+        <p><strong>Data source:</strong> [% source_label | html %]</p>
         [% FOREACH mainloo IN mainloop %]
+            [% IF mainloo.missing_metric || mainloo.missing_dimensions %]
+                <div class="alert alert-warning">
+                    [% IF mainloo.missing_metric %]<p>[% mainloo.missing_metric | html %] records have no identifier for the selected measure. Unique counts include only recorded identifiers.</p>[% END %]
+                    [% IF mainloo.missing_dimensions %]<p>[% mainloo.missing_dimensions | html %] records have a missing row or column value, shown as "Not recorded".</p>[% END %]
+                </div>
+            [% END %]
             [% IF ( mainloo.loopfilter ) %]
                 <h2>Filtered on:</h2>
                 <ul>
@@ -142,7 +170,7 @@
             [% END %]
 
             <div class="page-section">
-                <table>
+                <table id="circulation-statistics-results">
                     <tr>
                         <th>[% mainloo.line | html %] / [% mainloo.column | html %]</th>
                         [% FOREACH loopco IN mainloo.loopcol %]
@@ -152,19 +180,19 @@
                     </tr>
                     [% FOREACH loopro IN mainloo.looprow %]
                         <tr>
-                            <td>[% loopro.rowtitle_display or "UNKNOWN VALUE" | html %]</td>
+                            <td>[% IF pseudonymized %][% loopro.rowtitle_display | html %][% ELSE %][% loopro.rowtitle_display or "UNKNOWN VALUE" | html %][% END %]</td>
                             [% FOREACH loopcel IN loopro.loopcell %]
-                                <td>[% loopcel.value || 0 | html %]</td>
+                                <td>[% IF pseudonymized && !loopcel.value.defined %]Not recorded[% ELSE %][% loopcel.value || 0 | html %][% END %]</td>
                             [% END %]
-                            <td>[% loopro.totalrow | html %]</td>
+                            <td>[% IF pseudonymized && !loopro.totalrow.defined %]Not recorded[% ELSE %][% loopro.totalrow | html %][% END %]</td>
                         </tr>
                     [% END %]
                     <tr>
                         <th>TOTAL</th>
                         [% FOREACH loopfoote IN mainloo.loopfooter %]
-                            <th>[% loopfoote.totalcol | html %]</th>
+                            <th>[% IF pseudonymized && !loopfoote.totalcol.defined %]Not recorded[% ELSE %][% loopfoote.totalcol | html %][% END %]</th>
                         [% END %]
-                        <th>[% mainloo.total | html %]</th>
+                        <th>[% IF pseudonymized && !mainloo.total.defined %]Not recorded[% ELSE %][% mainloo.total | html %][% END %]</th>
                     </tr>
                 </table>
             </div>
@@ -172,6 +200,21 @@
         [% END %]
     [% ELSE %]
         <form method="get" action="/cgi-bin/koha/reports/issues_stats.pl">
+            <fieldset class="rows">
+                <legend>Data source</legend>
+                <ol
+                    ><li>
+                        <label for="data_source">Use:</label>
+                        <select name="data_source" id="data_source">
+                            <option value="statistics" [% IF data_source == 'statistics' %]selected="selected"[% END %]>Statistics</option>
+                            <option value="pseudonymized" [% IF pseudonymized %]selected="selected"[% END %]>Retained pseudonymized transactions</option>
+                        </select>
+                    </li></ol
+                >
+                <p class="hint pseudonymized-source-help [% UNLESS pseudonymized %]d-none[% END %]"
+                    >Uses retained checkouts, renewals, checkins and on-site checkouts. Available fields depend on what was collected. Historical unique bibliographic counts and local use are not available.</p
+                >
+            </fieldset>
             <fieldset class="rows">
                 <legend>Circulation statistics</legend
                 ><table>
@@ -392,7 +435,7 @@
                                     </tr>
                                 [% END %]
                                 [% FOREACH attr_type IN attribute_types_by_class.$class %]
-                                    <tr>
+                                    <tr class="patron-attribute" data-retained="[% attr_type.has_retained_data | html %]">
                                         <td>[% attr_type.description | html %]</td>
                                         <td><input type="radio" name="Line" value="borrower_attributes.[% attr_type.code | html %]" /> </td>
                                         <td><input type="radio" name="Column" value="borrower_attributes.[% attr_type.code | html %]" /> </td>
@@ -471,6 +514,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
+    [% Asset.js("js/circulation_statistics.js") | $raw %]
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
