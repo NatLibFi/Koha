@@ -44,6 +44,8 @@
                     <span>Patron is protected</span>
                 [% CASE 'patron_anonymous' %]
                     <span>Patron is the anonymous patron</span>
+                [% CASE 'patron_has_checkouts' %]
+                    <span>Patron has active checkouts</span>
                 [% CASE %]
                     <span>[% m.reason | html %]</span>
                 [% END %]

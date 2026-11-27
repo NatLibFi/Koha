@@ -113,13 +113,21 @@ sub process {
             push @deleted_borrowernumbers, $borrowernumber;
             $report->{total_success}++;
         } catch {
+            my $error  = $_;
+            my $reason = $reason_codes{ ref $error };
+            if (   ref($error) eq 'Koha::Exceptions::Object::FKConstraintDeletion'
+                && ( $error->table // '' ) eq 'issues'
+                && ( $error->fk    // '' ) eq 'borrowernumber' )
+            {
+                $reason = 'patron_has_checkouts';
+            }
             push @not_deleted_borrowernumbers, $borrowernumber;
             push @messages, {
                 type           => 'error',
                 code           => 'patron_not_deleted',
                 borrowernumber => $borrowernumber,
                 cardnumber     => $cardnumber,
-                reason         => $reason_codes{ ref $_ } // ( ref($_) ? $_->message : $_ ),
+                reason         => $reason // ( ref($error) ? $error->message : $error ),
             };
         };
 
