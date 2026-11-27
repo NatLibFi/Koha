@@ -51,6 +51,7 @@ $(document).ready(function () {
                         url: bookings_table_url,
                     },
                     embed: ["biblio", "item", "item.checkout", "patron"],
+                    pageSizeLimit: patron_disclosure_bookings_page_size_limit,
                     createdRow: function (row, data) {
                         BookingsTable.highlightRow(data, row);
                     },

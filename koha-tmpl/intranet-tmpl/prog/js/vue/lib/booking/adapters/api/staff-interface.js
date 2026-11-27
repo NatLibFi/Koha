@@ -5,6 +5,7 @@
  */
 
 import { APIClient } from "@koha-vue/fetch/api-client.js";
+import HttpClient from "@koha-vue/fetch/http-client.js";
 import { $__ } from "@koha-vue/i18n";
 
 // The adapter's callers present API errors themselves (formatApiError
@@ -22,6 +23,25 @@ function requestConfig(options = {}) {
     return options.signal ? { ...QUIET, signal: options.signal } : QUIET;
 }
 
+const itemClient = new HttpClient();
+
+function fetchItems(biblionumber, params, options) {
+    const query = new URLSearchParams(params);
+    const endpoint = "/api/v1/biblios/" + encodeURIComponent(biblionumber) + "/items?" + query;
+    return window.fetchAllKohaApiPages(
+        endpoint,
+        "item_id",
+        { "x-koha-embed": "+strings,item_type" },
+        (url, { headers }) =>
+            itemClient.get({
+                endpoint: url.pathname + url.search,
+                headers,
+                return_response: true,
+                config: requestConfig(options),
+            })
+    );
+}
+
 /**
  * Fetches bookable items for a given biblionumber
  * @param {import('../../types/bookings').Id} biblionumber Biblio identifier.
@@ -30,12 +50,7 @@ function requestConfig(options = {}) {
  * @throws {Error} If the request fails or returns a non-OK status
  */
 export function fetchBookableItems(biblionumber, options = {}) {
-    return APIClient.biblio.biblios.items(
-        encodeURIComponent(biblionumber),
-        { bookable: 1 },
-        { "x-koha-embed": "+strings,item_type" },
-        requestConfig(options)
-    );
+    return fetchItems(biblionumber, { bookable: 1 }, options);
 }
 
 /**
@@ -47,12 +62,10 @@ export function fetchBookableItems(biblionumber, options = {}) {
  * @returns {Promise<import('../../types/bookings').BookableItem[]>} Matching assigned items.
  */
 export function fetchAssignedItem(biblionumber, itemId, options = {}) {
-    return APIClient.biblio.biblios.items(
-        encodeURIComponent(biblionumber),
-        {},
-        { "x-koha-embed": "+strings,item_type" },
-        requestConfig(options),
-        { item_id: itemId }
+    return fetchItems(
+        biblionumber,
+        { q: JSON.stringify({ item_id: itemId }) },
+        options
     );
 }
 

@@ -900,6 +900,9 @@
             CAN_user_circulate_circulate_remaining_permissions: [% CAN_user_circulate_circulate_remaining_permissions ? 1 : 0 | html %],
         });
         patron_borrowernumber = [% patron.borrowernumber | $raw %]
+        [% USE PatronDisclosure %]
+        const patron_disclosure_bookings_page_size_limit =
+            [% PatronDisclosure.page_size_limit('GET /bookings') || 'undefined' %];
 
         var amountlimit = "[% Koha.Preference('FineNoRenewals') | html %]";
         var fines = "[% fines | $Price %]";
