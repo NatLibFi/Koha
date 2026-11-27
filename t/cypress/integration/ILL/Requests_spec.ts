@@ -112,4 +112,39 @@ describe("ILL requests", () => {
 
         cy.get(`#${tableId} tbody`).contains(searchValue).should("be.visible");
     });
+
+    it("shows every last-request recipient in the staff ILL list", () => {
+        const recipients = "first&second@example.test, third@example.test";
+
+        cy.task("query", {
+            sql: `INSERT INTO illrequestattributes (illrequest_id, backend, type, value, readonly)
+                  SELECT illrequest_id, 'Standard', 'requested_partners', '${recipients}', 0
+                  FROM illrequests WHERE orderid = '${matchingOrderId}'`,
+        });
+        cy.task("query", {
+            sql: `INSERT INTO illrequestattributes (illrequest_id, backend, type, value, readonly)
+                  SELECT illrequest_id, 'Other', 'requested_partners', 'old@example.test', 0
+                  FROM illrequests WHERE orderid IN ('${matchingOrderId}', '${excludedOrderId}')`,
+        });
+
+        cy.intercept("GET", "/api/v1/ill/requests*").as("getRequests");
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.wait("@getRequests").its("response.statusCode").should("eq", 200);
+
+        cy.contains("#ill-requests thead th", "Last request sent to").then(
+            $header => {
+                const column = $header.index();
+                cy.contains("#ill-requests tbody tr", matchingOrderId)
+                    .find("td")
+                    .eq(column)
+                    .should("have.text", recipients)
+                    .find("a")
+                    .should("not.exist");
+                cy.contains("#ill-requests tbody tr", excludedOrderId)
+                    .find("td")
+                    .eq(column)
+                    .should("be.empty");
+            }
+        );
+    });
 });
