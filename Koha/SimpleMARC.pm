@@ -20,6 +20,7 @@ use base 'Exporter';
 
 use Koha::Exceptions;
 use Koha::Regex::Replacement;
+use Koha::SimpleMARC::Replacement;
 
 BEGIN {
     our @EXPORT_OK = qw(
@@ -279,7 +280,8 @@ sub add_field {
 
 =head2 _update_field
 
-Updates the value of a field.
+Update existing control fields or create missing control fields with the
+provided values.
 
 =cut
 
@@ -311,7 +313,8 @@ sub _update_field {
 
 =head3 _update_subfield
 
-Updates the value of a subfield
+Update or add subfield values, optionally limiting the operation to selected
+field occurrences.
 
 =cut
 
@@ -435,7 +438,8 @@ sub read_field {
 
 =head3 _read_field
 
-Returns the value of a field
+Return control-field data or all subfield values from the selected data-field
+occurrences.
 
 =cut
 
@@ -474,7 +478,7 @@ sub _read_field {
 
 =head3 _read_subfield
 
-Returns the value of a subfield
+Return values for one subfield, optionally limited to selected occurrences.
 
 =cut
 
@@ -760,7 +764,8 @@ sub _delete_field {
 
 =head3 _delete_subfield
 
-Deletes the given subfield.
+Delete a subfield from selected field occurrences and remove fields left with
+no subfields.
 
 =cut
 
@@ -785,7 +790,8 @@ sub _delete_subfield {
 
 =head3 _copy_move_field
 
-Copies a value from one field and moves it to another.
+Copy, move or replace whole fields and optionally transform each subfield
+value with a regular expression.
 
 =cut
 
@@ -814,12 +820,27 @@ sub _copy_move_field {
         if ( $regex and $regex->{search} ) {
             if ( $new_field->is_control_field ) {
                 my $value = $new_field->data;
-                ($value) = _modify_values( { values => [$value], regex => $regex } );
+                ($value) = _modify_values(
+                    {
+                        values      => [$value],
+                        regex       => $regex,
+                        record      => $record,
+                        current_tag => $fromFieldName,
+                    }
+                );
                 $new_field->update($value);
             } else {
                 for my $subfield ( $new_field->subfields ) {
                     my $value = $subfield->[1];
-                    ($value) = _modify_values( { values => [$value], regex => $regex } );
+                    ($value) = _modify_values(
+                        {
+                            values           => [$value],
+                            regex            => $regex,
+                            record           => $record,
+                            current_tag      => $fromFieldName,
+                            current_subfield => $subfield->[0],
+                        }
+                    );
                     $new_field->update( $subfield->[0], $value );
                 }
             }
@@ -839,7 +860,8 @@ sub _copy_move_field {
 
 =head3 _copy_move_subfield
 
-Copies a value from one subfield and moves it to another.
+Copy, move or replace subfield values and optionally transform them with a
+regular expression.
 
 =cut
 
@@ -879,7 +901,15 @@ sub _copy_move_subfield {
             }
         );
     }
-    _modify_values( { values => \@values, regex => $regex } );
+    _modify_values(
+        {
+            values           => \@values,
+            regex            => $regex,
+            record           => $record,
+            current_tag      => $fromFieldName,
+            current_subfield => $fromSubfieldName,
+        }
+    );
     my $dont_erase = $action eq 'copy' ? 1 : 0;
 
     # Find which source fields actually have the subfield to determine target field numbers
@@ -928,7 +958,8 @@ sub _copy_move_subfield {
 
 =head3 _modify_values
 
-Performs a regex substitution to modify values
+Apply a regular-expression replacement to values, expanding MARC placeholders
+first when the C<T> modifier is enabled.
 
 =cut
 
@@ -939,6 +970,16 @@ sub _modify_values {
 
     if ( $regex and $regex->{search} ) {
         my $replace = $regex->{replace};
+        if ( $regex->{modifiers} && $regex->{modifiers} =~ /T/ ) {
+            $replace = Koha::SimpleMARC::Replacement::expand(
+                {
+                    template         => $replace,
+                    record           => $params->{record},
+                    current_tag      => $params->{current_tag},
+                    current_subfield => $params->{current_subfield},
+                }
+            );
+        }
         $regex->{modifiers} //= q||;
         my @available_modifiers = qw( i g );
         my $modifiers           = q||;
