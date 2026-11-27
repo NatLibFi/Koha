@@ -1014,7 +1014,10 @@ to ensure those parts are correct.
 
 =cut
 
-my $crazy_char="\x{02BA}";
+# Text between quote delimiters, including escaped characters.
+my $query_text = qr/[^"\\]++|\\./s;
+
+my $crazy_char = "\x{02BA}";
 
 sub _replace_all_quotes {
     my $s = shift;
@@ -1025,8 +1028,8 @@ sub _replace_all_quotes {
 sub clean_search_term {
     my ( $self, $term ) = @_;
 
-    # Lookahead for checking if we are inside quotes
-    my $lookahead = '(?=(?:[^\"]*+\"[^\"]*+\")*+[^\"]*+$)';
+    # An even number of quote delimiters ahead means we are outside a phrase.
+    my $lookahead = qr/(?=(?:(?:$query_text)*+"(?:$query_text)*+")*+(?:$query_text)*+\\?$)/;
 
     # Some hardcoded searches (like with authorities) produce things like
     # 'an=123', when it ought to be 'an:123' for our purposes.
@@ -1034,19 +1037,21 @@ sub clean_search_term {
 
     $term = $self->_convert_index_strings_freeform($term);
 
-    $term =~ s/((?:\W|^)")((?:\w"|[^"])+)(\w")/$1._replace_all_quotes($2).$3/ge;
-    $term =~ s/(\w)"(\w)/$1$crazy_char$2/g;
-    while($term =~ s/^([^"]*\w)"/$1$crazy_char/) {};
+    # Keep legacy Fikka normalization for queries without literal quote escapes.
+    unless ( $term =~ /\\["\\]/ ) {
+        $term =~ s/((?:\W|^)")((?:\w"|[^"])+)(\w")/$1._replace_all_quotes($2).$3/ge;
+        $term =~ s/(\w)"(\w)/$1$crazy_char$2/g;
+        while ( $term =~ s/^([^"]*\w)"/$1$crazy_char/ ) { }
+    }
 
     # escape special characters
     $term = $self->_escape_special_characters($term);
 
-    # # Remove unbalanced quotes
-    # my $unquoted = $term;
-    # my $count    = ( $unquoted =~ tr/"/ / );
-    # if ( $count % 2 == 1 ) {
-    #     $term = $unquoted;
-    # }
+    # Remove unbalanced quote delimiters, preserving literal quotes.
+    my $count = grep { defined } $term =~ /\\.|(")/gs;
+    if ( $count % 2 == 1 ) {
+        $term =~ s{(\\.)|"}{$1 // ' '}gse;
+    }
     $term = $self->_query_regex_escape_process($term);
 
     # because of _truncate_terms and if QueryAutoTruncate enabled
@@ -1344,7 +1349,8 @@ any field prefixes and quoted strings.
 
 =cut
 
-my $tokenize_split_re = qr/((?:${field_name_pattern}${multi_field_pattern}:)?"[^"]+"|\s+)/;
+# An escaped quote is part of the phrase rather than its closing delimiter.
+my $tokenize_split_re = qr/((?:${field_name_pattern}${multi_field_pattern}:)?"(?:$query_text)++"|\s+)/;
 
 sub _split_query {
     my ( $self, $query ) = @_;

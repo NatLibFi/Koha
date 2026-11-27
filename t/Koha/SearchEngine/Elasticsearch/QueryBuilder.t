@@ -196,7 +196,7 @@ subtest '_is_safe_to_auto_truncate() tests' => sub {
 };
 
 subtest '_split_query() tests' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     my $qb;
     ok(
@@ -229,10 +229,22 @@ subtest '_split_query() tests' => sub {
     @res = $qb->_split_query(' "donald   duck" ');
     @exp = ('"donald   duck"');
     is_deeply( \@res, \@exp, 'quoted search terms surrounded by spaces correctly' );
+
+    my $series = q{title-series:"Test \"Lumi\" & A+B #2"};
+    @res = $qb->_split_query("$series AND title:example");
+    is_deeply(
+        \@res,
+        [ $series, 'AND', 'title:example' ],
+        'Escaped quotes within a series phrase do not split the phrase'
+    );
+
+    $series = q{title-series:"Test \"Lumi\""};
+    @res    = $qb->_split_query($series);
+    is_deeply( \@res, [$series], 'An escaped quote at the end of a series phrase is preserved' );
 };
 
 subtest 'clean_search_term() tests' => sub {
-    plan tests => 31;
+    plan tests => 33;
 
     my $qb;
     ok(
@@ -251,10 +263,18 @@ subtest 'clean_search_term() tests' => sub {
     is( $res, '"balanced quotes"', 'balanced quotes returned correctly' );
 
     $res = $qb->clean_search_term('unbalanced quotes"');
-    is( $res, 'unbalanced quotes ', 'unbalanced quotes removed' );
+    is( $res, "unbalanced quotes\x{02BA}", 'Fikka normalizes a trailing literal quote' );
 
     $res = $qb->clean_search_term('"unbalanced "quotes"');
     is( $res, ' unbalanced  quotes ', 'unbalanced quotes removed' );
+
+    $res = $qb->clean_search_term(q{se,phr:"Test & \"Lumi"});
+    is( $res, q{title-series:"Test & \"Lumi"}, 'A literal quote does not unbalance a series phrase' );
+
+    t::lib::Mocks::mock_preference( 'QueryAutoTruncate', 1 );
+    $res = $qb->clean_search_term(q{se,phr:"Test & \"Lumi"});
+    is( $res, q{title-series:"Test & \"Lumi"}, 'Auto-truncation preserves punctuation before an escaped quote' );
+    t::lib::Mocks::mock_preference( 'QueryAutoTruncate', 0 );
 
     $res = $qb->clean_search_term(':test query');
     is( $res, 'test query', 'remove colon at the start' );
@@ -350,7 +370,7 @@ subtest 'clean_search_term() tests' => sub {
     is( $res, 'Simple\?\# query', 'question mark and hash escaped' );
 
     $res = $qb->clean_search_term('a"b?c');
-    is( $res, 'aʺb\?c', 'Fikka quote normalization happens before special character escaping' );
+    is( $res, "a\x{02BA}b\\?c", 'Fikka quote normalization happens before special character escaping' );
 
     $res = $qb->clean_search_term('a "phrase?"');
     is( $res, 'a "phrase\?"', 'Phrase quotes survive while special characters are escaped' );
