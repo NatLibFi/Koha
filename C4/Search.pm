@@ -108,12 +108,15 @@ sub FindDuplicate {
         my $authorindex = 'au,ext';
         my $op          = 'AND';
 
-        $result->{title} =~ s /\\//g;
-        $result->{title} =~ s /\"//g;
-        $result->{title} =~ s /\(//g;
-        $result->{title} =~ s /\)//g;
+        if   ( $result->{title} ) {
+            $result->{title} =~ s /\\//g;
+            $result->{title} =~ s /\"//g;
+            $result->{title} =~ s /\(//g;
+            $result->{title} =~ s /\)//g;
 
-        $query = "$titleindex:\"$result->{title}\"";
+            $query = "$titleindex:\"$result->{title}\"";
+        }
+
         if ( $result->{author} ) {
             $result->{author} =~ s /\\//g;
             $result->{author} =~ s /\"//g;
@@ -2035,7 +2038,7 @@ sub searchResults {
                 $onloan_items->{$key}->{imageurl}       = getitemtypeimagelocation(
                     $search_context->{'interface'},
                     $itemtypes{ $item->{itype} }->{imageurl}
-                );
+                ) if $item->{itype};
                 $onloan_items->{$key}->{collectioncode} =
                     GetAuthorisedValueDesc( '', '', $item->{ccode}, '', '', 'CCODE' );
 
@@ -2133,7 +2136,7 @@ sub searchResults {
                     }
                     $other_items->{$key}->{branchothercount} = $branch_other_count;
                     $other_items->{$key}->{branchcode}       = $item->{branchcode};
-                    $other_items->{$key}->{intransit}        = ( $transfertwhen ne '' ) ? 1 : 0;
+                    $other_items->{$key}->{intransit}        = ( defined $transfertwhen && $transfertwhen ne '' ) ? 1 : 0;
                     $other_items->{$key}->{recalled}         = ($recallstatus)          ? 1 : 0;
                     $other_items->{$key}->{onhold}           = ($reservestatus)         ? 1 : 0;
                     $other_items->{$key}->{notforloan} =

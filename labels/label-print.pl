@@ -160,7 +160,7 @@ if ( $op eq 'cud-export' ) {
 } elsif ( $op eq 'none' ) {
 
     # setup select menus for selecting layout and template for this run...
-    $referer = $ENV{'HTTP_REFERER'};
+    $referer = $ENV{'HTTP_REFERER'} || '';
     $referer =~ s/^.*?:\/\/.*?(\/.*)$/$1/m;
     @batch_ids    = map { { batch_id    => $_ } } @batch_ids;
     @label_ids    = map { { label_id    => $_ } } @label_ids;

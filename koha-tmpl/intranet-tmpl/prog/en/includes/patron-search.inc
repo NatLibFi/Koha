@@ -692,7 +692,9 @@
                                 searchable: true,
                                 orderable: true,
                                 render: function (data, type, row, meta) {
-                                    return escape_str(categories_map[data.toLowerCase()].description);
+                                    const code = data ?? "";
+                                    const category = categories_map[code.toLowerCase()];
+                                    return escape_str(category?.description ?? code);
                                 },
                             });
                             break;
