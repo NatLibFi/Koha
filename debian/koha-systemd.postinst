@@ -113,7 +113,9 @@ case "$1" in
 
         if [ -z "$2" ]; then
             enable_existing_instances
-            deb-systemd-invoke start koha.target koha-common.service >/dev/null || true
+            # A policy-rc.d denial for one unit skips the entire invocation.
+            deb-systemd-invoke start koha.target >/dev/null || true
+            deb-systemd-invoke start koha-common.service >/dev/null || true
         else
             # Upgrade: restart the running per-component units so they pick
             # up new code and unit files. deb-systemd-invoke takes unit
