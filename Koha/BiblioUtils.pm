@@ -145,6 +145,8 @@ sub get_all_biblios_iterator {
         $rs = $rs->search( \[$sql] );
     }
 
+    my $embed_holdings_mode = $options{embed_holdings_mode} // 'all_biblios_iterator';
+
     my $next_func = sub {
 
         # Warn and skip bad records, otherwise we break the loop
@@ -152,7 +154,7 @@ sub get_all_biblios_iterator {
             my $row = $rs->next();
             return if !$row;
             my $next = eval {
-                my $marc = $row->metadata_record( { embed_items => 1 } );
+                my $marc = $row->metadata_record( { embed_items => 1, embed_holdings => $embed_holdings_mode } );
                 $class->new( $marc, $row->biblionumber );
             };
             if ($@) {
@@ -188,7 +190,10 @@ If set to true, item data is embedded in the record. Default is to not do this.
 sub get_marc_biblio {
     my ( $class, $bibnum, %options ) = @_;
 
-    my $record = Koha::Biblios->find($bibnum)->metadata_record( { $options{item_data} ? ( embed_items => 1 ) : () } );
+    my $record = Koha::Biblios->find($bibnum)->metadata_record( {
+        $options{item_data} ? ( embed_items => 1 ) : (),
+        $options{holdings_data} ? ( embed_holdings => $options{holdings_data} ) : (),
+    } );
     return $record;
 }
 

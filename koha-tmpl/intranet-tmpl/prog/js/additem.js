@@ -160,6 +160,10 @@ function constructTrNode(index, unique_item_fields) {
         "itemnotes",
     ];
 
+    if ($('th#holdings_record').length) {
+        fields.splice(1, 0, 'holding_id');
+    }
+
     var result = "<tr idblock='" + index + "'>";
     var edit_link =
         "<a href='#itemfieldset' style='text-decoration:none' onclick='showItem(\"" +

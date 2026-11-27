@@ -6,6 +6,9 @@
 [% USE ItemTypes %]
 [% USE raw %]
 
+[% USE Holdings %]
+[% ShowSummaryHoldings = Koha.Preference('SummaryHoldings') %]
+
 [% BLOCK build_table %]
     <table class="items_table" id="[% tab | html %]_table">
         <thead>
@@ -13,6 +16,7 @@
                 <th id="[% tab | html %]_checkbox" data-colname="checkbox" class="no-sort no-export"></th>
                 <th id="[% tab | html %]_cover_image" data-colname="cover_image">Cover image</th>
                 <th id="[% tab | html %]_itype" data-colname="itype">Item type</th>
+                [% IF ( ShowSummaryHoldings ) %]<th id="[% tab | html %]_holdings" data-colname="holdings">Holdings record</th>[% END %]
                 <th id="[% tab | html %]_holdingbranch" data-colname="holdingbranch">Current library</th>
                 <th id="[% tab | html %]_homebranch" data-colname="homebranch">Home library</th>
                 <th id="[% tab | html %]_location" data-colname="location">Shelving location</th>
@@ -148,6 +152,7 @@
             noItemTypeImages: [% Koha.Preference('noItemTypeImages') ? 1 : 0 | html %],
             DisplayPublishedDate: [% Koha.Preference('DisplayPublishedDate') ? 1 : 0 | html %],
             canreservefromotherbranches: [% Koha.Preference('canreservefromotherbranches') ? 1 : 0 | html %],
+            ShowSummaryHoldings: [% ShowSummaryHoldings ? 1 : 0 | html %],
         });
         Koha.addPermissions({
             CAN_user_editcatalogue_edit_items: [% (CAN_user_editcatalogue_edit_items || CAN_user_editcatalogue_fast_cataloging && is_fast_add) ? 1 : 0 | html %],
@@ -484,6 +489,46 @@
                         return node;
                     },
                 },
+                ...(Koha.prefs.ShowSummaryHoldings
+                    ? [
+                          {
+                              data: "me.holding_id",
+                              className: "holding",
+                              searchable: true,
+                              orderable: true,
+                              render: function (data, type, row, meta) {
+                                  if(! row.holding_id)
+                                      return ' ';
+                                  let values = [];
+                                  if ( row.holding['branch_name'] ) {
+                                      values.push(row.holding.branch_name);
+                                  }
+                                  if ( row.holding['location_name'] ) {
+                                      values.push(row.holding.location_name);
+                                  }
+                                  if ( row.holding['ccode_name'] ) {
+                                      values.push(row.holding.ccode_name);
+                                  }
+                                  if ( row.holding.callnumber ) {
+                                      values.push(row.holding.callnumber);
+                                  }
+                                  return values.join(' - ');
+
+                                  // if (my $branch = $holding->holding_branch()) {
+                                  //     push @parts, $branch->branchname();
+                                  // }
+                                  // if ($holding->location()) {
+                                  //     my $av = Koha::AuthorisedValues->search({ category => 'LOC', authorised_value => $holding->location() });
+                                  //     push @parts, $av->next()->opac_description() if $av->count;
+                                  // }
+                                  // push @parts, $holding->callnumber() if $holding->callnumber();
+                                  // return join(' - ', @parts);
+
+                                  // return nodes;
+                              }
+                          },
+                      ]
+                    : []),
                 {
                     data: "holding_library.name:me.holding_library_id",
                     datatype: "coded_value:library",
