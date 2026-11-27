@@ -1007,8 +1007,10 @@ sub CheckReserves {
 
     CancelExpiredReserves();
     CancelExpiredReserves($cancellation_reason);
+    CancelExpiredReserves( $cancellation_reason, { dry_run => 1 } );
 
-Cancels all reserves with an expiration date from before today.
+Cancels all reserves with an expiration date from before today. With C<dry_run>,
+prints the IDs of eligible holds without cancelling them.
 
 When the ExpireReservesOnHolidays system preference is disabled (0), implements
 sophisticated holiday logic to handle various edge cases:
@@ -1072,7 +1074,8 @@ This logic ensures that:
 =cut
 
 sub CancelExpiredReserves {
-    my $cancellation_reason = shift;
+    my ( $cancellation_reason, $options ) = @_;
+    $options //= {};
     my $today               = dt_from_string();
     my $cancel_on_holidays  = C4::Context->preference('ExpireReservesOnHolidays');
     my $expireWaiting       = C4::Context->preference('ExpireReservesMaxPickUpDelay');
@@ -1144,6 +1147,11 @@ sub CancelExpiredReserves {
 
                 # If today is a business day, cancel expired holds from the past
             }
+        }
+
+        if ( $options->{dry_run} ) {
+            say "Would cancel expired hold " . $hold->id;
+            next;
         }
 
         my $cancel_params = {};

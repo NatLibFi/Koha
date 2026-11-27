@@ -48,13 +48,18 @@ use Koha::Exceptions;
 use Koha::Exception;
 
 our $_cron = 0;
+our $_defer_log = 0;
 
 # Flag names (matched case-insensitively, substring match) whose following
 # value should be redacted from logged command-line output.
 my @_sensitive_patterns = qw( password passwd secret token apikey api_key credential ^p$ ^pass$ );
 
 INIT {
-    my $command_line_options = join( " ", _scrub_argv(@ARGV) );
+    _log_start(@ARGV) unless $_defer_log;
+}
+
+sub _log_start {
+    my $command_line_options = join( " ", _scrub_argv(@_) );
     if ($_cron) {
         cronlogaction( { info => $command_line_options } );
     } else {
@@ -63,10 +68,12 @@ INIT {
 }
 
 END {
-    if ($_cron) {
-        cronlogaction( { action => 'End', info => "COMPLETED" } );
-    } else {
-        logscriptaction( { action => 'End', info => "COMPLETED" } );
+    unless ($_defer_log) {
+        if ($_cron) {
+            cronlogaction( { action => 'End', info => "COMPLETED" } );
+        } else {
+            logscriptaction( { action => 'End', info => "COMPLETED" } );
+        }
     }
 }
 
@@ -74,6 +81,7 @@ END {
 
     use Koha::Script;
     use Koha::Script -cron;
+    use Koha::Script -cron, '-defer-log';
 
 Sets the interface and userenv appropriately based on the flags passed.
 
@@ -84,6 +92,9 @@ preference is enabled.
 Without C<-cron>, the script is automatically logged to the SCRIPTS
 action log when the C<ScriptLog> system preference is enabled.
 
+With C<-defer-log>, the script calls C<Koha::Script-E<gt>start_logging(@original_argv)>
+after option parsing when it needs an audit log. Read-only previews can omit this call.
+
 In both cases, command-line arguments whose flag names contain sensitive
 patterns (C<password>, C<secret>, C<token>, etc.) have their values
 replaced with C<[REDACTED]> before logging.
@@ -93,6 +104,7 @@ replaced with C<[REDACTED]> before logging.
 sub import {
     my $class = shift;
     my @flags = @_;
+    $_defer_log = 1 if grep { $_ eq '-defer-log' } @flags;
 
     if ( ( $flags[0] || '' ) eq '-cron' ) {
         $_cron = 1;
@@ -117,6 +129,13 @@ sub import {
         # Set interface
         C4::Context->interface('commandline');
     }
+}
+
+sub start_logging {
+    my ( $class, @original_argv ) = @_;
+    return unless $_defer_log;
+    $_defer_log = 0;
+    _log_start(@original_argv);
 }
 
 =head2 Internal methods
